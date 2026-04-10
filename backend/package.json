@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "dev": "nodemon src/app.ts"
   },
   "keywords": [],
   "author": "",
@@ -25,9 +26,12 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.0",
     "drizzle-kit": "^0.31.10",
     "nodemon": "^3.1.14",
+    "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   }
 }
