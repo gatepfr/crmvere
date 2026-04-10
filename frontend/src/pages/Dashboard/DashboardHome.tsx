@@ -18,7 +18,7 @@ export default function DashboardHome() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Carregando métricas...</span>
+        <span className="ml-2 text-slate-600">Carregando métricas...</span>
       </div>
     );
   }
