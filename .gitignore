@@ -1,0 +1,11 @@
+node_modules/
+.env
+dist/
+drizzle/
+frontend/node_modules/
+backend/node_modules/
+backend/drizzle/
+frontend/dist/
+backend/dist/
+*.log
+.superpowers/
