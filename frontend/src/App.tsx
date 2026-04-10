@@ -1,58 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Tenants from './pages/SuperAdmin/Tenants';
 import Demands from './pages/Dashboard/Demands';
 import DashboardHome from './pages/Dashboard/DashboardHome';
-import { LayoutDashboard, ClipboardList, LogOut } from 'lucide-react';
+import AIConfig from './pages/Dashboard/AIConfig';
+import Sidebar from './components/Sidebar';
 
-function Layout({ children }: { children: React.ReactNode }) {
-  const { logout, user } = useAuth();
-
+function DashboardLayout() {
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full">
-        <div className="p-6 border-b border-slate-800">
-          <h2 className="text-xl font-bold tracking-tight">VereadorCRM</h2>
-          <p className="text-xs text-slate-400 mt-1">Gabinete Digital</p>
-        </div>
-        
-        <nav className="flex-1 p-4 space-y-2 mt-4">
-          <Link 
-            to="/dashboard" 
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-all"
-          >
-            <LayoutDashboard size={20} />
-            <span className="font-medium">Dashboard</span>
-          </Link>
-          <Link 
-            to="/demands" 
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-all"
-          >
-            <ClipboardList size={20} />
-            <span className="font-medium">Demandas</span>
-          </Link>
-        </nav>
-
-        <div className="p-4 border-t border-slate-800">
-          <div className="mb-4 px-3">
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Usuário</p>
-            <p className="text-sm truncate font-medium text-slate-300">{user?.email}</p>
-          </div>
-          <button 
-            onClick={logout}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all"
-          >
-            <LogOut size={20} />
-            <span className="font-medium">Sair</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen">
-        {children}
+    <div className="flex min-h-screen bg-slate-50">
+      <Sidebar />
+      <main className="flex-1 ml-64 p-10 bg-slate-50 min-h-screen">
+        <Outlet />
       </main>
     </div>
   );
@@ -93,22 +53,16 @@ function AppContent() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Layout>
-                <DashboardHome />
-              </Layout>
+              <DashboardLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/demands"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Demands />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="demands" element={<Demands />} />
+          <Route path="whatsapp" element={<div>Módulo WhatsApp (Em breve)</div>} />
+          <Route path="ai" element={<AIConfig />} />
+          <Route path="knowledge" element={<div>Base de Dados (Em breve)</div>} />
+        </Route>
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </BrowserRouter>
