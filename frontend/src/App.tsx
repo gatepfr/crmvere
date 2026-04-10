@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Tenants from './pages/SuperAdmin/Tenants';
+import Demands from './pages/Dashboard/Demands';
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: string }) {
   const { user, loading } = useAuth();
@@ -38,10 +39,7 @@ function AppContent() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <div className="p-8">
-                <h1 className="text-2xl font-bold">Dashboard do Gabinete</h1>
-                <p>Bem-vindo! Esta tela será implementada na próxima fase.</p>
-              </div>
+              <Demands />
             </ProtectedRoute>
           }
         />
