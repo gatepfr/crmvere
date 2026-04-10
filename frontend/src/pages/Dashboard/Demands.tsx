@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import DemandModal from '../../components/DemandModal';
 
 interface Demand {
   demandas: {
@@ -17,13 +18,27 @@ interface Demand {
 export default function Demands() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDemand, setSelectedDemand] = useState<any>(null);
 
-  useEffect(() => {
+  const fetchDemands = () => {
     api.get('/demands')
       .then(res => setDemands(res.data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDemands();
   }, []);
+
+  const handleOpenDemand = async (id: string) => {
+    try {
+      const res = await api.get(`/demands/${id}`);
+      setSelectedDemand(res.data);
+    } catch (err) {
+      console.error('Erro ao buscar detalhes:', err);
+    }
+  };
 
   if (loading) {
     return (
@@ -63,7 +78,11 @@ export default function Demands() {
               </tr>
             ) : (
               demands.map((demand) => (
-                <tr key={demand.demandas.id} className="hover:bg-gray-50 transition-colors">
+                <tr 
+                  key={demand.demandas.id} 
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleOpenDemand(demand.demandas.id)}
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {demand.municipes.name}
                   </td>
@@ -99,6 +118,14 @@ export default function Demands() {
           </tbody>
         </table>
       </div>
+
+      {selectedDemand && (
+        <DemandModal 
+          demand={selectedDemand} 
+          onClose={() => setSelectedDemand(null)} 
+          onUpdate={fetchDemands} 
+        />
+      )}
     </div>
   );
 }
