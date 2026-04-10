@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes';
 import superAdminRoutes from './routes/superAdminRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import demandRoutes from './routes/demandRoutes';
+import metricsRoutes from './routes/metricsRoutes';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/demands', demandRoutes);
+app.use('/api/metrics', metricsRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
