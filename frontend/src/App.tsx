@@ -5,6 +5,7 @@ import Tenants from './pages/SuperAdmin/Tenants';
 import Demands from './pages/Dashboard/Demands';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
+import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
 import Sidebar from './components/Sidebar';
 
 function DashboardLayout() {
@@ -59,7 +60,7 @@ function AppContent() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="demands" element={<Demands />} />
-          <Route path="whatsapp" element={<div>Módulo WhatsApp (Em breve)</div>} />
+          <Route path="whatsapp" element={<WhatsAppConfig />} />
           <Route path="ai" element={<AIConfig />} />
           <Route path="knowledge" element={<div>Base de Dados (Em breve)</div>} />
         </Route>
