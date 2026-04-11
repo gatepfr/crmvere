@@ -10,7 +10,11 @@ interface WhatsAppStatus {
 
 export default function WhatsAppConfig() {
   const { user } = useAuth();
-  const [config, setConfig] = useState({ evolutionApiUrl: '', evolutionGlobalToken: '' });
+  const [config, setConfig] = useState({ 
+    evolutionApiUrl: '', 
+    evolutionGlobalToken: '',
+    whatsappNotificationNumber: '' 
+  });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
@@ -23,6 +27,7 @@ export default function WhatsAppConfig() {
       setConfig({
         evolutionApiUrl: res.data.evolutionApiUrl || '',
         evolutionGlobalToken: res.data.evolutionGlobalToken || '',
+        whatsappNotificationNumber: res.data.whatsappNotificationNumber || '',
       });
       return res.data;
     } catch (err) {
@@ -175,13 +180,45 @@ export default function WhatsAppConfig() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Config Side - Only visible for Super Admin */}
-        {isSuperAdmin && (
-          <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-6">
+          {/* Seção: Número de Alerta (Visível para todos os Admins) */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              Notificações de Socorro
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">WhatsApp da Equipe</label>
+                <input 
+                  type="text" 
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold"
+                  value={config.whatsappNotificationNumber}
+                  onChange={e => setConfig({...config, whatsappNotificationNumber: e.target.value})}
+                  placeholder="Ex: 5543999999999"
+                />
+                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                  Este número receberá um alerta imediato quando a IA solicitar intervenção humana.
+                </p>
+              </div>
+              {!isSuperAdmin && (
+                <button 
+                  onClick={handleSaveConfig}
+                  disabled={loading}
+                  className="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 text-xs shadow-sm"
+                >
+                  {loading ? 'Salvando...' : 'Salvar Número de Alerta'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Config Side - Only visible for Super Admin */}
+          {isSuperAdmin && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
                 <Database className="w-4 h-4 text-blue-500" />
-                Servidor Evolution
+                Infraestrutura (Admin)
               </h3>
               
               <div className="space-y-4">
@@ -208,24 +245,24 @@ export default function WhatsAppConfig() {
                 <button 
                   onClick={handleSaveConfig}
                   disabled={loading}
-                  className="w-full bg-slate-900 text-white py-2 rounded-lg font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 text-sm"
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm shadow-md"
                 >
-                  {loading ? 'Salvando...' : 'Salvar Servidor'}
+                  {loading ? 'Salvando...' : 'Salvar Tudo'}
                 </button>
               </div>
             </div>
+          )}
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start gap-3 text-sm">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <p>{error}</p>
-              </div>
-            )}
-          </div>
-        )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start gap-3 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
+        </div>
 
         {/* Status/QR Code Side */}
-        <div className={isSuperAdmin ? "lg:col-span-2" : "lg:col-span-3"}>
+        <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 min-h-[400px] flex flex-col items-center justify-center text-center">
             {(!status && (config.evolutionApiUrl || !isSuperAdmin)) ? (
               <div className="space-y-6">

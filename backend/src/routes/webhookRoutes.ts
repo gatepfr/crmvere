@@ -107,8 +107,18 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
         tenant.evolutionApiUrl || 'http://localhost:8080',
         tenant.evolutionGlobalToken || 'mestre123'
       );
+      
+      // Send main response to citizen
       await evolution.sendMessage(tenant.whatsappInstanceId, normalized.from, aiResult.resposta_usuario)
         .catch(e => console.error('[WEBHOOK] Send Error:', e.message));
+
+      // 7. ALERT HUMAN if needed
+      if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {
+        const alertMsg = `🚨 *ALERTA DE ATENDIMENTO HUMANO*\n\n*Munícipe:* ${municipe.name}\n*Telefone:* ${normalized.from}\n*Bairro:* ${municipe.bairro || 'Não informado'}\n*Resumo:* ${aiResult.resumo_ia}\n\nO cidadão solicitou atenção humana ou a IA não soube responder. Acesse o painel para assumir.`;
+        
+        await evolution.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, alertMsg)
+          .catch(e => console.error('[WEBHOOK] Alert Send Error:', e.message));
+      }
     }
 
     res.status(200).json({ status: 'received' });

@@ -14,7 +14,7 @@ router.post('/setup', async (req, res) => {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
 
-    let { evolutionApiUrl, evolutionGlobalToken } = req.body;
+    let { evolutionApiUrl, evolutionGlobalToken, whatsappNotificationNumber } = req.body;
     
     // Auto-fix URL if protocol is missing
     if (evolutionApiUrl && !evolutionApiUrl.startsWith('http')) {
@@ -22,7 +22,7 @@ router.post('/setup', async (req, res) => {
     }
 
     await db.update(tenants)
-      .set({ evolutionApiUrl, evolutionGlobalToken })
+      .set({ evolutionApiUrl, evolutionGlobalToken, whatsappNotificationNumber })
       .where(eq(tenants.id, tenantId));
     
     res.json({ success: true });

@@ -15,6 +15,7 @@ export const tenants = pgTable("tenants", {
   systemPrompt: varchar("system_prompt", { length: 10000 }),
   whatsappInstanceId: varchar("whatsapp_instance_id", { length: 255 }),
   whatsappToken: varchar("whatsapp_token", { length: 255 }),
+  whatsappNotificationNumber: varchar("whatsapp_notification_number", { length: 50 }),
   evolutionApiUrl: varchar("evolution_api_url", { length: 255 }),
   evolutionGlobalToken: varchar("evolution_global_token", { length: 255 }),
   // Cabinet Info
