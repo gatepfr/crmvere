@@ -61,7 +61,7 @@ export default function Sidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-amber-400 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold text-yellow-400">
             CRM do Verê
           </h1>
         </div>
