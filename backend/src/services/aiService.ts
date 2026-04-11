@@ -1,8 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "dummy_key");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
 export interface AIDemandResult {
   categoria: 'saude' | 'infraestrutura' | 'seguranca' | 'educacao' | 'outro';
   subcategoria: string;
@@ -15,12 +12,20 @@ export interface AIDemandResult {
 /**
  * Analisa a mensagem do cidadão usando o Gemini AI e retorna dados estruturados.
  * @param messageText Texto da mensagem do cidadão
+ * @param config Configurações do Gemini para o tenant
  * @param context Contexto adicional (ex: histórico de conversa)
  * @returns Promessa com o resultado estruturado
  */
-export async function processDemand(messageText: string, context?: string): Promise<AIDemandResult> {
+export async function processDemand(
+  messageText: string, 
+  config: { apiKey: string, model: string, systemPrompt: string },
+  context?: string
+): Promise<AIDemandResult> {
+  const genAI = new GoogleGenerativeAI(config.apiKey);
+  const model = genAI.getGenerativeModel({ model: config.model });
+
   const prompt = `
-    Você é um assistente de IA para um vereador. Sua tarefa é analisar a mensagem de um cidadão e extrair informações úteis para o gabinete.
+    ${config.systemPrompt || 'Você é um assistente de IA para um vereador. Sua tarefa é analisar a mensagem de um cidadão e extrair informações úteis para o gabinete.'}
     
     Contexto adicional da conversa: ${context || 'Nenhum'}
     Mensagem do cidadão: ${messageText}
@@ -45,7 +50,7 @@ export async function processDemand(messageText: string, context?: string): Prom
     const text = response.text();
     
     const jsonMatch = text.match(/\|\|\|JSON\|\|\|([\s\S]*?)\|\|\|JSON\|\|\|/);
-    if (!jsonMatch) {
+    if (!jsonMatch || !jsonMatch[1]) {
       throw new Error("Falha ao processar resposta da IA: Formato inválido");
     }
 

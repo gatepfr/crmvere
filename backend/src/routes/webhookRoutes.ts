@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { normalizeEvolution } from '../services/whatsappService';
 import { db } from '../db';
-import { municipes, demandas } from '../db/schema';
+import { tenants, municipes, demandas } from '../db/schema';
 import { processDemand } from '../services/aiService';
 import { eq, and } from 'drizzle-orm';
 
@@ -12,7 +12,7 @@ const router = Router();
  * Route: POST /api/webhook/evolution/:tenantId
  */
 router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
-  const { tenantId } = req.params;
+  const tenantId = req.params.tenantId as string;
   const payload = req.body;
 
   try {
@@ -29,23 +29,31 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
           eq(municipes.tenantId, tenantId)
         )
       );
+    
+    // Fetch tenant config for AI
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
     // 2. Create a new citizen if not found
     if (!municipe) {
-      [municipe] = await db.insert(municipes)
+      const [newMunicipe] = await db.insert(municipes)
         .values({
           tenantId,
           name: normalized.name || 'Cidadão',
           phone: normalized.from,
         })
         .returning();
+      municipe = newMunicipe;
     }
 
-    // 3. Call processDemand (AI Service) with the message text
-    const aiResult = await processDemand(normalized.text);
+    // 3. Call processDemand (AI Service) with the message text and tenant config
+    const aiResult = await processDemand(normalized.text, {
+      apiKey: tenant?.geminiApiKey || process.env.GEMINI_API_KEY || '',
+      model: tenant?.aiModel || 'gemini-1.5-flash',
+      systemPrompt: tenant?.systemPrompt || ''
+    });
 
     // 4. If AI processing succeeds, insert a new demanda linked to the citizen and tenant
-    if (aiResult) {
+    if (aiResult && municipe) {
       await db.insert(demandas)
         .values({
           tenantId,

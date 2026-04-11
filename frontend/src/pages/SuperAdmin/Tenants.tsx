@@ -6,6 +6,7 @@ export default function Tenants() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { logout } = useAuth();
@@ -29,10 +30,12 @@ export default function Tenants() {
     setError('');
     
     try {
-      await api.post('/superadmin/tenants', { name, slug });
+      await api.post('/superadmin/tenants', { name, slug, email });
       setName('');
       setSlug('');
+      setEmail('');
       loadTenants();
+      alert('Gabinete criado com sucesso! Senha padrão: admin123');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Falha ao criar gabinete.');
     } finally {
@@ -82,6 +85,17 @@ export default function Tenants() {
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         value={slug}
                         onChange={(e) => setSlug(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-6">
+                      <label className="block text-sm font-medium text-gray-700">Email do Administrador</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="admin@exemplo.com"
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                   </div>
