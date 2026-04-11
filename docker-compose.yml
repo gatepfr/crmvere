@@ -62,6 +62,8 @@ services:
       - DATABASE_URL=postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-vereador_crm}
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET:-supersecret}
+      - WA_API_KEY=${WA_API_KEY:-mestre123}
+      - EVOLUTION_API_URL=https://wa.crmvere.com.br
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
