@@ -145,6 +145,8 @@ export default function WhatsAppConfig() {
     );
   }
 
+  const isSuperAdmin = user?.role === 'super_admin';
+
   return (
     <div className="max-w-4xl space-y-8">
       <header>
@@ -153,57 +155,59 @@ export default function WhatsAppConfig() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Config Side */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-              <Database className="w-4 h-4 text-blue-500" />
-              Servidor Evolution
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">API URL</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  value={config.evolutionApiUrl}
-                  onChange={e => setConfig({...config, evolutionApiUrl: e.target.value})}
-                  placeholder="https://api.seuservidor.com"
-                />
+        {/* Config Side - Only visible for Super Admin */}
+        {isSuperAdmin && (
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Database className="w-4 h-4 text-blue-500" />
+                Servidor Evolution
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">API URL</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    value={config.evolutionApiUrl}
+                    onChange={e => setConfig({...config, evolutionApiUrl: e.target.value})}
+                    placeholder="https://api.seuservidor.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Global Token</label>
+                  <input 
+                    type="password" 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    value={config.evolutionGlobalToken}
+                    onChange={e => setConfig({...config, evolutionGlobalToken: e.target.value})}
+                    placeholder="Seu Global API Key"
+                  />
+                </div>
+                <button 
+                  onClick={handleSaveConfig}
+                  disabled={loading}
+                  className="w-full bg-slate-900 text-white py-2 rounded-lg font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 text-sm"
+                >
+                  {loading ? 'Salvando...' : 'Salvar Servidor'}
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Global Token</label>
-                <input 
-                  type="password" 
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  value={config.evolutionGlobalToken}
-                  onChange={e => setConfig({...config, evolutionGlobalToken: e.target.value})}
-                  placeholder="Seu Global API Key"
-                />
-              </div>
-              <button 
-                onClick={handleSaveConfig}
-                disabled={loading}
-                className="w-full bg-slate-900 text-white py-2 rounded-lg font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 text-sm"
-              >
-                {loading ? 'Salvando...' : 'Salvar Servidor'}
-              </button>
             </div>
-          </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start gap-3 text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <p>{error}</p>
-            </div>
-          )}
-        </div>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-start gap-3 text-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Status/QR Code Side */}
-        <div className="lg:col-span-2">
+        <div className={isSuperAdmin ? "lg:col-span-2" : "lg:col-span-3"}>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 min-h-[400px] flex flex-col items-center justify-center text-center">
-            {!status && config.evolutionApiUrl ? (
+            {(!status && (config.evolutionApiUrl || !isSuperAdmin)) ? (
               <div className="space-y-6">
                 <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
                   <Smartphone className="w-10 h-10" />
