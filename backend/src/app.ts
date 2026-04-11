@@ -6,6 +6,8 @@ import superAdminRoutes from './routes/superAdminRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import demandRoutes from './routes/demandRoutes';
 import metricsRoutes from './routes/metricsRoutes';
+import configRoutes from './routes/configRoutes';
+import whatsappRoutes from './routes/whatsappRoutes';
 
 dotenv.config();
 
@@ -20,6 +22,8 @@ app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/demands', demandRoutes);
 app.use('/api/metrics', metricsRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
