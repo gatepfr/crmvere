@@ -11,6 +11,7 @@ import whatsappRoutes from './routes/whatsappRoutes';
 import knowledgeRoutes from './routes/knowledgeRoutes';
 import teamRoutes from './routes/teamRoutes';
 import profileRoutes from './routes/profileRoutes';
+import mapRoutes from './routes/mapRoutes';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/map', mapRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
