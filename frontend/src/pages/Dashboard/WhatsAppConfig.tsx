@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import { Smartphone, CheckCircle2, AlertCircle, RefreshCw, Database, QrCode as QrCodeIcon } from 'lucide-react';
 
 interface WhatsAppStatus {
