@@ -7,6 +7,9 @@ import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
 import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
 import KnowledgeBase from './pages/Dashboard/KnowledgeBase';
+import Team from './pages/Dashboard/Team';
+import Profile from './pages/Dashboard/Profile';
+import VoterMap from './pages/Dashboard/VoterMap';
 import Sidebar from './components/Sidebar';
 
 function DashboardLayout() {
@@ -61,9 +64,12 @@ function AppContent() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="demands" element={<Demands />} />
+          <Route path="map" element={<VoterMap />} />
           <Route path="whatsapp" element={<WhatsAppConfig />} />
           <Route path="ai" element={<AIConfig />} />
           <Route path="knowledge" element={<KnowledgeBase />} />
+          <Route path="team" element={<Team />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, MessageCircle, Bot, Database, LogOut } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, MessageCircle, Bot, Database, LogOut, Users, User, Map } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
@@ -8,9 +8,12 @@ export default function Sidebar() {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Demandas', icon: MessageSquare, path: '/dashboard/demands' },
+    { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
     { name: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
     { name: 'Configuração IA', icon: Bot, path: '/dashboard/ai' },
     { name: 'Base de Dados', icon: Database, path: '/dashboard/knowledge' },
+    ...(user?.role !== 'assessor' ? [{ name: 'Equipe', icon: Users, path: '/dashboard/team' }] : []),
+    { name: 'Meu Perfil', icon: User, path: '/dashboard/profile' },
   ];
 
   return (
