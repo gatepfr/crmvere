@@ -29,6 +29,7 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
+app.use('/api/kanban', kanbanRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/map', mapRoutes);
