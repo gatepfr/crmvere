@@ -7,6 +7,13 @@ export const tenants = pgTable("tenants", {
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   active: boolean("active").default(true),
+  geminiApiKey: varchar("gemini_api_key", { length: 255 }),
+  aiModel: varchar("ai_model", { length: 50 }).default("gemini-1.5-flash"),
+  systemPrompt: varchar("system_prompt", { length: 2000 }),
+  whatsappInstanceId: varchar("whatsapp_instance_id", { length: 255 }),
+  whatsappToken: varchar("whatsapp_token", { length: 255 }),
+  evolutionApiUrl: varchar("evolution_api_url", { length: 255 }),
+  evolutionGlobalToken: varchar("evolution_global_token", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
