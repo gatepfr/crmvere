@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes } from '../db/schema';
+import { demandas, municipes, tenants } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
 import { checkTenant } from '../middleware/tenant';
@@ -17,13 +17,45 @@ const neighborhoodCoords: Record<string, { lat: number; lng: number }> = {
   'Vila Mariana': { lat: -23.5891, lng: -46.6341 },
 };
 
+import axios from 'axios';
+
+// Helper to get coordinates from OpenStreetMap (Nominatim)
+async function getCoordinates(bairro: string, city: string, state: string) {
+  try {
+    const query = `${bairro}, ${city}, ${state}, Brasil`;
+    const response = await axios.get(`https://nominatim.openstreetmap.org/search`, {
+      params: {
+        q: query,
+        format: 'json',
+        limit: 1
+      },
+      headers: {
+        'User-Agent': 'VereadorCRM-MVP'
+      }
+    });
+
+    if (response.data && response.data.length > 0) {
+      return {
+        lat: parseFloat(response.data[0].lat),
+        lng: parseFloat(response.data[0].lon)
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error(`Geocoding error for ${bairro}:`, error);
+    return null;
+  }
+}
+
 router.get('/data', authenticate, checkTenant, async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  if (!tenantId) {
-    return res.status(403).json({ error: 'No tenant context' });
-  }
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    const city = tenant?.municipio || 'São Paulo';
+    const state = tenant?.uf || 'SP';
+    
     const stats = await db.select({
       bairro: municipes.bairro,
       count: sql<number>`count(*)::int`
@@ -33,24 +65,40 @@ router.get('/data', authenticate, checkTenant, async (req: Request, res: Respons
     .where(eq(demandas.tenantId, tenantId))
     .groupBy(municipes.bairro);
 
-    const data = stats.map(stat => {
-      const bairro = stat.bairro || 'Desconhecido';
+    // Fetch real coordinates for each neighborhood
+    const points = await Promise.all(stats.map(async (stat) => {
+      const bairro = stat.bairro || 'Centro';
       
-      // Use predefined coordinates or generate random ones nearby if not found
-      const coords = neighborhoodCoords[bairro] || {
-        lat: -23.5489 + (Math.random() - 0.5) * 0.15,
-        lng: -46.6388 + (Math.random() - 0.5) * 0.15,
-      };
+      // Try to geocode
+      const coords = await getCoordinates(bairro, city, state);
+      
+      if (coords) {
+        return {
+          bairro,
+          count: stat.count,
+          lat: coords.lat,
+          lng: coords.lng
+        };
+      }
+
+      // Fallback to random point near city center if geocoding fails
+      // We'll use a hardcoded center for fallback based on common cities or a generic one
+      const baseLat = city.toLowerCase() === 'apucarana' ? -23.5505 : -23.5489;
+      const baseLng = city.toLowerCase() === 'apucarana' ? -51.4614 : -46.6388;
 
       return {
         bairro,
-        count: Number(stat.count),
-        lat: coords.lat,
-        lng: coords.lng,
+        count: stat.count,
+        lat: baseLat + (Math.random() - 0.5) * 0.05,
+        lng: baseLng + (Math.random() - 0.5) * 0.05,
       };
-    });
+    }));
 
-    res.json(data);
+    res.json({
+      city,
+      state,
+      points
+    });
   } catch (error) {
     console.error('Error fetching map data:', error);
     res.status(500).json({ error: 'Failed to fetch map data' });

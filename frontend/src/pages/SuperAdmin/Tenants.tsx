@@ -20,6 +20,25 @@ export default function Tenants() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este gabinete?')) return;
+    try {
+      await api.delete(`/superadmin/tenants/${id}`);
+      loadTenants();
+    } catch (err) {
+      alert('Falha ao excluir gabinete.');
+    }
+  };
+
+  const toggleStatus = async (tenant: any) => {
+    try {
+      await api.patch(`/superadmin/tenants/${tenant.id}`, { active: !tenant.active });
+      loadTenants();
+    } catch (err) {
+      alert('Falha ao atualizar status.');
+    }
+  };
+
   useEffect(() => {
     loadTenants();
   }, []);
@@ -126,6 +145,7 @@ export default function Tenants() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -137,6 +157,20 @@ export default function Tenants() {
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tenant.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                               {tenant.active ? 'Ativo' : 'Inativo'}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button 
+                              onClick={() => toggleStatus(tenant)}
+                              className="text-blue-600 hover:text-blue-900 mr-4"
+                            >
+                              {tenant.active ? 'Desativar' : 'Ativar'}
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(tenant.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Excluir
+                            </button>
                           </td>
                         </tr>
                       ))}

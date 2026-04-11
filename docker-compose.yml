@@ -2,20 +2,92 @@ services:
   db:
     image: postgres:17-alpine
     container_name: vereador_crm_db
+    restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: vereador_crm
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-vereador_crm}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - vereador-network
 
   redis:
     image: redis:7-alpine
     container_name: vereador_crm_redis
+    restart: always
     ports:
       - "6379:6379"
+    networks:
+      - vereador-network
+
+  evolution_api:
+    image: evoapicloud/evolution-api:latest
+    container_name: vereador_crm_whatsapp
+    restart: always
+    environment:
+      - SERVER_URL=https://wa.crmvere.com.br
+      - DND_ENVIRONMENT=production
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=${WA_API_KEY:-mestre123}
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-vereador_crm}?schema=evolution_api
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_crm
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379
+      - CACHE_REDIS_PREFIX_KEY=EVO
+      - STORE_MESSAGES=true
+      - STORE_MESSAGE_UP_SERS=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - vereador-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vereador_crm_backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-vereador_crm}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-supersecret}
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - vereador-network
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vereador_crm_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - vereador-network
+
+networks:
+  vereador-network:
+    driver: bridge
 
 volumes:
   pgdata:

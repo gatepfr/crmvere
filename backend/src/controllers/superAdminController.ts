@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { tenants, users } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 export const createTenant = async (req: Request, res: Response) => {
@@ -50,5 +51,40 @@ export const listTenants = async (_req: Request, res: Response) => {
     res.status(200).json(allTenants);
   } catch (error) {
     res.status(500).json({ error: 'Failed to list tenants' });
+  }
+};
+
+export const updateTenant = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, slug, active } = req.body;
+  
+  try {
+    const [updated] = await db.update(tenants)
+      .set({ name, slug, active })
+      .where(eq(tenants.id, id))
+      .returning();
+    
+    if (!updated) return res.status(404).json({ error: 'Tenant not found' });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update tenant' });
+  }
+};
+
+export const deleteTenant = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    await db.transaction(async (tx) => {
+      // Although we have cascade in DB, sometimes it's safer to clear manually 
+      // or check for dependencies that might block
+      await tx.delete(users).where(eq(users.tenantId, id));
+      await tx.delete(tenants).where(eq(tenants.id, id));
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting tenant:', error);
+    res.status(500).json({ error: 'Failed to delete tenant' });
   }
 };

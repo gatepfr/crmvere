@@ -1,36 +1,67 @@
 import axios from 'axios';
 
 export class EvolutionService {
-  constructor(private baseUrl: string, private globalToken: string) {}
+  private client;
+
+  constructor(private baseUrl: string, private globalToken: string) {
+    // Ensure baseUrl doesn't end with slash
+    const cleanUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    
+    this.client = axios.create({
+      baseURL: cleanUrl,
+      timeout: 30000, // 30s timeout
+      headers: { 
+        apikey: globalToken,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
 
   async createInstance(instanceName: string) {
-    const response = await axios.post(`${this.baseUrl}/instance/create`, {
+    const response = await this.client.post('/instance/create', {
       instanceName,
-      token: Math.random().toString(36).substring(7), // Random instance token
-      qrcode: true
-    }, { headers: { apikey: this.globalToken } });
+      token: Math.random().toString(36).substring(7),
+      qrcode: true,
+      integration: "WHATSAPP-BAILEYS"
+    });
     return response.data;
   }
 
   async getQrCode(instanceName: string) {
-    const response = await axios.get(`${this.baseUrl}/instance/connect/${instanceName}`, {
-      headers: { apikey: this.globalToken }
-    });
+    const response = await this.client.get(`/instance/connect/${instanceName}`);
     return response.data;
   }
 
   async getStatus(instanceName: string) {
-    const response = await axios.get(`${this.baseUrl}/instance/connectionState/${instanceName}`, {
-      headers: { apikey: this.globalToken }
-    });
+    const response = await this.client.get(`/instance/connectionState/${instanceName}`);
     return response.data;
   }
 
   async setWebhook(instanceName: string, webhookUrl: string) {
-    await axios.post(`${this.baseUrl}/webhook/set/${instanceName}`, {
-      enabled: true,
-      url: webhookUrl,
-      events: ["MESSAGES_UPSERT"]
-    }, { headers: { apikey: this.globalToken } });
+    await this.client.post(`/webhook/set/${instanceName}`, {
+      webhook: {
+        enabled: true,
+        url: webhookUrl,
+        byEvents: false,
+        events: [
+          "MESSAGES_UPSERT",
+          "MESSAGES_UPDATE",
+          "MESSAGES_DELETE",
+          "QRCODE_UPDATED",
+          "CONNECTION_UPDATE"
+        ]
+      }
+    });
+  }
+
+  async sendMessage(instanceName: string, remoteJid: string, text: string) {
+    const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
+    const response = await this.client.post(`/message/sendText/${instanceName}`, {
+      number: jid,
+      text: text,
+      delay: 1200,
+      linkPreview: false
+    });
+    return response.data;
   }
 }

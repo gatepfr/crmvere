@@ -14,13 +14,24 @@ interface MapData {
 export default function VoterMap() {
   const [data, setData] = useState<MapData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [center, setCenter] = useState<[number, number]>([-23.5489, -46.6388]);
 
   useEffect(() => {
     api.get('/map/data')
-      .then(res => setData(res.data))
-      .catch(err => console.error('Erro ao buscar dados do mapa:', err))
+      .then(res => {
+        setData(res.data.points || []);
+        // In a real implementation we would geocode res.data.city
+        // For Apucarana, let's set it manually if detected
+        if (res.data.city.toLowerCase() === 'apucarana') {
+          setCenter([-23.5505, -51.4614]);
+        } else if (res.data.points && res.data.points.length > 0) {
+          setCenter([res.data.points[0].lat, res.data.points[0].lng]);
+        }
+      })
+      .catch(err => console.error('Erro ao carregar mapa:', err))
       .finally(() => setLoading(false));
   }, []);
+
 
   if (loading) {
     return (
@@ -80,8 +91,9 @@ export default function VoterMap() {
 
       <div className="bg-white p-2 rounded-2xl shadow-lg border border-slate-200 overflow-hidden relative" style={{ height: '600px' }}>
         <MapContainer 
-          center={defaultCenter} 
-          zoom={12} 
+          key={`${center[0]}-${center[1]}`}
+          center={center} 
+          zoom={13} 
           style={{ height: '100%', width: '100%', borderRadius: '1rem' }}
           scrollWheelZoom={true}
         >

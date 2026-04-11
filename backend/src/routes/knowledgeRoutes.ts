@@ -6,7 +6,6 @@ import { db } from '../db';
 import { documents } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
-import pdf from 'pdf-parse';
 
 const router = Router();
 router.use(authenticate);
@@ -31,14 +30,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['.pdf', '.txt', '.docx'];
+    const allowedExtensions = ['.pdf', '.txt', '.docx'];
     const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedTypes.includes(ext)) {
+    
+    if (allowedExtensions.includes(ext) || file.mimetype.includes('pdf')) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only PDF, TXT and DOCX are allowed.'));
+      cb(new Error(`Invalid file type (${file.mimetype}). Only PDF, TXT and DOCX are allowed.`));
     }
   }
 });
@@ -49,34 +49,45 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   const file = req.file;
 
   if (!tenantId || !file) {
+    console.error('[UPLOAD] Missing tenantId or file');
     return res.status(400).json({ error: 'No tenant context or file provided' });
   }
+
+  console.log(`[UPLOAD] Processing file: ${file.originalname} (${file.size} bytes)`);
 
   try {
     let textContent = '';
     
-    // Extract text based on file type
-    if (file.mimetype === 'application/pdf') {
+    const isPDF = file.mimetype === 'application/pdf' || 
+                  file.mimetype === 'application/x-pdf' ||
+                  path.extname(file.originalname).toLowerCase() === '.pdf';
+
+    if (isPDF) {
+      console.log(`[UPLOAD] Parsing PDF content...`);
       const dataBuffer = fs.readFileSync(file.path);
+      
+      // Using stable version of pdf-parse
+      const pdf = require('pdf-parse');
       const data = await pdf(dataBuffer);
       textContent = data.text;
     } else if (file.mimetype === 'text/plain') {
       textContent = fs.readFileSync(file.path, 'utf-8');
     }
 
-    // Save to DB
+    console.log(`[UPLOAD] Text extracted (${textContent.length} chars). Saving to database...`);
+
     const [newDoc] = await db.insert(documents).values({
       tenantId,
       fileName: file.originalname,
       filePath: file.path,
       fileType: file.mimetype,
-      textContent: textContent.substring(0, 10000) // Cap text for now
+      textContent: textContent.substring(0, 10000)
     }).returning();
 
     res.status(201).json(newDoc);
-  } catch (error) {
-    console.error('Error processing upload:', error);
-    res.status(500).json({ error: 'Failed to process file' });
+  } catch (error: any) {
+    console.error('[UPLOAD] Error processing file:', error.message);
+    res.status(500).json({ error: `Failed to process file: ${error.message}` });
   }
 });
 
@@ -107,12 +118,10 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    // Delete physical file
     if (fs.existsSync(doc.filePath)) {
       fs.unlinkSync(doc.filePath);
     }
 
-    // Delete from DB
     await db.delete(documents).where(eq(documents.id, id));
 
     res.json({ success: true });

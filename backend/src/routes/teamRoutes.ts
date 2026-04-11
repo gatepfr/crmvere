@@ -39,7 +39,12 @@ router.post('/', async (req: any, res: any) => {
       passwordHash,
       role: 'assessor',
       tenantId
-    } as any).returning();
+    } as any).returning({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      createdAt: users.createdAt
+    });
     res.status(201).json(newUser);
   } catch (error: any) {
     if (error.code === '23505') return res.status(400).json({ error: 'User already exists' });
@@ -52,9 +57,11 @@ router.delete('/:id', async (req: any, res: any) => {
   const tenantId = req.user?.tenantId;
   const { id } = req.params;
   
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  if (req.user?.role === 'assessor') return res.status(403).json({ error: 'Only admins can remove members' });
   if (id === req.user?.id) return res.status(400).json({ error: 'Cannot delete yourself' });
 
-  await db.delete(users).where(and(eq(users.id, id), eq(users.tenantId, tenantId!)));
+  await db.delete(users).where(and(eq(users.id, id), eq(users.tenantId, tenantId)));
   res.json({ success: true });
 });
 

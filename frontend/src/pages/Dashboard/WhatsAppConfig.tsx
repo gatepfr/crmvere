@@ -33,7 +33,7 @@ export default function WhatsAppConfig() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await api.get('/api/whatsapp/instance/status');
+      const res = await api.get('/whatsapp/instance/status');
       // Evolution API can return different formats based on version
       // Some return { instance: { state: 'open' } }, others { state: 'open' }
       const data = res.data.instance || res.data;
@@ -57,7 +57,7 @@ export default function WhatsAppConfig() {
 
   const fetchQrCode = useCallback(async () => {
     try {
-      const res = await api.get('/api/whatsapp/instance/qrcode');
+      const res = await api.get('/whatsapp/instance/qrcode');
       // Some versions return { base64: '...' }, others { code: '...' }
       if (res.data.base64) {
         setQrCode(res.data.base64);
@@ -98,9 +98,10 @@ export default function WhatsAppConfig() {
     setLoading(true);
     setError(null);
     try {
-      await api.post('/api/whatsapp/setup', config);
+      await api.post('/whatsapp/setup', config);
       alert('Configurações de conexão salvas!');
     } catch (err) {
+
       console.error('Erro ao salvar config:', err);
       setError('Falha ao salvar configurações.');
     } finally {
@@ -111,10 +112,17 @@ export default function WhatsAppConfig() {
   const handleCreateInstance = async () => {
     setLoading(true);
     setError(null);
+    setQrCode(null);
     try {
-      await api.post('/api/whatsapp/instance/create');
-      await fetchStatus();
-      await fetchQrCode();
+      const res = await api.post('/whatsapp/instance/create');
+      console.log('Instância criada:', res.data);
+      
+      // Give it a moment then fetch status and qrcode
+      setTimeout(() => {
+        fetchStatus();
+        fetchQrCode();
+      }, 2000);
+      
     } catch (err: unknown) {
       let errorMessage = 'Falha ao criar instância.';
       if (err && typeof err === 'object' && 'response' in err) {

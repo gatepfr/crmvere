@@ -60,13 +60,41 @@ export const updateStatus = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
 
   try {
-    await db
-      .update(demandas)
+    await db.update(demandas)
       .set({ status })
       .where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
 
     res.status(200).json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update status' });
+  }
+};
+
+export const updateMunicipe = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { name, phone, bairro } = req.body;
+  const tenantId = req.user?.tenantId;
+
+  try {
+    const [updated] = await db.update(municipes)
+      .set({ name, phone, bairro })
+      .where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId!)))
+      .returning();
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update citizen' });
+  }
+};
+
+export const deleteMunicipe = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const tenantId = req.user?.tenantId;
+
+  try {
+    await db.delete(municipes).where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId!)));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete citizen' });
   }
 };

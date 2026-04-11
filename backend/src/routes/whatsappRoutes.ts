@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import axios from 'axios';
 import { db } from '../db';
 import { tenants } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -13,7 +14,13 @@ router.post('/setup', async (req, res) => {
     const tenantId = req.user?.tenantId;
     if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { evolutionApiUrl, evolutionGlobalToken } = req.body;
+    let { evolutionApiUrl, evolutionGlobalToken } = req.body;
+    
+    // Auto-fix URL if protocol is missing
+    if (evolutionApiUrl && !evolutionApiUrl.startsWith('http')) {
+      evolutionApiUrl = `http://${evolutionApiUrl}`;
+    }
+
     await db.update(tenants)
       .set({ evolutionApiUrl, evolutionGlobalToken })
       .where(eq(tenants.id, tenantId));
@@ -37,28 +44,26 @@ router.post('/instance/create', async (req, res) => {
     }
 
     const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+    
+    // Create new instance without prior deletion to simplify
     const result = await evo.createInstance(tenant.slug);
     
-    // Some versions of Evolution API return result.hash, others result.instance.token
-    // Based on evolutionService.ts it returns response.data
-    const token = result.hash || result.instance?.token;
+    const token = result.instance?.token || result.hash || 'token_not_found';
 
     await db.update(tenants).set({ 
       whatsappInstanceId: tenant.slug,
       whatsappToken: token
     }).where(eq(tenants.id, tenantId));
 
-    // Set Webhook automatically
-    const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`;
-    const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenantId}`;
-    await evo.setWebhook(tenant.slug, webhookUrl);
+    // Async webhook setup so it doesn't block the response
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
+    evo.setWebhook(tenant.slug, `${backendUrl}/api/webhook/evolution/${tenantId}`)
+      .catch(e => console.error('Silent Webhook Error:', e.message));
 
     res.json(result);
   } catch (error: any) {
-    console.error('Error in /instance/create:', error);
-    res.status(error.response?.status || 500).json({ 
-      error: error.response?.data?.error || 'Failed to create instance' 
-    });
+    console.error('CRASH NA CRIAÇÃO:', error.message);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -70,17 +75,20 @@ router.get('/instance/qrcode', async (req, res) => {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
     if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
-      return res.status(400).json({ error: 'Evolution API not configured or instance not created' });
+      return res.status(200).json({ error: 'not_configured' });
     }
 
     const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
-    const result = await evo.getQrCode(tenant.whatsappInstanceId);
-    res.json(result);
+    try {
+      const result = await evo.getQrCode(tenant.whatsappInstanceId);
+      res.json(result);
+    } catch (apiError: any) {
+      // Return 200 with error info so frontend doesn't crash
+      res.status(200).json({ error: 'api_unavailable', message: apiError.message });
+    }
   } catch (error: any) {
-    console.error('Error in /instance/qrcode:', error);
-    res.status(error.response?.status || 500).json({ 
-      error: error.response?.data?.error || 'Failed to get QR Code' 
-    });
+    console.error('Error in /instance/qrcode:', error.message);
+    res.status(200).json({ error: 'server_error' });
   }
 });
 
@@ -92,17 +100,23 @@ router.get('/instance/status', async (req, res) => {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
     if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
-      return res.status(400).json({ error: 'Evolution API not configured or instance not created' });
+      return res.status(200).json({ state: 'not_created' });
     }
 
     const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
-    const result = await evo.getStatus(tenant.whatsappInstanceId);
-    res.json(result);
+    try {
+      const result = await evo.getStatus(tenant.whatsappInstanceId);
+      res.json(result);
+    } catch (apiError: any) {
+      // If instance doesn't exist in Evolution API, return not_created instead of 500
+      if (apiError.response?.status === 404) {
+        return res.status(200).json({ state: 'not_created' });
+      }
+      throw apiError;
+    }
   } catch (error: any) {
-    console.error('Error in /instance/status:', error);
-    res.status(error.response?.status || 500).json({ 
-      error: error.response?.data?.error || 'Failed to get instance status' 
-    });
+    console.error('Error in /instance/status:', error.message);
+    res.status(200).json({ state: 'error', message: error.message });
   }
 });
 

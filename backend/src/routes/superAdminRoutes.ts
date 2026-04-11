@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
-import { createTenant, listTenants } from '../controllers/superAdminController';
+import { createTenant, listTenants, deleteTenant, updateTenant } from '../controllers/superAdminController';
 
 const router = Router();
 
@@ -18,5 +18,7 @@ router.use(checkSuperAdmin);
 
 router.post('/tenants', createTenant);
 router.get('/tenants', listTenants);
+router.patch('/tenants/:id', updateTenant);
+router.delete('/tenants/:id', deleteTenant);
 
 export default router;

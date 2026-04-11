@@ -28,20 +28,17 @@ describe('Metrics Controller', () => {
   });
 
   it('should return dashboard stats for the tenant', async () => {
-    const mockTotal = [{ count: 10 }];
-    const mockPending = [{ count: 3 }];
+    const mockSummary = [{ total: 10, pending: 3 }];
     const mockCategoryStats = [{ name: 'saude', value: 7 }, { name: 'educacao', value: 3 }];
-    const mockDailyStats = [{ date: '10/04', count: 5 }, { date: '09/04', count: 5 }];
+    const mockDailyStats = [
+      { date: '10/04', count: 5, day: '2024-04-10' },
+      { date: '09/04', count: 5, day: '2024-04-09' }
+    ];
 
     // Fluent mock for Drizzle
-    const chainTotal = {
+    const chainSummary = {
       from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue(mockTotal),
-    };
-    
-    const chainPending = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue(mockPending),
+      where: vi.fn().mockResolvedValue(mockSummary),
     };
 
     const chainCategory = {
@@ -59,8 +56,7 @@ describe('Metrics Controller', () => {
     };
 
     (db.select as any)
-      .mockReturnValueOnce(chainTotal)
-      .mockReturnValueOnce(chainPending)
+      .mockReturnValueOnce(chainSummary)
       .mockReturnValueOnce(chainCategory)
       .mockReturnValueOnce(chainDaily);
 

@@ -9,6 +9,7 @@ import metricsRoutes from './routes/metricsRoutes';
 import configRoutes from './routes/configRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
 import knowledgeRoutes from './routes/knowledgeRoutes';
+import kanbanRoutes from './routes/kanbanRoutes';
 import teamRoutes from './routes/teamRoutes';
 import profileRoutes from './routes/profileRoutes';
 import mapRoutes from './routes/mapRoutes';

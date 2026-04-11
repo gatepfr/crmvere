@@ -1,11 +1,51 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { campaigns, campaignColumns, leads } from '../db/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { campaigns, campaignColumns, leads, demandas, municipes } from '../db/schema';
+import { eq, and, asc, notInArray, sql } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
 router.use(authenticate);
+
+// Get Demands not yet in Kanban
+router.get('/pending-demands', async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  try {
+    // Subquery to get municipeIds already in leads for this tenant
+    const existingLeads = await db.select({ id: leads.municipeId })
+      .from(leads)
+      .where(eq(leads.tenantId, tenantId));
+    
+    const excludedIds = existingLeads.map(l => l.id).filter(Boolean) as string[];
+
+    let query = db.select({
+      id: demandas.id,
+      resumoIa: demandas.resumoIa,
+      categoria: demandas.categoria,
+      createdAt: demandas.createdAt,
+      municipe: {
+        id: municipes.id,
+        name: municipes.name,
+        phone: municipes.phone
+      }
+    })
+    .from(demandas)
+    .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
+    .where(eq(demandas.tenantId, tenantId));
+
+    if (excludedIds.length > 0) {
+      query = query.where(notInArray(demandas.municipeId, excludedIds));
+    }
+
+    const list = await query.orderBy(asc(demandas.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error('Failed to fetch pending demands:', error);
+    res.status(500).json({ error: 'Failed to fetch pending demands' });
+  }
+});
 
 // List Campaigns
 router.get('/campaigns', async (req, res) => {
@@ -73,7 +113,7 @@ router.get('/boards/:campaignId', async (req, res) => {
 router.post('/campaigns/:campaignId/leads', async (req, res) => {
   const tenantId = req.user?.tenantId;
   const { campaignId } = req.params;
-  const { name, email, phone, notes } = req.body;
+  const { name, email, phone, notes, municipeId } = req.body;
   
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
@@ -90,11 +130,13 @@ router.post('/campaigns/:campaignId/leads', async (req, res) => {
       name,
       email,
       phone,
-      notes
+      notes,
+      municipeId // Link to municipe if provided
     }).returning();
 
     res.status(201).json(newLead);
   } catch (error) {
+    console.error('Error adding lead:', error);
     res.status(500).json({ error: 'Failed to add lead' });
   }
 });
@@ -117,6 +159,59 @@ router.patch('/leads/:id/move', async (req, res) => {
     res.json(updatedLead);
   } catch (error) {
     res.status(500).json({ error: 'Failed to move lead' });
+  }
+});
+
+// Add Column to Campaign
+router.post('/campaigns/:campaignId/columns', async (req, res) => {
+  const { campaignId } = req.params;
+  const { name } = req.body;
+
+  try {
+    const [lastCol] = await db.select().from(campaignColumns).where(eq(campaignColumns.campaignId, campaignId)).orderBy(asc(campaignColumns.order)).limit(1);
+    const order = lastCol ? lastCol.order + 1 : 0;
+
+    const [newCol] = await db.insert(campaignColumns).values({
+      campaignId,
+      name,
+      order
+    }).returning();
+
+    res.status(201).json(newCol);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add column' });
+  }
+});
+
+// Delete Column
+router.delete('/columns/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.delete(campaignColumns).where(eq(campaignColumns.id, id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete column' });
+  }
+});
+
+// Delete Lead
+router.delete('/leads/:id', async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { id } = req.params;
+  
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  try {
+    await db.delete(leads).where(
+      and(
+        eq(leads.id, id), 
+        eq(leads.tenantId, tenantId)
+      )
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting lead:', error);
+    res.status(500).json({ error: 'Failed to delete lead' });
   }
 });
 

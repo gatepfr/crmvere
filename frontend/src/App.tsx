@@ -7,6 +7,8 @@ import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
 import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
 import KnowledgeBase from './pages/Dashboard/KnowledgeBase';
+import CabinetConfig from './pages/Dashboard/CabinetConfig';
+import KanbanLeads from './pages/Dashboard/KanbanLeads';
 import Team from './pages/Dashboard/Team';
 import Profile from './pages/Dashboard/Profile';
 import VoterMap from './pages/Dashboard/VoterMap';
@@ -16,8 +18,10 @@ function DashboardLayout() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="flex-1 ml-64 p-10 bg-slate-50 min-h-screen">
-        <Outlet />
+      <main className="flex-1 lg:ml-64 p-4 lg:p-10 bg-slate-50 min-h-screen">
+        <div className="mt-14 lg:mt-0">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
@@ -65,6 +69,8 @@ function AppContent() {
           <Route index element={<DashboardHome />} />
           <Route path="demands" element={<Demands />} />
           <Route path="map" element={<VoterMap />} />
+          <Route path="cabinet" element={<CabinetConfig />} />
+          <Route path="kanban" element={<KanbanLeads />} />
           <Route path="whatsapp" element={<WhatsAppConfig />} />
           <Route path="ai" element={<AIConfig />} />
           <Route path="knowledge" element={<KnowledgeBase />} />

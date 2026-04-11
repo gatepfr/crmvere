@@ -5,13 +5,16 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "dev": "nodemon src/app.ts"
+    "dev": "nodemon src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
     "@google/generative-ai": "^0.24.1",
     "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
@@ -21,7 +24,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "pdf-parse": "^2.4.5",
+    "openai": "^6.34.0",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.20.0"
   },
   "devDependencies": {

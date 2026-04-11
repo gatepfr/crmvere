@@ -68,6 +68,7 @@ describe('Team Routes', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.email).toBe('new@test.com');
+      expect(response.body).not.toHaveProperty('passwordHash');
     });
 
     it('should return 403 if user is assessor', async () => {
@@ -103,6 +104,17 @@ describe('Team Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Cannot delete yourself');
+    });
+
+    it('should return 403 if user is assessor', async () => {
+      const assessorToken = jwt.sign({ id: 'assessor-123', tenantId: mockTenantId, role: 'assessor' }, process.env.JWT_SECRET || 'secret');
+      
+      const response = await request(app)
+        .delete('/api/team/member-to-delete')
+        .set('Authorization', `Bearer ${assessorToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('Only admins can remove members');
     });
   });
 });

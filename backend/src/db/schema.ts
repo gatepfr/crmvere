@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, timestamp, pgEnum, boolean, integer } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["super_admin", "admin", "vereador", "assessor"]);
-export const aiProviderEnum = pgEnum("ai_provider", ["gemini", "openai", "anthropic", "groq"]);
+export const aiProviderEnum = pgEnum("ai_provider", ["gemini", "openai", "anthropic", "groq", "custom", "openrouter"]);
 
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -11,7 +11,8 @@ export const tenants = pgTable("tenants", {
   aiProvider: aiProviderEnum("ai_provider").default("gemini"),
   aiApiKey: varchar("ai_api_key", { length: 500 }),
   aiModel: varchar("ai_model", { length: 100 }),
-  systemPrompt: varchar("system_prompt", { length: 2000 }),
+  aiBaseUrl: varchar("ai_base_url", { length: 500 }),
+  systemPrompt: varchar("system_prompt", { length: 10000 }),
   whatsappInstanceId: varchar("whatsapp_instance_id", { length: 255 }),
   whatsappToken: varchar("whatsapp_token", { length: 255 }),
   evolutionApiUrl: varchar("evolution_api_url", { length: 255 }),

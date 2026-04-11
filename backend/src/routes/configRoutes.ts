@@ -19,9 +19,34 @@ router.patch('/update', async (req, res) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   
-  const { name, geminiApiKey, aiModel, systemPrompt } = req.body;
+  const { 
+    name, 
+    aiProvider, 
+    aiApiKey, 
+    aiModel, 
+    aiBaseUrl,
+    systemPrompt,
+    municipio,
+    uf,
+    partido,
+    mandato,
+    fotoUrl
+  } = req.body;
+
   await db.update(tenants)
-    .set({ name, geminiApiKey, aiModel, systemPrompt })
+    .set({ 
+      name, 
+      aiProvider, 
+      aiApiKey, 
+      aiModel, 
+      aiBaseUrl,
+      systemPrompt,
+      municipio,
+      uf,
+      partido,
+      mandato,
+      fotoUrl
+    })
     .where(eq(tenants.id, tenantId));
     
   res.json({ success: true });
