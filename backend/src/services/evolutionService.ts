@@ -37,6 +37,16 @@ export class EvolutionService {
     return response.data;
   }
 
+  async logoutInstance(instanceName: string) {
+    const response = await this.client.delete(`/instance/logout/${instanceName}`);
+    return response.data;
+  }
+
+  async deleteInstance(instanceName: string) {
+    const response = await this.client.delete(`/instance/delete/${instanceName}`);
+    return response.data;
+  }
+
   async setWebhook(instanceName: string, webhookUrl: string) {
     await this.client.post(`/webhook/set/${instanceName}`, {
       webhook: {

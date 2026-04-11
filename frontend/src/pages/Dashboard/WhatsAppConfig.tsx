@@ -137,6 +137,24 @@ export default function WhatsAppConfig() {
     }
   };
 
+  const handleLogout = async () => {
+    if (!confirm('Deseja realmente desconectar este WhatsApp? Você precisará ler o QR Code novamente para conectar.')) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post('/whatsapp/instance/logout');
+      setStatus(null);
+      setQrCode(null);
+      alert('WhatsApp desconectado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao deslogar:', err);
+      setError('Falha ao desconectar o WhatsApp.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const isConnected = status?.state === 'open' || status?.status === 'CONNECTED';
 
   if (fetching) {
@@ -247,6 +265,16 @@ export default function WhatsAppConfig() {
                   >
                     <RefreshCw className="w-3 h-3" />
                     Atualizar Status
+                  </button>
+                </div>
+                <div className="pt-8 border-t border-slate-100 w-full max-w-xs">
+                  <button 
+                    onClick={handleLogout}
+                    disabled={loading}
+                    className="text-red-500 hover:text-red-700 text-sm font-bold flex items-center gap-2 mx-auto transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Desconectar este WhatsApp
                   </button>
                 </div>
               </div>

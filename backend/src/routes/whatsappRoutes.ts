@@ -126,4 +126,35 @@ router.get('/instance/status', async (req, res) => {
   }
 });
 
+router.post('/instance/logout', async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    
+    if (tenant?.whatsappInstanceId) {
+      const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
+      const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
+      const evo = new EvolutionService(evolutionApiUrl, evolutionGlobalToken);
+      
+      try {
+        await evo.deleteInstance(tenant.whatsappInstanceId);
+      } catch (e) {
+        console.error('Error deleting instance on logout:', e);
+      }
+    }
+
+    await db.update(tenants).set({ 
+      whatsappInstanceId: null,
+      whatsappToken: null
+    }).where(eq(tenants.id, tenantId));
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error in /instance/logout:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
