@@ -8,6 +8,7 @@ interface WhatsAppStatus {
 }
 
 export default function WhatsAppConfig() {
+  const { user } = useAuth();
   const [config, setConfig] = useState({ evolutionApiUrl: '', evolutionGlobalToken: '' });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
