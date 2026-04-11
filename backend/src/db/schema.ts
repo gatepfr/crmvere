@@ -54,3 +54,15 @@ export const demandas = pgTable("demandas", {
   resumoIa: varchar("resumo_ia", { length: 1000 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const documents = pgTable("documents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileType: varchar("file_type", { length: 100 }).notNull(),
+  textContent: varchar("text_content", { length: 10000 }), // Store extracted text
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

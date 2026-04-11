@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { normalizeEvolution } from '../services/whatsappService';
 import { db } from '../db';
-import { tenants, municipes, demandas } from '../db/schema';
+import { tenants, municipes, demandas, documents } from '../db/schema';
 import { processDemand } from '../services/aiService';
 import { eq, and } from 'drizzle-orm';
 
@@ -30,8 +30,13 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
         )
       );
     
-    // Fetch tenant config for AI
+    // Fetch tenant config and knowledge base
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    const tenantDocs = await db.select().from(documents).where(eq(documents.tenantId, tenantId));
+    
+    const knowledgeBaseContent = tenantDocs
+      .map(doc => `--- DOCUMENTO: ${doc.fileName} ---\n${doc.textContent}`)
+      .join('\n\n');
 
     // 2. Create a new citizen if not found
     if (!municipe) {
@@ -45,12 +50,12 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
       municipe = newMunicipe;
     }
 
-    // 3. Call processDemand (AI Service) with the message text and tenant config
+    // 3. Call processDemand (AI Service) with the message text, tenant config and RAG content
     const aiResult = await processDemand(normalized.text, {
       apiKey: tenant?.geminiApiKey || process.env.GEMINI_API_KEY || '',
       model: tenant?.aiModel || 'gemini-1.5-flash',
       systemPrompt: tenant?.systemPrompt || ''
-    });
+    }, undefined, knowledgeBaseContent);
 
     // 4. If AI processing succeeds, insert a new demanda linked to the citizen and tenant
     if (aiResult && municipe) {

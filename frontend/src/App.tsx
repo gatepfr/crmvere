@@ -6,6 +6,7 @@ import Demands from './pages/Dashboard/Demands';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
 import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
+import KnowledgeBase from './pages/Dashboard/KnowledgeBase';
 import Sidebar from './components/Sidebar';
 
 function DashboardLayout() {
@@ -62,7 +63,7 @@ function AppContent() {
           <Route path="demands" element={<Demands />} />
           <Route path="whatsapp" element={<WhatsAppConfig />} />
           <Route path="ai" element={<AIConfig />} />
-          <Route path="knowledge" element={<div>Base de Dados (Em breve)</div>} />
+          <Route path="knowledge" element={<KnowledgeBase />} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>

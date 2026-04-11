@@ -8,6 +8,7 @@ import demandRoutes from './routes/demandRoutes';
 import metricsRoutes from './routes/metricsRoutes';
 import configRoutes from './routes/configRoutes';
 import whatsappRoutes from './routes/whatsappRoutes';
+import knowledgeRoutes from './routes/knowledgeRoutes';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/demands', demandRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/knowledge', knowledgeRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {

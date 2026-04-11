@@ -14,12 +14,14 @@ export interface AIDemandResult {
  * @param messageText Texto da mensagem do cidadão
  * @param config Configurações do Gemini para o tenant
  * @param context Contexto adicional (ex: histórico de conversa)
+ * @param knowledgeBaseContent Conteúdo extraído dos documentos da base de conhecimento
  * @returns Promessa com o resultado estruturado
  */
 export async function processDemand(
   messageText: string, 
   config: { apiKey: string, model: string, systemPrompt: string },
-  context?: string
+  context?: string,
+  knowledgeBaseContent?: string
 ): Promise<AIDemandResult> {
   const genAI = new GoogleGenerativeAI(config.apiKey);
   const model = genAI.getGenerativeModel({ model: config.model });
@@ -27,6 +29,9 @@ export async function processDemand(
   const prompt = `
     ${config.systemPrompt || 'Você é um assistente de IA para um vereador. Sua tarefa é analisar a mensagem de um cidadão e extrair informações úteis para o gabinete.'}
     
+    BASE DE CONHECIMENTO (Use estas informações para contextualizar sua resposta se necessário):
+    ${knowledgeBaseContent || 'Nenhuma informação adicional disponível.'}
+
     Contexto adicional da conversa: ${context || 'Nenhum'}
     Mensagem do cidadão: ${messageText}
 
