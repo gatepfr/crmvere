@@ -55,7 +55,7 @@ export const listTenants = async (_req: Request, res: Response) => {
 };
 
 export const updateTenant = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { name, slug, active } = req.body;
   
   try {
@@ -72,7 +72,7 @@ export const updateTenant = async (req: Request, res: Response) => {
 };
 
 export const deleteTenant = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   
   try {
     await db.transaction(async (tx) => {

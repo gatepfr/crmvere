@@ -23,11 +23,18 @@ vi.mock('@google/generative-ai', () => {
 });
 
 describe('aiService', () => {
+  const config = {
+    provider: 'gemini' as const,
+    apiKey: 'test-key',
+    model: 'gemini-1.5-flash',
+    systemPrompt: 'Test personality'
+  };
+
   it('should process citizen message and return structured JSON', async () => {
     const message = "Gostaria de marcar uma consulta na UBS";
     const context = "O cidadão está com dor de cabeça";
     
-    const result = await processDemand(message, context);
+    const result = await processDemand(message, config, context);
     
     expect(result).toEqual({
       categoria: "saude",
@@ -49,6 +56,6 @@ describe('aiService', () => {
       }
     });
 
-    await expect(processDemand("test", "context")).rejects.toThrow("Falha ao processar resposta da IA: Formato inválido");
+    await expect(processDemand("test", config, "context")).rejects.toThrow("Falha ao processar resposta da IA: Formato inválido");
   });
 });

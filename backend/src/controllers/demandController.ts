@@ -30,7 +30,7 @@ export const listDemands = async (req: Request, res: Response) => {
 };
 
 export const getDemand = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const tenantId = req.user?.tenantId;
 
   try {
@@ -55,7 +55,7 @@ export const getDemand = async (req: Request, res: Response) => {
 };
 
 export const updateStatus = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { status } = req.body;
   const tenantId = req.user?.tenantId;
 
@@ -71,7 +71,7 @@ export const updateStatus = async (req: Request, res: Response) => {
 };
 
 export const updateMunicipe = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { name, phone, bairro } = req.body;
   const tenantId = req.user?.tenantId;
 
@@ -88,7 +88,7 @@ export const updateMunicipe = async (req: Request, res: Response) => {
 };
 
 export const deleteMunicipe = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const tenantId = req.user?.tenantId;
 
   try {

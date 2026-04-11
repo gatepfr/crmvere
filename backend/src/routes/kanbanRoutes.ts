@@ -20,7 +20,12 @@ router.get('/pending-demands', async (req, res) => {
     
     const excludedIds = existingLeads.map(l => l.id).filter(Boolean) as string[];
 
-    let query = db.select({
+    const whereConditions = [eq(demandas.tenantId, tenantId)];
+    if (excludedIds.length > 0) {
+      whereConditions.push(notInArray(demandas.municipeId, excludedIds));
+    }
+
+    const list = await db.select({
       id: demandas.id,
       resumoIa: demandas.resumoIa,
       categoria: demandas.categoria,
@@ -33,13 +38,9 @@ router.get('/pending-demands', async (req, res) => {
     })
     .from(demandas)
     .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
-    .where(eq(demandas.tenantId, tenantId));
-
-    if (excludedIds.length > 0) {
-      query = query.where(notInArray(demandas.municipeId, excludedIds));
-    }
-
-    const list = await query.orderBy(asc(demandas.createdAt));
+    .where(and(...whereConditions))
+    .orderBy(asc(demandas.createdAt));
+    
     res.json(list);
   } catch (error) {
     console.error('Failed to fetch pending demands:', error);
