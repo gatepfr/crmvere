@@ -1,10 +1,38 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell,
+  AreaChart,
+  Area
+} from 'recharts';
+import { FileText, Clock, TrendingUp, BarChart2 } from 'lucide-react';
+
+interface MetricsData {
+  summary: {
+    total: number;
+    pending: number;
+  };
+  categoryStats: {
+    name: string | null;
+    value: number;
+  }[];
+  dailyStats: {
+    date: string;
+    count: number;
+  }[];
+}
 
 export default function DashboardHome() {
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,106 +53,136 @@ export default function DashboardHome() {
 
   if (!metrics) return <div className="p-8">Falha ao carregar métricas.</div>;
 
-  const COLORS = ['#3B82F6', '#F59E0B', '#10B981', '#EF4444'];
-
-  const getStatusCount = (status: string) => {
-    return metrics.byStatus.find((s: any) => s.status === status)?.count || 0;
-  };
+  const COLORS = ['#2563eb', '#4f46e5', '#7c3aed', '#c026d3', '#db2777'];
 
   return (
     <div className="space-y-10">
       <header>
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard de Gestão</h1>
-        <p className="text-slate-500">Visão geral do gabinete e demandas do WhatsApp.</p>
+        <p className="text-slate-500">Métricas reais extraídas do banco de dados.</p>
       </header>
       
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><FileText size={24} /></div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Total Demandas</p>
-            <p className="text-2xl font-bold text-slate-900">{metrics.total}</p>
+            <p className="text-sm text-slate-500 font-medium">Total de Demandas</p>
+            <p className="text-2xl font-bold text-slate-900">{metrics.summary.total}</p>
           </div>
         </div>
         
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><AlertCircle size={24} /></div>
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Clock size={24} /></div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Novas</p>
-            <p className="text-2xl font-bold text-slate-900">{getStatusCount('nova')}</p>
+            <p className="text-sm text-slate-500 font-medium">Demandas Novas</p>
+            <p className="text-2xl font-bold text-slate-900">{metrics.summary.pending}</p>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Clock size={24} /></div>
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><TrendingUp size={24} /></div>
           <div>
-            <p className="text-sm text-slate-500 font-medium">Em Andamento</p>
-            <p className="text-2xl font-bold text-slate-900">{getStatusCount('em_andamento')}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><CheckCircle size={24} /></div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Concluídas</p>
-            <p className="text-2xl font-bold text-slate-900">{getStatusCount('concluida')}</p>
+            <p className="text-sm text-slate-500 font-medium">Últimos 7 Dias</p>
+            <p className="text-2xl font-bold text-slate-900">
+              {metrics.dailyStats.reduce((acc, curr) => acc + curr.count, 0)}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Categories Bar Chart */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold mb-6 text-slate-800">Demandas por Categoria</h3>
-          <div className="h-72">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Daily Activity Line Chart */}
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-slate-800">Atividade Diária</h3>
+            <div className="p-2 bg-slate-50 rounded-lg text-slate-400"><BarChart2 size={18} /></div>
+          </div>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.byCategory}>
+              <AreaChart data={metrics.dailyStats}>
+                <defs>
+                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="categoria" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  cursor={{fill: '#f8fafc'}}
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#64748b', fontSize: 12}} 
+                  dy={10}
                 />
-                <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#64748b', fontSize: 12}} 
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                    padding: '12px'
+                  }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="count" 
+                  stroke="#2563eb" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorCount)" 
+                  animationDuration={1500}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Status Pie Chart */}
+        {/* Category Pie Chart */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold mb-6 text-slate-800">Distribuição por Status</h3>
-          <div className="h-72">
+          <h3 className="text-lg font-bold mb-6 text-slate-800">Principais Categorias</h3>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie 
-                  data={metrics.byStatus} 
-                  dataKey="count" 
-                  nameKey="status" 
+                  data={metrics.categoryStats} 
+                  dataKey="value" 
+                  nameKey="name" 
                   cx="50%" 
                   cy="50%" 
-                  outerRadius={100} 
+                  outerRadius={80} 
                   innerRadius={60}
-                  labelLine={false}
-                  label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
+                  stroke="none"
+                  paddingAngle={5}
                 >
-                  {metrics.byStatus.map((_entry: any, index: number) => (
+                  {metrics.categoryStats.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' 
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-4 flex justify-center flex-wrap gap-4">
-            {metrics.byStatus.map((s: any, index: number) => (
-              <div key={s.status} className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                <span className="text-xs font-medium text-slate-500 capitalize">{s.status.replace('_', ' ')}</span>
+          <div className="mt-8 space-y-3">
+            {metrics.categoryStats.slice(0, 5).map((c, index) => (
+              <div key={c.name || 'unnamed'} className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                  <span className="text-xs font-medium text-slate-600 truncate max-w-[120px]">
+                    {c.name || 'Sem Categoria'}
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-slate-900">{c.value}</span>
               </div>
             ))}
           </div>
@@ -133,3 +191,4 @@ export default function DashboardHome() {
     </div>
   );
 }
+
