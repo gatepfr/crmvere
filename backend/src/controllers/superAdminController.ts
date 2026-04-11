@@ -1,8 +1,46 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { tenants, users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { tenants, users, demandas, municipes } from '../db/schema';
+import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+
+export const getSystemStats = async (_req: Request, res: Response) => {
+  try {
+    const [tenantsCount] = await db.select({ count: sql<number>`count(*)` }).from(tenants);
+    const [usersCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [demandasCount] = await db.select({ count: sql<number>`count(*)` }).from(demandas);
+    const [municipesCount] = await db.select({ count: sql<number>`count(*)` }).from(municipes);
+
+    res.status(200).json({
+      tenants: Number(tenantsCount?.count || 0),
+      users: Number(usersCount?.count || 0),
+      demandas: Number(demandasCount?.count || 0),
+      municipes: Number(municipesCount?.count || 0)
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch system stats' });
+  }
+};
+
+export const listAllUsers = async (_req: Request, res: Response) => {
+  try {
+    const allUsers = await db.select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      tenantId: users.tenantId,
+      createdAt: users.createdAt,
+      tenantName: tenants.name
+    })
+    .from(users)
+    .leftJoin(tenants, eq(users.tenantId, tenants.id))
+    .where(sql`${users.role} != 'super_admin'`);
+
+    res.status(200).json(allUsers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to list all users' });
+  }
+};
 
 export const createTenant = async (req: Request, res: Response) => {
   const { name, slug, email } = req.body;

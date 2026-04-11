@@ -43,10 +43,10 @@ router.post('/instance/create', async (req, res) => {
       return res.status(400).json({ error: 'Evolution API credentials not configured' });
     }
 
-    const evo = new EvolutionService(
-      tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', 
-      tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123'
-    );
+    const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
+    const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
+
+    const evo = new EvolutionService(evolutionApiUrl, evolutionGlobalToken);
     
     // Create new instance without prior deletion to simplify
     const result = await evo.createInstance(tenant.slug);
