@@ -3,6 +3,53 @@ import { db } from '../db';
 import { demandas, municipes } from '../db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 
+export const createDemand = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const { municipeName, municipePhone, municipeBairro, categoria, prioridade, resumoIa } = req.body;
+
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      // 1. Find or create citizen
+      let [municipe] = await tx.select()
+        .from(municipes)
+        .where(and(eq(municipes.phone, municipePhone), eq(municipes.tenantId, tenantId)));
+
+      if (!municipe) {
+        const [newMunicipe] = await tx.insert(municipes)
+          .values({
+            tenantId,
+            name: municipeName,
+            phone: municipePhone,
+            bairro: municipeBairro
+          })
+          .returning();
+        municipe = newMunicipe;
+      }
+
+      // 2. Create demand
+      const [newDemand] = await tx.insert(demandas)
+        .values({
+          tenantId,
+          municipeId: municipe.id,
+          categoria: categoria || 'outro',
+          prioridade: prioridade || 'media',
+          resumoIa: resumoIa,
+          status: 'nova'
+        })
+        .returning();
+
+      return { demand: newDemand, municipe };
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error creating manual demand:', error);
+    res.status(500).json({ error: 'Failed to create demand' });
+  }
+};
+
 export const listDemands = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   

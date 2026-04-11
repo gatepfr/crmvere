@@ -29,7 +29,9 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     phone: demand.municipes.phone,
     bairro: demand.municipes.bairro || ''
   });
+  const [resumoIa, setResumoIa] = useState(demand.demandas.resumoIa);
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingResumo, setIsEditingResumo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [moving, setMoving] = useState(false);
@@ -50,6 +52,21 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
       alert('Dados atualizados!');
     } catch (err) {
       alert('Falha ao atualizar dados do munícipe.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateResumo = async () => {
+    setLoading(true);
+    try {
+      // We need a route to update demand summary, let's use a generic patch for demands
+      await api.patch(`/demands/${demand.demandas.id}/status`, { resumoIa });
+      setIsEditingResumo(false);
+      onUpdate();
+      alert('Resumo atualizado!');
+    } catch (err) {
+      alert('Falha ao atualizar resumo.');
     } finally {
       setLoading(false);
     }
@@ -100,6 +117,17 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     }
   };
 
+  // Helper to format bold text from markdown-like syntax (**text**)
+  const formatText = (text: string) => {
+    if (!text) return '';
+    return text.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="text-slate-900">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   if (!demand) return null;
 
   return (
@@ -131,7 +159,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                   <h4 className="text-xl font-bold text-slate-900 leading-tight">
                     {isEditing ? (
                       <input 
-                        className="bg-white border border-blue-200 rounded px-2 py-1 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="bg-white border border-blue-200 rounded px-2 py-1 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                         value={municipe.name}
                         onChange={e => setMunicipe({...municipe, name: e.target.value})}
                       />
@@ -172,7 +200,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                 <Phone size={14} className="mr-2 text-slate-400" />
                 {isEditing ? (
                   <input 
-                    className="bg-white border border-blue-200 rounded px-2 py-1 text-xs focus:outline-none"
+                    className="bg-white border border-blue-200 rounded px-2 py-1 text-xs focus:outline-none w-full"
                     value={municipe.phone}
                     onChange={e => setMunicipe({...municipe, phone: e.target.value})}
                   />
@@ -182,7 +210,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                 <MapIcon size={14} className="mr-2 text-slate-400" />
                 {isEditing ? (
                   <input 
-                    className="bg-white border border-blue-200 rounded px-2 py-1 text-xs focus:outline-none"
+                    className="bg-white border border-blue-200 rounded px-2 py-1 text-xs focus:outline-none w-full"
                     value={municipe.bairro}
                     onChange={e => setMunicipe({...municipe, bairro: e.target.value})}
                     placeholder="Bairro"
@@ -192,14 +220,32 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
             </div>
           </div>
 
-          {/* AI Summary */}
+          {/* AI Summary / Resumo */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-slate-800 font-bold">
-              <MessageSquare size={18} className="text-blue-600" />
-              <h4>Resumo da IA</h4>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 text-slate-800 font-bold">
+                <MessageSquare size={18} className="text-blue-600" />
+                <h4>Resumo e Contexto</h4>
+              </div>
+              {isEditingResumo ? (
+                <button onClick={handleUpdateResumo} className="text-xs font-black text-green-600 uppercase tracking-widest hover:text-green-700">Salvar Alterações</button>
+              ) : (
+                <button onClick={() => setIsEditingResumo(true)} className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-blue-600">Editar Resumo</button>
+              )}
             </div>
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 leading-relaxed italic">
-              "{demand.demandas.resumoIa}"
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 leading-relaxed min-h-[100px]">
+              {isEditingResumo ? (
+                <textarea 
+                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  rows={6}
+                  value={resumoIa}
+                  onChange={e => setResumoIa(e.target.value)}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap font-medium">
+                  {formatText(resumoIa)}
+                </div>
+              )}
             </div>
           </div>
 

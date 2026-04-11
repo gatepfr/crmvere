@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import api from '../../api/client';
 import DemandModal from '../../components/DemandModal';
-import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import NewDemandModal from '../../components/NewDemandModal';
+import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown, Plus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -26,6 +27,7 @@ export default function Demands() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
+  const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('date');
@@ -165,10 +167,17 @@ export default function Demands() {
             <ClipboardList className="mr-3 h-8 w-8 text-blue-600" />
             Fila de Demandas
           </h1>
-          <p className="text-slate-500 mt-1">Gerencie e responda as solicitações recebidas via WhatsApp.</p>
+          <p className="text-slate-500 mt-1">Gerencie e responda as solicitações recebidas via WhatsApp ou manualmente.</p>
         </div>
         
         <div className="flex gap-3 w-full md:w-auto">
+          <button 
+            onClick={() => setIsNewDemandModalOpen(true)}
+            className="flex-1 md:flex-none flex items-center justify-center px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Nova Demanda
+          </button>
           <button 
             onClick={exportCSV}
             className="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all shadow-sm"
@@ -221,7 +230,7 @@ export default function Demands() {
             {sortedDemands.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
-                  Nenhuma demanda recebida via WhatsApp ainda.
+                  Nenhuma demanda recebida ainda.
                 </td>
               </tr>
             ) : (
@@ -271,6 +280,13 @@ export default function Demands() {
         <DemandModal 
           demand={selectedDemand} 
           onClose={() => setSelectedDemand(null)} 
+          onUpdate={fetchDemands} 
+        />
+      )}
+
+      {isNewDemandModalOpen && (
+        <NewDemandModal 
+          onClose={() => setIsNewDemandModalOpen(false)} 
           onUpdate={fetchDemands} 
         />
       )}

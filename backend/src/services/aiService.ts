@@ -55,7 +55,7 @@ export async function processDemand(
     {
       "categoria": "saude" | "infraestrutura" | "seguranca" | "educacao" | "outro",
       "subcategoria": "2 ou 3 palavras sobre o tema",
-      "resumo_ia": "Um resumo técnico e conciso da demanda para o painel de controle.",
+      "resumo_ia": "Um resumo detalhado e organizado. Use tópicos (•) e negrito (**) para destacar pontos chave como: **Assunto**, **Localização**, **Urgência**.",
       "prioridade": "baixa" | "media" | "alta" | "urgente",
       "acao_sugerida": "ação recomendada para o gabinete",
       "precisa_retorno": true | false,

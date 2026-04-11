@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { checkTenant } from '../middleware/tenant';
-import { listDemands, getDemand, updateStatus, updateMunicipe, deleteMunicipe } from '../controllers/demandController';
+import { listDemands, getDemand, updateStatus, updateMunicipe, deleteMunicipe, createDemand } from '../controllers/demandController';
 
 const router = Router();
 
@@ -9,6 +9,7 @@ router.use(authenticate);
 router.use(checkTenant);
 
 router.get('/', listDemands);
+router.post('/', createDemand);
 router.get('/:id', getDemand);
 router.patch('/:id/status', updateStatus);
 router.patch('/municipe/:id', updateMunicipe);
