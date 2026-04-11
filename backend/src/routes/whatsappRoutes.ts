@@ -43,21 +43,27 @@ router.post('/instance/create', async (req, res) => {
       return res.status(400).json({ error: 'Evolution API credentials not configured' });
     }
 
-    const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+    const evo = new EvolutionService(
+      tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', 
+      tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123'
+    );
     
     // Create new instance without prior deletion to simplify
     const result = await evo.createInstance(tenant.slug);
     
-    const token = result.instance?.token || result.hash || 'token_not_found';
+    const token = result.hash?.apikey || result.instance?.token || 'token_not_found';
 
     await db.update(tenants).set({ 
       whatsappInstanceId: tenant.slug,
       whatsappToken: token
     }).where(eq(tenants.id, tenantId));
 
-    // Async webhook setup so it doesn't block the response
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:3001';
-    evo.setWebhook(tenant.slug, `${backendUrl}/api/webhook/evolution/${tenantId}`)
+    // Webhook setup
+    const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
+    const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenantId}`;
+    console.log(`[WHATSAPP] Setting webhook for ${tenant.slug} to ${webhookUrl}`);
+    
+    evo.setWebhook(tenant.slug, webhookUrl)
       .catch(e => console.error('Silent Webhook Error:', e.message));
 
     res.json(result);

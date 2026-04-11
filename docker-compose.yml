@@ -64,6 +64,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-supersecret}
       - WA_API_KEY=${WA_API_KEY:-mestre123}
       - EVOLUTION_API_URL=https://wa.crmvere.com.br
+      - BACKEND_URL=https://api.crmvere.com.br
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
