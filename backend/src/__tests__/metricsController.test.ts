@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getMetrics } from '../controllers/metricsController';
+import { getDashboardStats } from '../controllers/metricsController';
 import { db } from '../db';
 
 vi.mock('../db', () => ({
@@ -27,10 +27,11 @@ describe('Metrics Controller', () => {
     };
   });
 
-  it('should return metrics for the tenant', async () => {
+  it('should return dashboard stats for the tenant', async () => {
     const mockTotal = [{ count: 10 }];
-    const mockByStatus = [{ status: 'nova', count: 5 }, { status: 'concluida', count: 5 }];
-    const mockByCategory = [{ categoria: 'saude', count: 7 }, { categoria: 'educacao', count: 3 }];
+    const mockPending = [{ count: 3 }];
+    const mockCategoryStats = [{ name: 'saude', value: 7 }, { name: 'educacao', value: 3 }];
+    const mockDailyStats = [{ date: '10/04', count: 5 }, { date: '09/04', count: 5 }];
 
     // Fluent mock for Drizzle
     const chainTotal = {
@@ -38,35 +39,46 @@ describe('Metrics Controller', () => {
       where: vi.fn().mockResolvedValue(mockTotal),
     };
     
-    const chainStatus = {
+    const chainPending = {
       from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockResolvedValue(mockByStatus),
+      where: vi.fn().mockResolvedValue(mockPending),
     };
 
     const chainCategory = {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockResolvedValue(mockByCategory),
+      groupBy: vi.fn().mockResolvedValue(mockCategoryStats),
+    };
+
+    const chainDaily = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue(mockDailyStats),
     };
 
     (db.select as any)
       .mockReturnValueOnce(chainTotal)
-      .mockReturnValueOnce(chainStatus)
-      .mockReturnValueOnce(chainCategory);
+      .mockReturnValueOnce(chainPending)
+      .mockReturnValueOnce(chainCategory)
+      .mockReturnValueOnce(chainDaily);
 
-    await getMetrics(req, res);
+    await getDashboardStats(req, res);
 
     expect(res.json).toHaveBeenCalledWith({
-      total: 10,
-      byStatus: mockByStatus,
-      byCategory: mockByCategory,
+      summary: { total: 10, pending: 3 },
+      categoryStats: mockCategoryStats,
+      dailyStats: [
+        { date: '09/04', count: 5 },
+        { date: '10/04', count: 5 }
+      ],
     });
   });
 
   it('should return 403 if tenantId is missing', async () => {
     req.user.tenantId = undefined;
-    await getMetrics(req, res);
+    await getDashboardStats(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith({ error: 'No tenant context' });
   });
