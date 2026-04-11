@@ -61,8 +61,9 @@ export default function Sidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6">
-          <h1 className="text-xl font-bold text-yellow-400">
-            CRM do Verê
+          <h1 className="text-2xl font-black flex flex-col leading-none">
+            <span className="text-white">CRM do</span>
+            <span className="text-yellow-400">Verê</span>
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
