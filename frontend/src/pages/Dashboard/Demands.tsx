@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '../../api/client';
 import DemandModal from '../../components/DemandModal';
 import NewDemandModal from '../../components/NewDemandModal';
-import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown, Plus, AlertCircle } from 'lucide-react';
+import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown, Plus, AlertCircle, Search, Tag, Clock } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -31,6 +31,12 @@ export default function Demands() {
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
   const [filterByAttention, setFilterByAttention] = useState(false);
   
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -56,14 +62,22 @@ export default function Demands() {
 
   const attentionCount = demands.filter(d => d.demandas.precisaRetorno).length;
 
-  const sortedDemands = useMemo(() => {
-    let filtered = [...demands];
-    
-    if (filterByAttention) {
-      filtered = filtered.filter(d => d.demandas.precisaRetorno);
-    }
+  const filteredDemands = useMemo(() => {
+    return demands.filter(d => {
+      const matchesSearch = d.municipes.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           d.municipes.phone.includes(searchTerm);
+      const matchesCategory = !filterCategory || d.demandas.categoria === filterCategory;
+      const matchesStatus = !filterStatus || d.demandas.status === filterStatus;
+      const matchesPriority = !filterPriority || d.demandas.prioridade === filterPriority;
+      const matchesAttention = !filterByAttention || d.demandas.precisaRetorno;
+      
+      return matchesSearch && matchesCategory && matchesStatus && matchesPriority && matchesAttention;
+    });
+  }, [demands, searchTerm, filterCategory, filterStatus, filterPriority, filterByAttention]);
 
-    filtered.sort((a: Demand, b: Demand) => {
+  const sortedDemands = useMemo(() => {
+    const sorted = [...filteredDemands];
+    sorted.sort((a: Demand, b: Demand) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -85,8 +99,8 @@ export default function Demands() {
       
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-    return filtered;
-  }, [demands, sortField, sortOrder, filterByAttention]);
+    return sorted;
+  }, [filteredDemands, sortField, sortOrder]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -102,29 +116,22 @@ export default function Demands() {
     return sortOrder === 'asc' ? <ArrowUp size={14} className="ml-1 text-blue-600" /> : <ArrowDown size={14} className="ml-1 text-blue-600" />;
   };
 
-  const exportCSV = () => {
-    const headers = ['Protocolo', 'Cidadao', 'Categoria', 'Prioridade', 'Status', 'Data'];
-    const rows = sortedDemands.map((d: Demand) => [
-      `MUN-${new Date(d.demandas.createdAt).getFullYear()}-${d.demandas.id.slice(0, 5).toUpperCase()}`,
-      d.municipes.name,
-      d.demandas.categoria,
-      d.demandas.prioridade,
-      d.demandas.status,
-      new Date(d.demandas.createdAt).toLocaleDateString('pt-BR')
-    ]);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'nova': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'em_andamento': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'concluida': return 'bg-green-50 text-green-700 border-green-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  };
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row: any[]) => row.join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `demandas_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'alta': return 'text-red-700';
+      case 'urgente': return 'text-red-900 font-bold';
+      case 'media': return 'text-orange-700';
+      default: return 'text-gray-700';
+    }
   };
 
   const exportPDF = () => {
@@ -169,14 +176,14 @@ export default function Demands() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="max-w-6xl mx-auto space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center">
             <ClipboardList className="mr-3 h-8 w-8 text-blue-600" />
             Fila de Demandas
           </h1>
-          <p className="text-slate-500 mt-1">Gerencie e responda as solicitações recebidas via WhatsApp ou manualmente.</p>
+          <p className="text-slate-500 mt-1">Gerencie e responda as solicitações recebidas via WhatsApp.</p>
         </div>
         
         <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
@@ -206,13 +213,7 @@ export default function Demands() {
             <Plus className="mr-2 h-5 w-5" />
             Nova Demanda
           </button>
-          <button 
-            onClick={exportCSV}
-            className="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all shadow-sm"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            CSV
-          </button>
+          
           <button 
             onClick={exportPDF}
             className="flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
@@ -222,99 +223,150 @@ export default function Demands() {
           </button>
         </div>
       </div>
+
+      {/* Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-200">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+          <input 
+            type="text"
+            placeholder="Buscar por munícipe..."
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="relative">
+          <Tag className="absolute left-3 top-3 text-slate-400" size={18} />
+          <select 
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-medium"
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+          >
+            <option value="">Todas Categorias</option>
+            <option value="saude">Saúde</option>
+            <option value="infraestrutura">Infraestrutura</option>
+            <option value="seguranca">Segurança</option>
+            <option value="educacao">Educação</option>
+            <option value="outro">Outros</option>
+          </select>
+        </div>
+
+        <div className="relative">
+          <Clock className="absolute left-3 top-3 text-slate-400" size={18} />
+          <select 
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-medium"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+          >
+            <option value="">Todos Status</option>
+            <option value="nova">Nova</option>
+            <option value="em_andamento">Em Andamento</option>
+            <option value="concluida">Concluída</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+
+        <div className="relative">
+          <AlertCircle className="absolute left-3 top-3 text-slate-400" size={18} />
+          <select 
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-medium"
+            value={filterPriority}
+            onChange={e => setFilterPriority(e.target.value)}
+          >
+            <option value="">Prioridades</option>
+            <option value="alta">Alta</option>
+            <option value="media">Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </div>
+      </div>
       
       <div className="bg-white shadow-sm rounded-2xl overflow-hidden border border-slate-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 min-w-[800px] md:min-w-full">
             <thead className="bg-gray-50">
-            <tr>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => toggleSort('name')}
-              >
-                <div className="flex items-center">Munícipe <SortIcon field="name" /></div>
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => toggleSort('category')}
-              >
-                <div className="flex items-center">Categoria <SortIcon field="category" /></div>
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => toggleSort('priority')}
-              >
-                <div className="flex items-center">Prioridade <SortIcon field="priority" /></div>
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => toggleSort('date')}
-              >
-                <div className="flex items-center">Data <SortIcon field="date" /></div>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedDemands.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
-                  Nenhuma demanda recebida ainda.
-                </td>
-              </tr>
-            ) : (
-              sortedDemands.map((demand: Demand) => (
-                <tr 
-                  key={demand.demandas.id} 
-                  className={`transition-colors cursor-pointer ${
-                    demand.demandas.precisaRetorno 
-                      ? 'bg-red-50/80 hover:bg-red-100/80' 
-                      : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => handleOpenDemand(demand.demandas.id)}
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => toggleSort('name')}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    <div className="flex items-center gap-2">
-                      {demand.municipes.name}
-                      {demand.demandas.precisaRetorno && (
-                        <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse shadow-sm">
-                          <AlertCircle size={10} />
-                          EQUIPE
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                    {demand.demandas.categoria}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                      demand.demandas.status === 'nova' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                      demand.demandas.status === 'em_andamento' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                      demand.demandas.status === 'concluida' ? 'bg-green-50 text-green-700 border-green-200' :
-                      'bg-gray-50 text-gray-700 border-gray-200'
-                    }`}>
-                      {demand.demandas.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      demand.demandas.prioridade.toLowerCase() === 'alta' ? 'bg-red-50 text-red-700' :
-                      demand.demandas.prioridade.toLowerCase() === 'urgente' ? 'bg-red-100 text-red-900 font-bold' :
-                      demand.demandas.prioridade.toLowerCase() === 'media' ? 'bg-orange-50 text-orange-700' :
-                      'bg-gray-50 text-gray-700'
-                    }`}>
-                      {demand.demandas.prioridade}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(demand.demandas.createdAt).toLocaleDateString('pt-BR')}
+                  <div className="flex items-center">Munícipe <SortIcon field="name" /></div>
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => toggleSort('category')}
+                >
+                  <div className="flex items-center">Categoria <SortIcon field="category" /></div>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => toggleSort('priority')}
+                >
+                  <div className="flex items-center">Prioridade <SortIcon field="priority" /></div>
+                </th>
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => toggleSort('date')}
+                >
+                  <div className="flex items-center">Data <SortIcon field="date" /></div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sortedDemands.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                    Nenhuma demanda encontrada.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                sortedDemands.map((demand: Demand) => (
+                  <tr 
+                    key={demand.demandas.id} 
+                    className={`transition-colors cursor-pointer ${
+                      demand.demandas.precisaRetorno 
+                        ? 'bg-red-50/80 hover:bg-red-100/80' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleOpenDemand(demand.demandas.id)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <div className="flex items-center gap-2">
+                        {demand.municipes.name}
+                        {demand.demandas.precisaRetorno && (
+                          <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse shadow-sm">
+                            <AlertCircle size={10} />
+                            EQUIPE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 font-normal">{demand.municipes.phone}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                      {demand.demandas.categoria}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(demand.demandas.status)}`}>
+                        {demand.demandas.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(demand.demandas.prioridade)}`}>
+                        {demand.demandas.prioridade}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(demand.demandas.createdAt).toLocaleDateString('pt-BR')}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {selectedDemand && (
