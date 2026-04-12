@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 export default function Agenda() {
   const [calendarUrl, setCalendarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     api.get('/config/me')
@@ -50,16 +51,59 @@ export default function Agenda() {
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Agenda do Vereador</h2>
           <p className="text-slate-500">Gerencie datas e horários de compromissos.</p>
         </div>
-        <a 
-          href={calendarUrl} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-700 flex items-center text-sm font-semibold bg-blue-50 px-4 py-2 rounded-lg transition-colors"
-        >
-          <ExternalLink size={16} className="mr-2" />
-          Abrir Google Agenda
-        </a>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowHelp(!showHelp)}
+            className="text-slate-500 hover:text-slate-700 text-sm font-medium px-3 py-2 rounded-lg border border-slate-200 bg-white transition-colors"
+          >
+            Como configurar?
+          </button>
+          <a 
+            href={calendarUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-700 flex items-center text-sm font-semibold bg-blue-50 px-4 py-2 rounded-lg transition-colors"
+          >
+            <ExternalLink size={16} className="mr-2" />
+            Abrir Google Agenda
+          </a>
+        </div>
       </header>
+
+      {showHelp && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+          <h3 className="font-bold text-blue-900 mb-4 flex items-center">
+            <AlertCircle size={20} className="mr-2" />
+            Passo a Passo para Configurar a Agenda
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-blue-800">
+            <div className="space-y-3">
+              <p className="font-bold border-b border-blue-200 pb-1">Opção A: Apenas Visualização</p>
+              <ol className="list-decimal ml-4 space-y-2">
+                <li>No Google Agenda, vá em <strong>Configurações e Compartilhamento</strong> da sua agenda.</li>
+                <li>Role até <strong>Integrar Agenda</strong>.</li>
+                <li>Copie o link que aparece em <strong>URL pública para esta agenda</strong>.</li>
+                <li>Cole este link nas configurações do Gabinete.</li>
+              </ol>
+            </div>
+            <div className="space-y-3">
+              <p className="font-bold border-b border-blue-200 pb-1">Opção B: Para Marcar Horários (Recomendado)</p>
+              <ol className="list-decimal ml-4 space-y-2">
+                <li>No Google Agenda, clique em <strong>Criar</strong> &gt; <strong>Agendamento</strong>.</li>
+                <li>Configure seus horários e clique em <strong>Próximo</strong> até concluir.</li>
+                <li>Clique em <strong>Compartilhar</strong> &gt; <strong>Página de agendamento</strong>.</li>
+                <li>Copie o link e cole nas configurações do Gabinete.</li>
+              </ol>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowHelp(false)}
+            className="mt-4 text-xs font-bold text-blue-600 hover:underline"
+          >
+            Entendi, fechar instruções
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
         <iframe 
