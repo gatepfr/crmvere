@@ -63,7 +63,7 @@ export default function Demands() {
       filtered = filtered.filter(d => d.demandas.precisaRetorno);
     }
 
-    filtered.sort((a, b) => {
+    filtered.sort((a: Demand, b: Demand) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -85,8 +85,8 @@ export default function Demands() {
       
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-    return sorted;
-  }, [demands, sortField, sortOrder]);
+    return filtered;
+  }, [demands, sortField, sortOrder, filterByAttention]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -104,7 +104,7 @@ export default function Demands() {
 
   const exportCSV = () => {
     const headers = ['Protocolo', 'Cidadao', 'Categoria', 'Prioridade', 'Status', 'Data'];
-    const rows = sortedDemands.map(d => [
+    const rows = sortedDemands.map((d: Demand) => [
       `MUN-${new Date(d.demandas.createdAt).getFullYear()}-${d.demandas.id.slice(0, 5).toUpperCase()}`,
       d.municipes.name,
       d.demandas.categoria,
@@ -115,7 +115,7 @@ export default function Demands() {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map((row: any[]) => row.join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -130,7 +130,7 @@ export default function Demands() {
   const exportPDF = () => {
     const doc = new jsPDF();
     const tableHeaders = [['Protocolo', 'Cidadao', 'Categoria', 'Status', 'Data']];
-    const tableData = sortedDemands.map(d => [
+    const tableData = sortedDemands.map((d: Demand) => [
       `MUN-${new Date(d.demandas.createdAt).getFullYear()}-${d.demandas.id.slice(0, 5).toUpperCase()}`,
       d.municipes.name,
       d.demandas.categoria,
@@ -316,7 +316,6 @@ export default function Demands() {
           </tbody>
         </table>
       </div>
-    </div>
 
       {selectedDemand && (
         <DemandModal 
