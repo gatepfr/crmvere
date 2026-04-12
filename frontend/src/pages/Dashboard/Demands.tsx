@@ -316,6 +316,7 @@ export default function Demands() {
           </tbody>
         </table>
       </div>
+    </div>
 
       {selectedDemand && (
         <DemandModal 

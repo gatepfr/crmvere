@@ -380,9 +380,9 @@ export default function Municipes() {
             </tbody>
           </table>
         </div>
-        </table>
+      </div>
         
-        {filteredMunicipes.length === 0 && (
+      {filteredMunicipes.length === 0 && (
           <div className="p-20 text-center">
             <p className="text-slate-500 font-medium">Nenhum munícipe encontrado com esses filtros.</p>
           </div>
