@@ -42,6 +42,20 @@ export const listAllUsers = async (_req: Request, res: Response) => {
   }
 };
 
+export const resetDatabase = async (_req: Request, res: Response) => {
+  try {
+    await db.transaction(async (tx) => {
+      // Order matters due to foreign keys
+      await tx.execute(sql`TRUNCATE demandas, municipes, documents, leads, campaign_columns, campaigns RESTART IDENTITY CASCADE;`);
+    });
+    
+    res.json({ success: true, message: 'Database reset successfully' });
+  } catch (error) {
+    console.error('Error resetting database:', error);
+    res.status(500).json({ error: 'Failed to reset database' });
+  }
+};
+
 export const createTenant = async (req: Request, res: Response) => {
   const { name, slug, email } = req.body;
   

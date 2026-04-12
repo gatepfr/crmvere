@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
-import { createTenant, listTenants, deleteTenant, updateTenant, getSystemStats, listAllUsers } from '../controllers/superAdminController';
+import { createTenant, listTenants, deleteTenant, updateTenant, getSystemStats, listAllUsers, resetDatabase } from '../controllers/superAdminController';
 
 const router = Router();
 
@@ -23,5 +23,6 @@ router.delete('/tenants/:id', deleteTenant);
 
 router.get('/stats', getSystemStats);
 router.get('/users', listAllUsers);
+router.post('/reset-database', resetDatabase);
 
 export default router;

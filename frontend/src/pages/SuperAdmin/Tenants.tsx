@@ -74,6 +74,25 @@ export default function Tenants() {
     }
   };
 
+  const handleResetDatabase = async () => {
+    const confirm1 = confirm('⚠️ PERIGO: Isso vai apagar TODAS as demandas, munícipes e documentos de TODOS os gabinetes. Deseja continuar?');
+    if (!confirm1) return;
+    
+    const confirm2 = confirm('TEM CERTEZA ABSOLUTA? Esta ação não pode ser desfeita e o sistema ficará vazio.');
+    if (!confirm2) return;
+
+    setLoading(true);
+    try {
+      await api.post('/superadmin/reset-database');
+      alert('Banco de dados zerado com sucesso!');
+      loadData();
+    } catch (err) {
+      alert('Falha ao zerar banco de dados.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -355,6 +374,26 @@ export default function Tenants() {
             </div>
           </div>
         )}
+
+        {/* Zona de Perigo */}
+        <div className="pt-12 border-t border-slate-200">
+          <div className="bg-red-50 rounded-3xl p-8 border border-red-100 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+              <h3 className="text-xl font-black text-red-900 flex items-center gap-2">
+                <Trash2 className="text-red-600" size={24} />
+                Zona de Perigo
+              </h3>
+              <p className="text-sm text-red-700 mt-1 font-medium">Use estas ferramentas com extrema cautela. As ações são irreversíveis.</p>
+            </div>
+            <button 
+              onClick={handleResetDatabase}
+              disabled={loading}
+              className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black shadow-xl shadow-red-200 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {loading ? 'Limpando...' : 'Zerar Todo o Banco de Dados'}
+            </button>
+          </div>
+        </div>
 
       </main>
 
