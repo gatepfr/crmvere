@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '../../api/client';
 import DemandModal from '../../components/DemandModal';
 import NewDemandModal from '../../components/NewDemandModal';
-import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown, Plus } from 'lucide-react';
+import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown, Plus, AlertCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
