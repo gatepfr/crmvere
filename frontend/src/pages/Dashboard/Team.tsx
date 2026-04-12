@@ -168,7 +168,6 @@ export default function Team() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-slate-900">{member.email}</p>
-                        <p className="text-xs text-slate-500">{member.id.substring(0, 8)}...</p>
                       </div>
                     </div>
                   </td>
