@@ -20,12 +20,8 @@ export default function VoterMap() {
     api.get('/map/data')
       .then(res => {
         setData(res.data.points || []);
-        // In a real implementation we would geocode res.data.city
-        // For Apucarana, let's set it manually if detected
-        if (res.data.city.toLowerCase() === 'apucarana') {
-          setCenter([-23.5505, -51.4614]);
-        } else if (res.data.points && res.data.points.length > 0) {
-          setCenter([res.data.points[0].lat, res.data.points[0].lng]);
+        if (res.data.center) {
+          setCenter([res.data.center.lat, res.data.center.lng]);
         }
       })
       .catch(err => console.error('Erro ao carregar mapa:', err))

@@ -19,8 +19,14 @@ const neighborhoodCoords: Record<string, { lat: number; lng: number }> = {
 
 import axios from 'axios';
 
-// Helper to get coordinates from OpenStreetMap (Nominatim)
+// Simple in-memory cache to avoid redundant geocoding and Nominatim blocking
+const geoCache: Record<string, { lat: number; lng: number }> = {};
+
+// Helper to get coordinates from OpenStreetMap (Nominatim) with Cache
 async function getCoordinates(bairro: string, city: string, state: string) {
+  const cacheKey = `${bairro}-${city}-${state}`.toLowerCase();
+  if (geoCache[cacheKey]) return geoCache[cacheKey];
+
   try {
     const query = `${bairro}, ${city}, ${state}, Brasil`;
     const response = await axios.get(`https://nominatim.openstreetmap.org/search`, {
@@ -30,15 +36,17 @@ async function getCoordinates(bairro: string, city: string, state: string) {
         limit: 1
       },
       headers: {
-        'User-Agent': 'VereadorCRM-MVP'
+        'User-Agent': 'VereadorCRM-System-v1'
       }
     });
 
     if (response.data && response.data.length > 0) {
-      return {
+      const coords = {
         lat: parseFloat(response.data[0].lat),
         lng: parseFloat(response.data[0].lon)
       };
+      geoCache[cacheKey] = coords;
+      return coords;
     }
     return null;
   } catch (error) {
@@ -56,6 +64,9 @@ router.get('/data', authenticate, checkTenant, async (req: Request, res: Respons
     const city = tenant?.municipio || 'São Paulo';
     const state = tenant?.uf || 'SP';
     
+    // Get city center coordinate for fallback
+    const cityCenter = await getCoordinates('', city, state) || { lat: -23.5489, lng: -46.6388 };
+
     const stats = await db.select({
       bairro: municipes.bairro,
       count: sql<number>`count(*)::int`
@@ -67,9 +78,9 @@ router.get('/data', authenticate, checkTenant, async (req: Request, res: Respons
 
     // Fetch real coordinates for each neighborhood
     const points = await Promise.all(stats.map(async (stat) => {
-      const bairro = stat.bairro || 'Centro';
+      const bairro = stat.bairro;
+      if (!bairro) return null;
       
-      // Try to geocode
       const coords = await getCoordinates(bairro, city, state);
       
       if (coords) {
@@ -81,23 +92,20 @@ router.get('/data', authenticate, checkTenant, async (req: Request, res: Respons
         };
       }
 
-      // Fallback to random point near city center if geocoding fails
-      // We'll use a hardcoded center for fallback based on common cities or a generic one
-      const baseLat = city.toLowerCase() === 'apucarana' ? -23.5505 : -23.5489;
-      const baseLng = city.toLowerCase() === 'apucarana' ? -51.4614 : -46.6388;
-
+      // If geocoding fails, return a point slightly offset from city center to avoid stacking
       return {
         bairro,
         count: stat.count,
-        lat: baseLat + (Math.random() - 0.5) * 0.05,
-        lng: baseLng + (Math.random() - 0.5) * 0.05,
+        lat: cityCenter.lat + (Math.random() - 0.5) * 0.02,
+        lng: cityCenter.lng + (Math.random() - 0.5) * 0.02,
       };
     }));
 
     res.json({
       city,
       state,
-      points
+      center: cityCenter,
+      points: points.filter(p => p !== null)
     });
   } catch (error) {
     console.error('Error fetching map data:', error);
