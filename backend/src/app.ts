@@ -13,6 +13,7 @@ import kanbanRoutes from './routes/kanbanRoutes';
 import teamRoutes from './routes/teamRoutes';
 import profileRoutes from './routes/profileRoutes';
 import mapRoutes from './routes/mapRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use('/api/kanban', kanbanRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/map', mapRoutes);
+app.use('/api/ai', aiRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
