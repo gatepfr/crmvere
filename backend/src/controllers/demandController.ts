@@ -155,3 +155,19 @@ export const deleteMunicipe = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete citizen' });
   }
 };
+
+export const listMunicipes = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  try {
+    const results = await db.select()
+      .from(municipes)
+      .where(eq(municipes.tenantId, tenantId))
+      .orderBy(desc(municipes.createdAt));
+
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to list citizens' });
+  }
+};
