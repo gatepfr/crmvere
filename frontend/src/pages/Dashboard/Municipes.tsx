@@ -278,105 +278,108 @@ export default function Municipes() {
 
       {/* List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-10"></th>
-              <th 
-                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => handleSort('name')}
-              >
-                <div className="flex items-center gap-2">
-                  Nome
-                  {sortConfig.key === 'name' ? (
-                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                  ) : <ArrowUpDown size={14} className="opacity-30" />}
-                </div>
-              </th>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
-              <th 
-                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => handleSort('bairro')}
-              >
-                <div className="flex items-center gap-2">
-                  Bairro
-                  {sortConfig.key === 'bairro' ? (
-                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                  ) : <ArrowUpDown size={14} className="opacity-30" />}
-                </div>
-              </th>
-              <th 
-                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => handleSort('demandCount')}
-              >
-                <div className="flex items-center gap-2">
-                  Demandas
-                  {sortConfig.key === 'demandCount' ? (
-                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                  ) : <ArrowUpDown size={14} className="opacity-30" />}
-                </div>
-              </th>
-              <th 
-                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => handleSort('createdAt')}
-              >
-                <div className="flex items-center gap-2">
-                  Data Cadastro
-                  {sortConfig.key === 'createdAt' ? (
-                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                  ) : <ArrowUpDown size={14} className="opacity-30" />}
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {filteredMunicipes.map(m => (
-              <tr 
-                key={m.id} 
-                className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/30' : ''}`}
-                onClick={() => toggleSelect(m.id)}
-              >
-                <td className="px-6 py-4">
-                  {selectedMunicipes.includes(m.id) ? (
-                    <CheckSquare size={20} className="text-blue-600" />
-                  ) : (
-                    <Square size={20} className="text-slate-300" />
-                  )}
-                </td>
-                <td className="px-6 py-4 font-bold text-slate-900">{m.name}</td>
-                <td className="px-6 py-4 text-slate-600 font-medium">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px] md:min-w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-10"></th>
+                <th 
+                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('name')}
+                >
                   <div className="flex items-center gap-2">
-                    <Phone size={14} className="text-slate-400" />
-                    {formatPhone(m.phone)}
+                    Nome
+                    {sortConfig.key === 'name' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                    ) : <ArrowUpDown size={14} className="opacity-30" />}
                   </div>
-                </td>
-                <td className="px-6 py-4">
-                  {m.bairro ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                      {m.bairro}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 italic text-xs">Não informado</span>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-sm ${
-                    m.demandCount >= 5 
-                      ? 'bg-amber-500 text-white' 
-                      : m.demandCount >= 3 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-slate-200 text-slate-600'
-                  }`}>
-                    {m.demandCount >= 5 && <Star size={12} className="fill-white" />}
-                    {m.demandCount} {m.demandCount === 1 ? 'Demanda' : 'Demandas'}
+                </th>
+                <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
+                <th 
+                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('bairro')}
+                >
+                  <div className="flex items-center gap-2">
+                    Bairro
+                    {sortConfig.key === 'bairro' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                    ) : <ArrowUpDown size={14} className="opacity-30" />}
                   </div>
-                </td>
-                <td className="px-6 py-4 text-slate-500 text-sm">
-                  {new Date(m.createdAt).toLocaleDateString('pt-BR')}
-                </td>
+                </th>
+                <th 
+                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('demandCount')}
+                >
+                  <div className="flex items-center gap-2">
+                    Demandas
+                    {sortConfig.key === 'demandCount' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                    ) : <ArrowUpDown size={14} className="opacity-30" />}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => handleSort('createdAt')}
+                >
+                  <div className="flex items-center gap-2">
+                    Data Cadastro
+                    {sortConfig.key === 'createdAt' ? (
+                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                    ) : <ArrowUpDown size={14} className="opacity-30" />}
+                  </div>
+                </th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredMunicipes.map(m => (
+                <tr 
+                  key={m.id} 
+                  className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/30' : ''}`}
+                  onClick={() => toggleSelect(m.id)}
+                >
+                  <td className="px-4 md:px-6 py-4">
+                    {selectedMunicipes.includes(m.id) ? (
+                      <CheckSquare size={20} className="text-blue-600" />
+                    ) : (
+                      <Square size={20} className="text-slate-300" />
+                    )}
+                  </td>
+                  <td className="px-4 md:px-6 py-4 font-bold text-slate-900">{m.name}</td>
+                  <td className="px-4 md:px-6 py-4 text-slate-600 font-medium">
+                    <div className="flex items-center gap-2">
+                      <Phone size={14} className="text-slate-400" />
+                      {formatPhone(m.phone)}
+                    </div>
+                  </td>
+                  <td className="px-4 md:px-6 py-4">
+                    {m.bairro ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                        {m.bairro}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic text-xs">Não informado</span>
+                    )}
+                  </td>
+                  <td className="px-4 md:px-6 py-4">
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-sm ${
+                      m.demandCount >= 5 
+                        ? 'bg-amber-500 text-white' 
+                        : m.demandCount >= 3 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {m.demandCount >= 5 && <Star size={12} className="fill-white" />}
+                      {m.demandCount} {m.demandCount === 1 ? 'Demanda' : 'Demandas'}
+                    </div>
+                  </td>
+                  <td className="px-4 md:px-6 py-4 text-slate-500 text-sm">
+                    {new Date(m.createdAt).toLocaleDateString('pt-BR')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         </table>
         
         {filteredMunicipes.length === 0 && (
