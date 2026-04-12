@@ -111,6 +111,20 @@ export default function Municipes() {
     alert('Mensagens enviadas com sucesso!');
   };
 
+  const formatPhone = (phone: string) => {
+    if (!phone) return '';
+    // Remove 55 prefix if exists
+    const raw = phone.startsWith('55') ? phone.slice(2) : phone;
+    // Apply mask (DD) XXXXX-XXXX
+    if (raw.length === 11) {
+      return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+    }
+    if (raw.length === 10) {
+      return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+    }
+    return raw;
+  };
+
   if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   return (
@@ -203,7 +217,7 @@ export default function Municipes() {
                 <td className="px-6 py-4 text-slate-600 font-medium">
                   <div className="flex items-center gap-2">
                     <Phone size={14} className="text-slate-400" />
-                    {m.phone}
+                    {formatPhone(m.phone)}
                   </div>
                 </td>
                 <td className="px-6 py-4">
