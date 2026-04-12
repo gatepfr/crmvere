@@ -65,6 +65,7 @@ export const demandas = pgTable("demandas", {
   resumoIa: varchar("resumo_ia", { length: 10000 }).notNull(),
   precisaRetorno: boolean("precisa_retorno").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const documents = pgTable("documents", {

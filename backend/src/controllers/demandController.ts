@@ -68,7 +68,7 @@ export const listDemands = async (req: Request, res: Response) => {
       .from(demandas)
       .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
       .where(eq(demandas.tenantId, tenantId))
-      .orderBy(desc(demandas.createdAt));
+      .orderBy(desc(demandas.updatedAt));
 
     res.status(200).json(results);
   } catch (error) {
@@ -114,6 +114,7 @@ export const updateDemand = async (req: Request, res: Response) => {
     if (categoria) updateData.categoria = categoria;
     if (precisaRetorno !== undefined) updateData.precisaRetorno = precisaRetorno;
     if (resumoIa !== undefined) updateData.resumoIa = resumoIa;
+    updateData.updatedAt = new Date();
 
     await db.update(demandas)
       .set(updateData)

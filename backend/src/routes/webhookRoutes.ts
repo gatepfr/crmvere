@@ -48,12 +48,23 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
       municipe = newMunicipe;
     }
 
-    // 2. Get LATEST open demand (DESC order)
+    // 2. Get LATEST open demand (updated in the last 12 hours)
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
     let [existingDemanda] = await db.select()
       .from(demandas)
-      .where(and(eq(demandas.municipeId, municipe.id), eq(demandas.tenantId, tenantId), eq(demandas.status, 'nova')))
-      .orderBy(desc(demandas.createdAt))
+      .where(and(
+        eq(demandas.municipeId, municipe.id), 
+        eq(demandas.tenantId, tenantId), 
+        eq(demandas.status, 'nova')
+        // We could add a filter for updatedAt here if we wanted strictly new demands per session
+      ))
+      .orderBy(desc(demandas.updatedAt))
       .limit(1);
+
+    // If the demand is older than 12 hours, treat it as closed (or just don't reuse it)
+    if (existingDemanda && existingDemanda.updatedAt < twelveHoursAgo) {
+      existingDemanda = undefined;
+    }
 
     // 3. Build Full Conversation Context
     // We keep the raw messages in the context to prevent the AI from losing its personality
@@ -94,6 +105,7 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
           categoria: aiResult?.categoria || existingDemanda.categoria,
           prioridade: aiResult?.prioridade || existingDemanda.prioridade,
           precisaRetorno: aiResult?.precisa_retorno || existingDemanda.precisaRetorno,
+          updatedAt: new Date(), // Update the timestamp
         })
         .where(eq(demandas.id, existingDemanda.id));
     } else {
