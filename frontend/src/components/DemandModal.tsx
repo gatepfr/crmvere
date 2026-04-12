@@ -70,6 +70,8 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingResumo, setIsEditingResumo] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [manualMessage, setManualMessage] = useState('');
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [moving, setMoving] = useState(false);
 
@@ -79,6 +81,24 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
       .then(res => setCampaigns(res.data))
       .catch(err => console.error('Error loading campaigns', err));
   }, []);
+
+  const handleSendMessage = async () => {
+    if (!manualMessage.trim()) return;
+    setSendingMessage(true);
+    try {
+      await api.post('/whatsapp/send', {
+        demandId: demand.demandas.id,
+        message: manualMessage
+      });
+      setResumoIa(prev => `${prev}\n\nGabinete: ${manualMessage}`);
+      setManualMessage('');
+      onUpdate();
+    } catch (err) {
+      alert('Falha ao enviar mensagem pelo WhatsApp.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   const handleUpdateMunicipe = async () => {
     setLoading(true);
@@ -301,6 +321,37 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                   {formatText(resumoIa)}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Manual Chat / Resposta Direta */}
+          <div className="pt-6 border-t border-slate-100 space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-bold">
+              <Phone size={18} className="text-green-600" />
+              <h4>Responder pelo WhatsApp</h4>
+            </div>
+            <div className="flex flex-col gap-3">
+              <textarea
+                className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-medium transition-all"
+                rows={3}
+                placeholder="Digite sua resposta direta para o munícipe aqui..."
+                value={manualMessage}
+                onChange={e => setManualMessage(e.target.value)}
+              />
+              <div className="flex justify-end">
+                <button
+                  disabled={sendingMessage || !manualMessage.trim()}
+                  onClick={handleSendMessage}
+                  className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20 disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                >
+                  {sendingMessage ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <MessageSquare size={18} />
+                  )}
+                  {sendingMessage ? 'Enviando...' : 'Enviar Resposta'}
+                </button>
+              </div>
             </div>
           </div>
 
