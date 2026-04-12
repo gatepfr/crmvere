@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import express from 'express';
+import { handleStripeWebhook } from '../controllers/webhookController';
 import { normalizeEvolution } from '../services/whatsappService';
 import { db } from '../db';
 import { tenants, municipes, demandas, documents } from '../db/schema';
@@ -9,10 +11,16 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 const router = Router();
 
 /**
+ * Stripe Webhook endpoint.
+ * Route: POST /api/webhook/stripe
+ */
+router.post('/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+/**
  * Webhook endpoint for Evolution API.
  * Route: POST /api/webhook/evolution/:tenantId
  */
-router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
+router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Response) => {
   const tenantId = req.params.tenantId as string;
   const payload = req.body;
 
