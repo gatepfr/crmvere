@@ -12,7 +12,10 @@ import {
   Settings,
   PlusCircle,
   LogOut,
-  Clock
+  Clock,
+  Star,
+  Infinity,
+  CalendarDays
 } from 'lucide-react';
 
 interface Stats {
@@ -71,6 +74,16 @@ export default function Tenants() {
       loadData();
     } catch (err) {
       alert('Falha ao atualizar status.');
+    }
+  };
+
+  const updateSubscription = async (id: string, status: string, trialEndsAt?: string) => {
+    try {
+      await api.patch(`/superadmin/tenants/${id}/subscription`, { status, trialEndsAt });
+      loadData();
+      alert('Assinatura atualizada com sucesso!');
+    } catch (err) {
+      alert('Falha ao atualizar assinatura.');
     }
   };
 
@@ -281,6 +294,7 @@ export default function Tenants() {
                     <tr>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinete</th>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identificador</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano</th>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                     </tr>
@@ -299,6 +313,23 @@ export default function Tenants() {
                           <code className="bg-slate-100 px-2 py-1 rounded-lg text-xs font-bold text-slate-600">/{tenant.slug}</code>
                         </td>
                         <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                              tenant.subscriptionStatus === 'lifetime' ? 'bg-amber-100 text-amber-700' :
+                              tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' :
+                              tenant.subscriptionStatus === 'trial' ? 'bg-blue-100 text-blue-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {tenant.subscriptionStatus}
+                            </span>
+                            {tenant.subscriptionStatus === 'trial' && (
+                              <span className="text-[9px] font-bold text-slate-400">
+                                Expira: {new Date(tenant.trialEndsAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
                           <span className={`px-3 py-1 rounded-full text-[10px] font-black ${tenant.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {tenant.active ? 'ATIVO' : 'INATIVO'}
                           </span>
@@ -306,9 +337,30 @@ export default function Tenants() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button 
+                              onClick={() => updateSubscription(tenant.id, 'lifetime')}
+                              title="Tornar Vitalício (Gratuito)"
+                              className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl transition-all"
+                            >
+                              <Infinity size={18} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const days = prompt('Quantos dias de trial extra?', '7');
+                                if (days) {
+                                  const date = new Date();
+                                  date.setDate(date.getDate() + parseInt(days));
+                                  updateSubscription(tenant.id, 'trial', date.toISOString());
+                                }
+                              }}
+                              title="Estender Trial"
+                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
+                            >
+                              <Star size={18} />
+                            </button>
+                            <button 
                               onClick={() => toggleStatus(tenant)}
                               title={tenant.active ? "Desativar" : "Ativar"}
-                              className={`p-2 rounded-xl transition-all ${tenant.active ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                              className={`p-2 rounded-xl transition-all ${tenant.active ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
                             >
                               <Power size={18} />
                             </button>

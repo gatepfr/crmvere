@@ -140,3 +140,30 @@ export const deleteTenant = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to delete tenant' });
   }
 };
+
+export const updateSubscriptionStatus = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { status, trialEndsAt, isManual } = req.body;
+  
+  try {
+    const updateData: any = { 
+      subscriptionStatus: status,
+      isManual: isManual ?? true
+    };
+    
+    if (trialEndsAt) {
+      updateData.trialEndsAt = new Date(trialEndsAt);
+    }
+
+    const [updated] = await db.update(tenants)
+      .set(updateData)
+      .where(eq(tenants.id, id))
+      .returning();
+    
+    if (!updated) return res.status(404).json({ error: 'Tenant not found' });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating subscription status:', error);
+    res.status(500).json({ error: 'Failed to update subscription status' });
+  }
+};
