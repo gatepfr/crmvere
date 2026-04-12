@@ -48,21 +48,23 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
       municipe = newMunicipe;
     }
 
-    // 2. Get LATEST open demand (updated in the last 12 hours)
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    // 2. Get LATEST open demand (created TODAY since 00:00)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     let [existingDemanda] = await db.select()
       .from(demandas)
       .where(and(
         eq(demandas.municipeId, municipe.id), 
         eq(demandas.tenantId, tenantId), 
         eq(demandas.status, 'nova')
-        // We could add a filter for updatedAt here if we wanted strictly new demands per session
+        // We could add more filters here if needed
       ))
       .orderBy(desc(demandas.updatedAt))
       .limit(1);
 
-    // If the demand is older than 12 hours, treat it as closed (or just don't reuse it)
-    if (existingDemanda && existingDemanda.updatedAt < twelveHoursAgo) {
+    // If the latest open demand was NOT created today, start a NEW one
+    if (existingDemanda && existingDemanda.createdAt < todayStart) {
       existingDemanda = undefined;
     }
 
