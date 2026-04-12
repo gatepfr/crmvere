@@ -18,6 +18,7 @@ export const tenants = pgTable("tenants", {
   whatsappNotificationNumber: varchar("whatsapp_notification_number", { length: 50 }),
   evolutionApiUrl: varchar("evolution_api_url", { length: 255 }),
   evolutionGlobalToken: varchar("evolution_global_token", { length: 255 }),
+  calendarUrl: varchar("calendar_url", { length: 1000 }),
   // Cabinet Info
   municipio: varchar("municipio", { length: 255 }),
   uf: varchar("uf", { length: 2 }),
