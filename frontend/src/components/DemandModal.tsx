@@ -24,6 +24,8 @@ interface DemandModalProps {
 
 export default function DemandModal({ demand, onClose, onUpdate }: DemandModalProps) {
   const [status, setStatus] = useState(demand.demandas.status);
+  const [prioridade, setPrioridade] = useState(demand.demandas.prioridade);
+  const [categoria, setCategoria] = useState(demand.demandas.categoria);
   const [municipe, setMunicipe] = useState({
     name: demand.municipes.name,
     phone: demand.municipes.phone,
@@ -47,6 +49,23 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     setDisplayPhone(masked);
     setMunicipe(prev => ({ ...prev, phone: raw ? `55${raw}` : '' }));
   };
+
+  const handleUpdateField = async (field: string, value: string) => {
+    setLoading(true);
+    try {
+      await api.patch(`/demands/${demand.demandas.id}/status`, { [field]: value });
+      if (field === 'status') setStatus(value);
+      if (field === 'prioridade') setPrioridade(value);
+      if (field === 'categoria') setCategoria(value);
+      onUpdate();
+    } catch (err) {
+      console.error(`Erro ao atualizar ${field}:`, err);
+      alert(`Falha ao atualizar ${field}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [resumoIa, setResumoIa] = useState(demand.demandas.resumoIa);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingResumo, setIsEditingResumo] = useState(false);
@@ -78,7 +97,6 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
   const handleUpdateResumo = async () => {
     setLoading(true);
     try {
-      // We need a route to update demand summary, let's use a generic patch for demands
       await api.patch(`/demands/${demand.demandas.id}/status`, { resumoIa });
       setIsEditingResumo(false);
       onUpdate();
@@ -105,17 +123,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    setLoading(true);
-    try {
-      await api.patch(`/demands/${demand.demandas.id}/status`, { status: newStatus });
-      setStatus(newStatus);
-      onUpdate();
-    } catch (err) {
-      console.error('Erro ao atualizar status:', err);
-      alert('Falha ao atualizar status.');
-    } finally {
-      setLoading(false);
-    }
+    handleUpdateField('status', newStatus);
   };
 
   const moveToKanban = async (campaignId: string) => {
@@ -299,22 +307,42 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Categoria</p>
-              <div className="flex items-center gap-2 text-slate-900 font-semibold">
-                <Tag size={16} className="text-slate-400" />
-                <span className="capitalize">{demand.demandas.categoria}</span>
+              <div className="relative">
+                <Tag size={14} className="absolute left-3 top-3 text-slate-400" />
+                <select 
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                  value={categoria}
+                  onChange={(e) => handleUpdateField('categoria', e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="saude">Saúde</option>
+                  <option value="infraestrutura">Infraestrutura</option>
+                  <option value="seguranca">Segurança</option>
+                  <option value="educacao">Educação</option>
+                  <option value="outro">Outro</option>
+                </select>
               </div>
             </div>
             <div className="space-y-2">
               <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Prioridade</p>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                demand.demandas.prioridade.toLowerCase() === 'alta' ? 'bg-red-100 text-red-700' :
-                demand.demandas.prioridade.toLowerCase() === 'urgente' ? 'bg-red-600 text-white shadow-lg shadow-red-200' :
-                demand.demandas.prioridade.toLowerCase() === 'media' ? 'bg-orange-100 text-orange-700' :
-                'bg-slate-100 text-slate-700'
-              }`}>
-                <AlertCircle size={12} className="mr-1.5" />
-                {demand.demandas.prioridade.toUpperCase()}
-              </span>
+              <div className="relative">
+                <AlertCircle size={14} className="absolute left-3 top-3 text-slate-400" />
+                <select 
+                  className={`w-full pl-9 pr-4 py-2 border rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none appearance-none ${
+                    prioridade === 'urgente' ? 'bg-red-50 border-red-200 text-red-700' :
+                    prioridade === 'alta' ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                    'bg-slate-50 border-slate-200 text-slate-900'
+                  }`}
+                  value={prioridade}
+                  onChange={(e) => handleUpdateField('prioridade', e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
             </div>
           </div>
 

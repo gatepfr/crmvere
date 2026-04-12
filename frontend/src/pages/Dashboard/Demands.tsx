@@ -12,6 +12,7 @@ interface Demand {
     categoria: string;
     status: string;
     prioridade: string;
+    precisaRetorno: boolean;
     createdAt: string;
   };
   municipes: {
@@ -237,11 +238,23 @@ export default function Demands() {
               sortedDemands.map((demand) => (
                 <tr 
                   key={demand.demandas.id} 
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  className={`transition-colors cursor-pointer ${
+                    demand.demandas.precisaRetorno 
+                      ? 'bg-red-50/80 hover:bg-red-100/80' 
+                      : 'hover:bg-gray-50'
+                  }`}
                   onClick={() => handleOpenDemand(demand.demandas.id)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {demand.municipes.name}
+                    <div className="flex items-center gap-2">
+                      {demand.municipes.name}
+                      {demand.demandas.precisaRetorno && (
+                        <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse shadow-sm">
+                          <AlertCircle size={10} />
+                          EQUIPE
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
                     {demand.demandas.categoria}

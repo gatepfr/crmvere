@@ -62,6 +62,7 @@ export const demandas = pgTable("demandas", {
   status: statusEnum("status").default("nova").notNull(),
   prioridade: varchar("prioridade", { length: 255 }).notNull(),
   resumoIa: varchar("resumo_ia", { length: 1000 }).notNull(),
+  precisaRetorno: boolean("precisa_retorno").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

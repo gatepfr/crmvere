@@ -5,7 +5,7 @@ import { eq, desc, and } from 'drizzle-orm';
 
 export const createDemand = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  const { municipeName, municipePhone, municipeBairro, categoria, prioridade, resumoIa } = req.body;
+  const { municipeName, municipePhone, municipeBairro, categoria, prioridade, resumoIa, precisaRetorno } = req.body;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
@@ -36,7 +36,8 @@ export const createDemand = async (req: Request, res: Response) => {
           categoria: categoria || 'outro',
           prioridade: prioridade || 'media',
           resumoIa: resumoIa,
-          status: 'nova'
+          status: 'nova',
+          precisaRetorno: precisaRetorno || false
         })
         .returning();
 
@@ -103,12 +104,15 @@ export const getDemand = async (req: Request, res: Response) => {
 
 export const updateDemand = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { status, resumoIa } = req.body;
+  const { status, resumoIa, prioridade, categoria, precisaRetorno } = req.body;
   const tenantId = req.user?.tenantId;
 
   try {
     const updateData: any = {};
     if (status) updateData.status = status;
+    if (prioridade) updateData.prioridade = prioridade;
+    if (categoria) updateData.categoria = categoria;
+    if (precisaRetorno !== undefined) updateData.precisaRetorno = precisaRetorno;
     if (resumoIa !== undefined) updateData.resumoIa = resumoIa;
 
     await db.update(demandas)

@@ -87,6 +87,7 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
           resumoIa: updatedHistory, // Now resumoIa stores the conversation log
           categoria: aiResult?.categoria || existingDemanda.categoria,
           prioridade: aiResult?.prioridade || existingDemanda.prioridade,
+          precisaRetorno: aiResult?.precisa_retorno || existingDemanda.precisaRetorno,
         })
         .where(eq(demandas.id, existingDemanda.id));
     } else {
@@ -98,6 +99,7 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
           prioridade: aiResult?.prioridade || 'media',
           resumoIa: updatedHistory,
           status: 'nova',
+          precisaRetorno: aiResult?.precisa_retorno || false,
         });
     }
 
