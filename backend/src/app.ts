@@ -14,6 +14,7 @@ import teamRoutes from './routes/teamRoutes';
 import profileRoutes from './routes/profileRoutes';
 import mapRoutes from './routes/mapRoutes';
 import aiRoutes from './routes/aiRoutes';
+import billingRoutes from './routes/billingRoutes';
 import { authenticate } from './middleware/auth';
 import { checkTenant } from './middleware/tenant';
 import { checkSubscription } from './middleware/subscription';
@@ -30,8 +31,13 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/webhook', webhookRoutes);
 
-// Protected routes (Require authentication and subscription check)
+// Protected routes (Require authentication)
 app.use(authenticate);
+
+// Billing routes should skip subscription check
+app.use('/api/billing', billingRoutes);
+
+// Other protected routes require subscription check
 app.use(checkSubscription);
 
 // Super admin routes do not require tenant context

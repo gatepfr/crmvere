@@ -6,6 +6,7 @@ declare global {
       user?: {
         id: string;
         tenantId: string | null;
+        email: string;
         role: 'super_admin' | 'admin' | 'vereador' | 'assessor';
       };
     }
