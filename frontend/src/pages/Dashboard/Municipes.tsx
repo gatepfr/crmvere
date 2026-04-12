@@ -79,8 +79,8 @@ export default function Municipes() {
       return matchesSearch && matchesBairro && matchesEngaged;
     })
     .sort((a, b) => {
-      const valA = a[sortConfig.key] || '';
-      const valB = b[sortConfig.key] || '';
+      const valA = (a[sortConfig.key] || '').toString().toLowerCase();
+      const valB = (b[sortConfig.key] || '').toString().toLowerCase();
       
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -111,9 +111,6 @@ export default function Municipes() {
       const municipe = municipes.find(m => m.id === municipeId);
       
       try {
-        // We use a generic endpoint or need a way to find a demand ID for this municipe
-        // To simplify, let's assume we need to send to the phone directly.
-        // For now, we'll search for the latest demand of this municipe to use our existing route
         const demandsRes = await api.get('/demands');
         const latestDemand = demandsRes.data.find((d: any) => d.municipes.id === municipeId);
         
@@ -128,7 +125,6 @@ export default function Municipes() {
       }
       
       setSendProgress(prev => ({ ...prev, current: i + 1 }));
-      // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
@@ -141,16 +137,10 @@ export default function Municipes() {
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
-    // Remove 55 prefix if exists
     let raw = phone.startsWith('55') ? phone.slice(2) : phone;
-    
-    // If it's a mobile number missing the leading 9 (10 digits total)
-    // and starting with a digit that indicates a mobile (usually 7, 8, 9 in Brazil)
     if (raw.length === 10 && ['7', '8', '9'].includes(raw[2])) {
       raw = raw.slice(0, 2) + '9' + raw.slice(2);
     }
-
-    // Apply mask (DD) XXXXX-XXXX (11 digits) or (DD) XXXX-XXXX (10 digits)
     if (raw.length === 11) {
       return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
     }
@@ -162,8 +152,6 @@ export default function Municipes() {
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
-    // Header
     doc.setFontSize(18);
     doc.text('Relatório de Munícipes - CRM do Verê', 14, 20);
     doc.setFontSize(10);
@@ -185,7 +173,7 @@ export default function Municipes() {
       head: [['Nome', 'Telefone', 'Bairro', 'Data Cadastro']],
       body: tableData,
       theme: 'striped',
-      headStyles: { fillColor: [30, 41, 59] }, // slate-800
+      headStyles: { fillColor: [30, 41, 59] },
       styles: { fontSize: 9 }
     });
 
@@ -226,7 +214,6 @@ export default function Municipes() {
         </div>
       </header>
 
-      {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div className="relative">
           <Search className="absolute left-3 top-3 text-slate-400" size={18} />
@@ -276,7 +263,6 @@ export default function Municipes() {
         </div>
       </div>
 
-      {/* List */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px] md:min-w-full">
@@ -383,11 +369,10 @@ export default function Municipes() {
       </div>
         
       {filteredMunicipes.length === 0 && (
-          <div className="p-20 text-center">
-            <p className="text-slate-500 font-medium">Nenhum munícipe encontrado com esses filtros.</p>
-          </div>
-        )}
-      </div>
+        <div className="p-20 text-center">
+          <p className="text-slate-500 font-medium">Nenhum munícipe encontrado com esses filtros.</p>
+        </div>
+      )}
 
       {/* Broadcast Modal */}
       {isModalOpen && (
