@@ -135,8 +135,15 @@ export default function Municipes() {
   const formatPhone = (phone: string) => {
     if (!phone) return '';
     // Remove 55 prefix if exists
-    const raw = phone.startsWith('55') ? phone.slice(2) : phone;
-    // Apply mask (DD) XXXXX-XXXX
+    let raw = phone.startsWith('55') ? phone.slice(2) : phone;
+    
+    // If it's a mobile number missing the leading 9 (10 digits total)
+    // and starting with a digit that indicates a mobile (usually 7, 8, 9 in Brazil)
+    if (raw.length === 10 && ['7', '8', '9'].includes(raw[2])) {
+      raw = raw.slice(0, 2) + '9' + raw.slice(2);
+    }
+
+    // Apply mask (DD) XXXXX-XXXX (11 digits) or (DD) XXXX-XXXX (10 digits)
     if (raw.length === 11) {
       return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
     }
