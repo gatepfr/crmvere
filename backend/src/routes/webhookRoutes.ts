@@ -79,6 +79,16 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
       promptContext = "..." + promptContext.substring(promptContext.length - 5000);
     }
 
+    // New: Check for Human Intervention (Silence AI for 10 minutes)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const lastMessageWasHuman = existingDemanda?.resumoIa?.includes('Gabinete:');
+    const wasRecentlyUpdatedByHuman = existingDemanda && existingDemanda.updatedAt > tenMinutesAgo;
+
+    if (lastMessageWasHuman && wasRecentlyUpdatedByHuman) {
+      console.log(`[WEBHOOK] AI is SILENCED for tenant ${tenantId} due to recent human intervention.`);
+      return res.status(200).json({ status: 'ignored_human_active' });
+    }
+
     // 4. AI Processing
     let aiResult = null;
     const apiKey = tenant?.aiApiKey || process.env.GEMINI_API_KEY;
