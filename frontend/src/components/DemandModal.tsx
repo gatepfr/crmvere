@@ -29,6 +29,24 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     phone: demand.municipes.phone,
     bairro: demand.municipes.bairro || ''
   });
+  const [displayPhone, setDisplayPhone] = useState('');
+
+  useEffect(() => {
+    if (demand.municipes.phone) {
+      // Remove o 55 inicial para exibir na máscara
+      const raw = demand.municipes.phone.startsWith('55') ? demand.municipes.phone.slice(2) : demand.municipes.phone;
+      applyPhoneMask(raw);
+    }
+  }, [demand.municipes.phone]);
+
+  const applyPhoneMask = (value: string) => {
+    const raw = value.replace(/\D/g, '').slice(0, 11);
+    let masked = raw;
+    if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+    if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+    setDisplayPhone(masked);
+    setMunicipe(prev => ({ ...prev, phone: raw ? `55${raw}` : '' }));
+  };
   const [resumoIa, setResumoIa] = useState(demand.demandas.resumoIa);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingResumo, setIsEditingResumo] = useState(false);
@@ -201,10 +219,11 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                 {isEditing ? (
                   <input 
                     className="bg-white border border-blue-200 rounded px-2 py-1 text-xs focus:outline-none w-full"
-                    value={municipe.phone}
-                    onChange={e => setMunicipe({...municipe, phone: e.target.value})}
+                    value={displayPhone}
+                    onChange={e => applyPhoneMask(e.target.value)}
+                    placeholder="(43) 99999-9999"
                   />
-                ) : municipe.phone}
+                ) : displayPhone}
               </div>
               <div className="flex items-center text-sm text-slate-600 font-medium">
                 <MapIcon size={14} className="mr-2 text-slate-400" />

@@ -98,11 +98,10 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp (DDD + Número)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-3.5 text-slate-400 font-bold text-sm">+55</span>
                   <input
                     type="text"
                     required
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
                     placeholder="(43) 99999-9999"
                     value={displayPhone}
                     onChange={e => handlePhoneChange(e.target.value)}
