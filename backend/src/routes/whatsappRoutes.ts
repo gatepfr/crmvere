@@ -41,7 +41,7 @@ router.post('/send', async (req, res) => {
     await evo.sendMessage(tenant.whatsappInstanceId, demand.municipe.phone, message);
 
     // 3. Update conversation history in DB
-    const updatedHistory = `${demand.demandas.resumoIa}\n\nGabinete: ${message}`;
+    const updatedHistory = `${demand.demand.resumoIa}\n\nGabinete: ${message}`;
     
     await db.update(demandas)
       .set({ 
