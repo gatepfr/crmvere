@@ -12,6 +12,7 @@ import KanbanLeads from './pages/Dashboard/KanbanLeads';
 import Team from './pages/Dashboard/Team';
 import Profile from './pages/Dashboard/Profile';
 import VoterMap from './pages/Dashboard/VoterMap';
+import Agenda from './pages/Dashboard/Agenda';
 import Sidebar from './components/Sidebar';
 
 function DashboardLayout() {
@@ -67,6 +68,7 @@ function AppContent() {
           }
         >
           <Route index element={<DashboardHome />} />
+          <Route path="agenda" element={<Agenda />} />
           <Route path="demands" element={<Demands />} />
           <Route path="map" element={<VoterMap />} />
           <Route path="cabinet" element={<CabinetConfig />} />
