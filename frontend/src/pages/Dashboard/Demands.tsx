@@ -29,6 +29,7 @@ export default function Demands() {
   const [loading, setLoading] = useState(true);
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
+  const [filterByAttention, setFilterByAttention] = useState(false);
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('date');
@@ -53,9 +54,16 @@ export default function Demands() {
     'outro': 0
   };
 
+  const attentionCount = demands.filter(d => d.demandas.precisaRetorno).length;
+
   const sortedDemands = useMemo(() => {
-    const sorted = [...demands];
-    sorted.sort((a, b) => {
+    let filtered = [...demands];
+    
+    if (filterByAttention) {
+      filtered = filtered.filter(d => d.demandas.precisaRetorno);
+    }
+
+    filtered.sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -171,7 +179,26 @@ export default function Demands() {
           <p className="text-slate-500 mt-1">Gerencie e responda as solicitações recebidas via WhatsApp ou manualmente.</p>
         </div>
         
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+          <button 
+            onClick={() => setFilterByAttention(!filterByAttention)}
+            className={`flex-1 md:flex-none flex items-center justify-center px-4 py-2.5 rounded-xl font-bold transition-all border ${
+              filterByAttention 
+                ? 'bg-red-600 text-white border-red-600 shadow-lg shadow-red-200' 
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
+            }`}
+          >
+            <AlertCircle className={`mr-2 h-5 w-5 ${filterByAttention ? 'text-white' : 'text-red-500'}`} />
+            <span className="whitespace-nowrap">Atenção</span>
+            {attentionCount > 0 && (
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-black ${
+                filterByAttention ? 'bg-white text-red-600' : 'bg-red-600 text-white'
+              }`}>
+                {attentionCount}
+              </span>
+            )}
+          </button>
+
           <button 
             onClick={() => setIsNewDemandModalOpen(true)}
             className="flex-1 md:flex-none flex items-center justify-center px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
