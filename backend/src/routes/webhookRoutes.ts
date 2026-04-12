@@ -60,6 +60,12 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
     let conversationHistory = existingDemanda?.resumoIa || '';
     let promptContext = conversationHistory ? `${conversationHistory}\nCidadão: ${normalized.text}` : `Cidadão: ${normalized.text}`;
 
+    // Truncate context if it gets too long (max 10000 in DB, we use 9000 as safety threshold)
+    if (promptContext.length > 9000) {
+      console.log(`[WEBHOOK] Truncating history for tenant ${tenantId} (current length: ${promptContext.length})`);
+      promptContext = "..." + promptContext.substring(promptContext.length - 5000);
+    }
+
     // 4. AI Processing
     let aiResult = null;
     const apiKey = tenant?.aiApiKey || process.env.GEMINI_API_KEY;
