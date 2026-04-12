@@ -15,7 +15,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  FileDown
+  FileDown,
+  Star
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -26,6 +27,7 @@ interface Municipe {
   phone: string;
   bairro: string | null;
   createdAt: string;
+  demandCount: number;
 }
 
 export default function Municipes() {
@@ -33,8 +35,9 @@ export default function Municipes() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
+  const [onlyEngaged, setOnlyEngaged] = useState(false);
   const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro' | 'createdAt'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro' | 'createdAt' | 'demandCount'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,7 +62,7 @@ export default function Municipes() {
 
   const bairros = Array.from(new Set(municipes.map(m => m.bairro).filter(Boolean))) as string[];
 
-  const handleSort = (key: 'name' | 'bairro' | 'createdAt') => {
+  const handleSort = (key: 'name' | 'bairro' | 'createdAt' | 'demandCount') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -72,11 +75,12 @@ export default function Municipes() {
       const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            m.phone.includes(searchTerm);
       const matchesBairro = !selectedBairro || m.bairro === selectedBairro;
-      return matchesSearch && matchesBairro;
+      const matchesEngaged = !onlyEngaged || m.demandCount >= 5;
+      return matchesSearch && matchesBairro && matchesEngaged;
     })
     .sort((a, b) => {
-      const valA = (a[sortConfig.key] || '').toString().toLowerCase();
-      const valB = (b[sortConfig.key] || '').toString().toLowerCase();
+      const valA = a[sortConfig.key] || '';
+      const valB = b[sortConfig.key] || '';
       
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -249,13 +253,25 @@ export default function Municipes() {
           </select>
         </div>
 
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between gap-4">
+          <button 
+            onClick={() => setOnlyEngaged(!onlyEngaged)}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${
+              onlyEngaged 
+                ? 'bg-amber-100 border-amber-200 text-amber-700 shadow-sm' 
+                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Star size={16} className={onlyEngaged ? 'fill-amber-500' : ''} />
+            Apenas Engajados (+5)
+          </button>
+          
           <button 
             onClick={toggleSelectAll}
-            className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-2"
+            className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-2 whitespace-nowrap"
           >
             {selectedMunicipes.length === filteredMunicipes.length ? <CheckSquare size={18} /> : <Square size={18} />}
-            {selectedMunicipes.length === filteredMunicipes.length ? 'Desmarcar Todos' : 'Selecionar Todos Filtrados'}
+            {selectedMunicipes.length === filteredMunicipes.length ? 'Desmarcar' : 'Selecionar'}
           </button>
         </div>
       </div>
@@ -285,6 +301,17 @@ export default function Municipes() {
                 <div className="flex items-center gap-2">
                   Bairro
                   {sortConfig.key === 'bairro' ? (
+                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                  ) : <ArrowUpDown size={14} className="opacity-30" />}
+                </div>
+              </th>
+              <th 
+                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => handleSort('demandCount')}
+              >
+                <div className="flex items-center gap-2">
+                  Demandas
+                  {sortConfig.key === 'demandCount' ? (
                     sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
                   ) : <ArrowUpDown size={14} className="opacity-30" />}
                 </div>
@@ -331,6 +358,18 @@ export default function Municipes() {
                   ) : (
                     <span className="text-slate-400 italic text-xs">Não informado</span>
                   )}
+                </td>
+                <td className="px-6 py-4">
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-sm ${
+                    m.demandCount >= 5 
+                      ? 'bg-amber-500 text-white' 
+                      : m.demandCount >= 3 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {m.demandCount >= 5 && <Star size={12} className="fill-white" />}
+                    {m.demandCount} {m.demandCount === 1 ? 'Demanda' : 'Demandas'}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-slate-500 text-sm">
                   {new Date(m.createdAt).toLocaleDateString('pt-BR')}

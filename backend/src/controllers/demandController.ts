@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { demandas, municipes } from '../db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, sql } from 'drizzle-orm';
 
 export const createDemand = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
@@ -161,13 +161,23 @@ export const listMunicipes = async (req: Request, res: Response) => {
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
-    const results = await db.select()
-      .from(municipes)
-      .where(eq(municipes.tenantId, tenantId))
-      .orderBy(desc(municipes.createdAt));
+    const results = await db.select({
+      id: municipes.id,
+      name: municipes.name,
+      phone: municipes.phone,
+      bairro: municipes.bairro,
+      createdAt: municipes.createdAt,
+      demandCount: sql<number>`count(${demandas.id})::int`
+    })
+    .from(municipes)
+    .leftJoin(demandas, eq(municipes.id, demandas.municipeId))
+    .where(eq(municipes.tenantId, tenantId))
+    .groupBy(municipes.id)
+    .orderBy(desc(municipes.createdAt));
 
     res.json(results);
   } catch (error) {
+    console.error('Error listing citizens with counts:', error);
     res.status(500).json({ error: 'Failed to list citizens' });
   }
 };
