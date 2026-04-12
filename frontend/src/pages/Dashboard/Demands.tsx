@@ -263,7 +263,7 @@ export default function Demands() {
                 </td>
               </tr>
             ) : (
-              sortedDemands.map((demand) => (
+              sortedDemands.map((demand: Demand) => (
                 <tr 
                   key={demand.demandas.id} 
                   className={`transition-colors cursor-pointer ${
