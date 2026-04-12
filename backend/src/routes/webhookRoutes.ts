@@ -4,7 +4,7 @@ import { db } from '../db';
 import { tenants, municipes, demandas, documents } from '../db/schema';
 import { processDemand } from '../services/aiService';
 import { EvolutionService } from '../services/evolutionService';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 
 const router = Router();
 
