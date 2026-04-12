@@ -25,11 +25,14 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+
+// Webhook routes (MUST be before express.json() for Stripe signature verification)
+app.use('/api/webhook', webhookRoutes);
+
 app.use(express.json());
 
 // Public routes
 app.use('/api/auth', authRoutes);
-app.use('/api/webhook', webhookRoutes);
 
 // Protected routes (Require authentication)
 app.use(authenticate);
