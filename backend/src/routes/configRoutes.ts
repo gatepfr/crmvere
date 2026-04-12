@@ -30,7 +30,8 @@ router.patch('/update', async (req, res) => {
     uf,
     partido,
     mandato,
-    fotoUrl
+    fotoUrl,
+    calendarUrl
   } = req.body;
 
   await db.update(tenants)
@@ -45,7 +46,8 @@ router.patch('/update', async (req, res) => {
       uf,
       partido,
       mandato,
-      fotoUrl
+      fotoUrl,
+      calendarUrl
     })
     .where(eq(tenants.id, tenantId));
     
