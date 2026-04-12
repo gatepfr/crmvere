@@ -9,6 +9,7 @@ interface NewDemandModalProps {
 
 export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProps) {
   const [loading, setLoading] = useState(false);
+  const [displayPhone, setDisplayPhone] = useState('');
   const [formData, setFormData] = useState({
     municipeName: '',
     municipePhone: '',
@@ -18,8 +19,35 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
     resumoIa: ''
   });
 
+  const handlePhoneChange = (value: string) => {
+    // Remove tudo que não é número
+    const raw = value.replace(/\D/g, '');
+    
+    // Limita a 11 números (DDD + Número)
+    const truncated = raw.slice(0, 11);
+    
+    // Aplica a máscara (XX) XXXXX-XXXX
+    let masked = truncated;
+    if (truncated.length > 2) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
+    if (truncated.length > 7) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
+    
+    setDisplayPhone(masked);
+    
+    // No estado real, salvamos com o prefixo 55
+    if (truncated.length > 0) {
+      setFormData({ ...formData, municipePhone: `55${truncated}` });
+    } else {
+      setFormData({ ...formData, municipePhone: '' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.municipePhone.length < 12) {
+      alert('Por favor, insira um telefone válido com DDD.');
+      return;
+    }
+    
     setLoading(true);
     try {
       await api.post('/demands', formData);
@@ -68,15 +96,18 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp / Telefone</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                  placeholder="Ex: 5543999999999"
-                  value={formData.municipePhone}
-                  onChange={e => setFormData({...formData, municipePhone: e.target.value})}
-                />
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp (DDD + Número)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-3.5 text-slate-400 font-bold text-sm">+55</span>
+                  <input
+                    type="text"
+                    required
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                    placeholder="(43) 99999-9999"
+                    value={displayPhone}
+                    onChange={e => handlePhoneChange(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
             <div>

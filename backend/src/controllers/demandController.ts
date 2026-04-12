@@ -101,19 +101,24 @@ export const getDemand = async (req: Request, res: Response) => {
   }
 };
 
-export const updateStatus = async (req: Request, res: Response) => {
+export const updateDemand = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { status } = req.body;
+  const { status, resumoIa } = req.body;
   const tenantId = req.user?.tenantId;
 
   try {
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (resumoIa !== undefined) updateData.resumoIa = resumoIa;
+
     await db.update(demandas)
-      .set({ status })
+      .set(updateData)
       .where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
 
     res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update status' });
+    console.error('Error updating demand:', error);
+    res.status(500).json({ error: 'Failed to update demand' });
   }
 };
 
