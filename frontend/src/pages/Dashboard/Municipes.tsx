@@ -34,7 +34,7 @@ export default function Municipes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
   const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro' | 'createdAt'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,7 +59,7 @@ export default function Municipes() {
 
   const bairros = Array.from(new Set(municipes.map(m => m.bairro).filter(Boolean))) as string[];
 
-  const handleSort = (key: 'name' | 'bairro') => {
+  const handleSort = (key: 'name' | 'bairro' | 'createdAt') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -75,8 +75,8 @@ export default function Municipes() {
       return matchesSearch && matchesBairro;
     })
     .sort((a, b) => {
-      const valA = (a[sortConfig.key] || '').toLowerCase();
-      const valB = (b[sortConfig.key] || '').toLowerCase();
+      const valA = (a[sortConfig.key] || '').toString().toLowerCase();
+      const valB = (b[sortConfig.key] || '').toString().toLowerCase();
       
       if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
       if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -289,7 +289,17 @@ export default function Municipes() {
                   ) : <ArrowUpDown size={14} className="opacity-30" />}
                 </div>
               </th>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Data Cadastro</th>
+              <th 
+                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => handleSort('createdAt')}
+              >
+                <div className="flex items-center gap-2">
+                  Data Cadastro
+                  {sortConfig.key === 'createdAt' ? (
+                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                  ) : <ArrowUpDown size={14} className="opacity-30" />}
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
