@@ -90,7 +90,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
         demandId: demand.demandas.id,
         message: manualMessage
       });
-      setResumoIa(prev => `${prev}\n\nGabinete: ${manualMessage}`);
+      setResumoIa((prev: string) => `${prev}\n\nGabinete: ${manualMessage}`);
       setManualMessage('');
       onUpdate();
     } catch (err) {
