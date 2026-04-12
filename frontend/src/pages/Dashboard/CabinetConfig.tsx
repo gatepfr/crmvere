@@ -9,7 +9,8 @@ export default function CabinetConfig() {
     uf: '',
     partido: '',
     mandato: '',
-    fotoUrl: ''
+    fotoUrl: '',
+    calendarUrl: ''
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -23,7 +24,8 @@ export default function CabinetConfig() {
           uf: res.data.uf || '',
           partido: res.data.partido || '',
           mandato: res.data.mandato || '',
-          fotoUrl: res.data.fotoUrl || ''
+          fotoUrl: res.data.fotoUrl || '',
+          calendarUrl: res.data.calendarUrl || ''
         });
       })
       .catch(err => console.error('Erro ao carregar dados do gabinete:', err))
@@ -115,6 +117,18 @@ export default function CabinetConfig() {
                 onChange={e => setConfig({...config, mandato: e.target.value})}
                 placeholder="Ex: 2025 - 2028"
               />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700">Link de Incorporação da Agenda (Google Calendar)</label>
+              <input 
+                type="url" 
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
+                value={config.calendarUrl}
+                onChange={e => setConfig({...config, calendarUrl: e.target.value})}
+                placeholder="https://calendar.google.com/calendar/embed?src=..."
+              />
+              <p className="text-xs text-slate-500">Cole o link 'src' do código de incorporação ou o link público da sua agenda.</p>
             </div>
 
             <div className="space-y-2 md:col-span-2">
