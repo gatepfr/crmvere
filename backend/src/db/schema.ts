@@ -1,5 +1,7 @@
 import { pgTable, uuid, varchar, timestamp, pgEnum, boolean, integer } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["trial", "active", "past_due", "unpaid", "lifetime"]);
 export const roleEnum = pgEnum("role", ["super_admin", "admin", "vereador", "assessor"]);
 export const aiProviderEnum = pgEnum("ai_provider", ["gemini", "openai", "anthropic", "groq", "custom", "openrouter"]);
 
@@ -25,6 +27,13 @@ export const tenants = pgTable("tenants", {
   partido: varchar("partido", { length: 100 }),
   mandato: varchar("mandato", { length: 100 }),
   fotoUrl: varchar("foto_url", { length: 500 }),
+  subscriptionStatus: subscriptionStatusEnum("subscription_status").default("trial").notNull(),
+  trialEndsAt: timestamp("trial_ends_at").default(sql`CURRENT_TIMESTAMP + interval '7 days'`).notNull(),
+  gracePeriodEndsAt: timestamp("grace_period_ends_at"),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  isManual: boolean("is_manual").default(false).notNull(),
+  monthlyPrice: integer("monthly_price").default(24700).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
