@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SubscriptionProvider, SubscriptionGuard } from './components/SubscriptionGuard';
+import { BillingBanner } from './components/BillingBanner';
 import Login from './pages/Login';
 import Tenants from './pages/SuperAdmin/Tenants';
 import Demands from './pages/Dashboard/Demands';
@@ -15,17 +17,23 @@ import VoterMap from './pages/Dashboard/VoterMap';
 import Agenda from './pages/Dashboard/Agenda';
 import Municipes from './pages/Dashboard/Municipes';
 import IALab from './pages/Dashboard/IALab';
+import Billing from './pages/Billing';
 import Sidebar from './components/Sidebar';
 
 function DashboardLayout() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <main className="flex-1 lg:ml-64 p-4 lg:p-10 bg-slate-50 min-h-screen">
-        <div className="mt-14 lg:mt-0">
-          <Outlet />
-        </div>
-      </main>
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        <BillingBanner />
+        <main className="flex-1 p-4 lg:p-10 bg-slate-50">
+          <div className="mt-14 lg:mt-0">
+            <SubscriptionGuard>
+              <Outlet />
+            </SubscriptionGuard>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
@@ -82,6 +90,7 @@ function AppContent() {
           <Route path="knowledge" element={<KnowledgeBase />} />
           <Route path="team" element={<Team />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="billing" element={<Billing />} />
         </Route>
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
@@ -92,7 +101,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SubscriptionProvider>
+        <AppContent />
+      </SubscriptionProvider>
     </AuthProvider>
   );
 }
