@@ -14,6 +14,9 @@ import teamRoutes from './routes/teamRoutes';
 import profileRoutes from './routes/profileRoutes';
 import mapRoutes from './routes/mapRoutes';
 import aiRoutes from './routes/aiRoutes';
+import { authenticate } from './middleware/auth';
+import { checkTenant } from './middleware/tenant';
+import { checkSubscription } from './middleware/subscription';
 
 dotenv.config();
 
@@ -23,9 +26,20 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Public routes
 app.use('/api/auth', authRoutes);
-app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/webhook', webhookRoutes);
+
+// Protected routes (Require authentication and subscription check)
+app.use(authenticate);
+app.use(checkSubscription);
+
+// Super admin routes do not require tenant context
+app.use('/api/superadmin', superAdminRoutes);
+
+// Tenant-specific routes (Require tenant context)
+app.use(checkTenant);
+
 app.use('/api/demands', demandRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/config', configRoutes);
