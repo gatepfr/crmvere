@@ -135,14 +135,42 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     }
   };
 
-  // Helper to format bold text from markdown-like syntax (**text**)
+  // Helper to format conversation and bold text
   const formatText = (text: string) => {
     if (!text) return '';
-    return text.split(/(\*\*.*?\*\*)/g).map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="text-slate-900">{part.slice(2, -2)}</strong>;
+    
+    return text.split('\n').map((line, lineIndex) => {
+      let content: React.ReactNode = line;
+
+      // Handle Bold markers **text**
+      const parts = line.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="text-slate-900">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+      content = parts;
+
+      // Style based on who is speaking
+      if (line.startsWith('Cidadão:') || line.startsWith('Munícipe:')) {
+        return (
+          <div key={lineIndex} className="mb-3 pb-2 border-b border-slate-100 last:border-0">
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-1">Solicitação do Cidadão</span>
+            <div className="text-slate-900 font-semibold">{content}</div>
+          </div>
+        );
       }
-      return part;
+
+      if (line.startsWith('AI:') || line.startsWith('Gabinete:') || line.startsWith('Resposta:')) {
+        return (
+          <div key={lineIndex} className="mb-3 pl-4 border-l-2 border-slate-200 py-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Resposta do Gabinete</span>
+            <div className="text-slate-600 italic leading-relaxed">{content}</div>
+          </div>
+        );
+      }
+
+      return <div key={lineIndex} className="mb-2">{content}</div>;
     });
   };
 
