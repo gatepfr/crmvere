@@ -109,7 +109,13 @@ export const updateDemand = async (req: Request, res: Response) => {
 
   try {
     const updateData: any = {};
-    if (status) updateData.status = status;
+    if (status) {
+      updateData.status = status;
+      // If status is concluded, automatically clear the team alert
+      if (status === 'concluida') {
+        updateData.precisaRetorno = false;
+      }
+    }
     if (prioridade) updateData.prioridade = prioridade;
     if (categoria) updateData.categoria = categoria;
     if (precisaRetorno !== undefined) updateData.precisaRetorno = precisaRetorno;

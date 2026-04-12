@@ -48,7 +48,7 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
       municipe = newMunicipe;
     }
 
-    // 2. Get LATEST open demand (created TODAY since 00:00)
+    // 2. Get LATEST open demand (created TODAY since 00:00 AND status is active)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -57,13 +57,12 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
       .where(and(
         eq(demandas.municipeId, municipe.id), 
         eq(demandas.tenantId, tenantId), 
-        eq(demandas.status, 'nova')
-        // We could add more filters here if needed
+        sql`${demandas.status} IN ('nova', 'em_andamento')`
       ))
       .orderBy(desc(demandas.updatedAt))
       .limit(1);
 
-    // If the latest open demand was NOT created today, start a NEW one
+    // If the latest active demand was NOT created today, start a NEW one
     if (existingDemanda && existingDemanda.createdAt < todayStart) {
       existingDemanda = undefined;
     }
