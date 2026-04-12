@@ -81,11 +81,16 @@ router.post('/evolution/:tenantId', async (req: Request, res: Response) => {
 
     // New: Check for Human Intervention (Silence AI for 10 minutes)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const lastMessageWasHuman = existingDemanda?.resumoIa?.includes('Gabinete:');
+    const history = existingDemanda?.resumoIa || '';
+    
+    // Check if "Gabinete:" appears after the last "AI:" response
+    const lastGabineteIndex = history.lastIndexOf('Gabinete:');
+    const lastAIIndex = history.lastIndexOf('AI:');
+    const isHumanLastSpeaker = lastGabineteIndex > lastAIIndex;
     const wasRecentlyUpdatedByHuman = existingDemanda && existingDemanda.updatedAt > tenMinutesAgo;
 
-    if (lastMessageWasHuman && wasRecentlyUpdatedByHuman) {
-      console.log(`[WEBHOOK] AI is SILENCED for tenant ${tenantId} due to recent human intervention.`);
+    if (isHumanLastSpeaker && wasRecentlyUpdatedByHuman) {
+      console.log(`[WEBHOOK] AI is SILENCED for tenant ${tenantId} because human was the last speaker in the last 10 min.`);
       return res.status(200).json({ status: 'ignored_human_active' });
     }
 
