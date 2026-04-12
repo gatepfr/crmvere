@@ -4,7 +4,7 @@ import {
   Sparkles, 
   FileText, 
   Clapperboard, 
-  Instagram, 
+  Share2, 
   Loader2, 
   Copy, 
   CheckCircle2, 
@@ -42,7 +42,7 @@ export default function IALab() {
       id: 'social',
       title: 'Post de Prestação de Contas',
       desc: 'Transforme uma ação ou demanda resolvida em um texto engajador para redes sociais.',
-      icon: Instagram,
+      icon: Share2,
       color: 'bg-pink-600',
       placeholder: 'Ex: Texto para Instagram sobre a entrega da reforma da UBS...'
     }
