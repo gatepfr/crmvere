@@ -11,7 +11,10 @@ import {
   Square,
   Send,
   X,
-  CheckCircle2
+  CheckCircle2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 interface Municipe {
@@ -28,6 +31,7 @@ export default function Municipes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
   const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,12 +56,29 @@ export default function Municipes() {
 
   const bairros = Array.from(new Set(municipes.map(m => m.bairro).filter(Boolean))) as string[];
 
-  const filteredMunicipes = municipes.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         m.phone.includes(searchTerm);
-    const matchesBairro = !selectedBairro || m.bairro === selectedBairro;
-    return matchesSearch && matchesBairro;
-  });
+  const handleSort = (key: 'name' | 'bairro') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const filteredMunicipes = municipes
+    .filter(m => {
+      const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           m.phone.includes(searchTerm);
+      const matchesBairro = !selectedBairro || m.bairro === selectedBairro;
+      return matchesSearch && matchesBairro;
+    })
+    .sort((a, b) => {
+      const valA = (a[sortConfig.key] || '').toLowerCase();
+      const valB = (b[sortConfig.key] || '').toLowerCase();
+      
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const toggleSelect = (id: string) => {
     setSelectedSelectedMunicipes(prev => 
@@ -193,9 +214,29 @@ export default function Municipes() {
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-10"></th>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Nome</th>
+              <th 
+                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center gap-2">
+                  Nome
+                  {sortConfig.key === 'name' ? (
+                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                  ) : <ArrowUpDown size={14} className="opacity-30" />}
+                </div>
+              </th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
-              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Bairro</th>
+              <th 
+                className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => handleSort('bairro')}
+              >
+                <div className="flex items-center gap-2">
+                  Bairro
+                  {sortConfig.key === 'bairro' ? (
+                    sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                  ) : <ArrowUpDown size={14} className="opacity-30" />}
+                </div>
+              </th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Data Cadastro</th>
             </tr>
           </thead>
