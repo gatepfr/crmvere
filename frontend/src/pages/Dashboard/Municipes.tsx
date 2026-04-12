@@ -14,8 +14,11 @@ import {
   CheckCircle2,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  FileDown
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Municipe {
   id: string;
@@ -153,6 +156,38 @@ export default function Municipes() {
     return raw;
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text('Relatório de Munícipes - CRM do Verê', 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
+    if (selectedBairro) {
+      doc.text(`Filtro por Bairro: ${selectedBairro}`, 14, 34);
+    }
+
+    const tableData = filteredMunicipes.map(m => [
+      m.name,
+      formatPhone(m.phone),
+      m.bairro || 'Não informado',
+      new Date(m.createdAt).toLocaleDateString('pt-BR')
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Nome', 'Telefone', 'Bairro', 'Data Cadastro']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] }, // slate-800
+      styles: { fontSize: 9 }
+    });
+
+    doc.save(`municipes-${new Date().getTime()}.pdf`);
+  };
+
   if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   return (
@@ -166,15 +201,25 @@ export default function Municipes() {
           <p className="text-slate-500 mt-1">Gerencie seus contatos e realize disparos segmentados por bairro.</p>
         </div>
 
-        {selectedMunicipes.length > 0 && (
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2 animate-in zoom-in duration-200"
+            onClick={exportToPDF}
+            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
           >
-            <MessageCircle size={20} />
-            Enviar para {selectedMunicipes.length} selecionados
+            <FileDown size={20} className="text-slate-400" />
+            Exportar PDF
           </button>
-        )}
+
+          {selectedMunicipes.length > 0 && (
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2 animate-in zoom-in duration-200"
+            >
+              <MessageCircle size={20} />
+              Enviar para {selectedMunicipes.length}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Filters */}
