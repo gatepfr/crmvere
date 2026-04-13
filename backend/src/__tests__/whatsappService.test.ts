@@ -22,7 +22,7 @@ describe('whatsappService', () => {
     const result = normalizeEvolution(payload, tenantId);
 
     expect(result).toEqual({
-      event: 'unknown',
+      event: 'MESSAGES_UPSERT',
       from: '5511999999999',
       name: 'John Doe',
       text: 'Hello world',

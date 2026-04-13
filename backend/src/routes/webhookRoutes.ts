@@ -25,12 +25,14 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
   const payload = req.body;
 
   console.log(`[WEBHOOK] Incoming from tenant ${tenantId}`);
+  console.log(`[WEBHOOK] Payload structure:`, JSON.stringify(payload, null, 2).substring(0, 500));
 
   try {
     const normalized = normalizeEvolution(payload, tenantId);
     
     // 1. Only process new messages (upsert)
-    if (normalized.event !== 'MESSAGES_UPSERT' && normalized.event !== 'messages.upsert') {
+    const validEvents = ['MESSAGES_UPSERT', 'messages.upsert', 'MESSAGES_CREATE', 'messages.create'];
+    if (!validEvents.includes(normalized.event) && normalized.event !== 'unknown') {
       return res.status(200).json({ status: 'ignored_event', event: normalized.event });
     }
 

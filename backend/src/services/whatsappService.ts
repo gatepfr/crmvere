@@ -12,7 +12,11 @@ export interface IncomingMessage {
  * Normalizes the payload from Evolution API into a standard format.
  */
 export const normalizeEvolution = (payload: any, tenantId: string): IncomingMessage => {
-  const event = payload.event || 'unknown';
+  // Extract event type - fallback to upsert if message data exists
+  let event = payload.event || 'unknown';
+  if (event === 'unknown' && payload.data?.message) {
+    event = 'MESSAGES_UPSERT';
+  }
   const remoteJid = payload.data?.key?.remoteJid || '';
   const fromMe = payload.data?.key?.fromMe || false;
   
