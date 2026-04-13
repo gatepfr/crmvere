@@ -162,16 +162,31 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
 
   const moveToKanban = async (campaignId: string) => {
     setMoving(true);
+    console.log(`[KANBAN] Attempting to move demand to campaign ${campaignId}`);
+    console.log(`[KANBAN] Municipe Data:`, demand.municipes);
+    
     try {
-      await api.post(`/kanban/campaigns/${campaignId}/leads`, {
+      if (!demand.municipes.id) {
+        throw new Error('ID do munícipe não encontrado.');
+      }
+
+      const payload = {
         name: demand.municipes.name,
         phone: demand.municipes.phone,
         notes: `Demanda original: ${demand.demandas.resumoIa}`,
         municipeId: demand.municipes.id
-      });
+      };
+
+      console.log(`[KANBAN] Sending payload:`, payload);
+
+      const response = await api.post(`/kanban/campaigns/${campaignId}/leads`, payload);
+      console.log(`[KANBAN] Success response:`, response.data);
+      
       alert('Convertido em Lead com sucesso!');
-    } catch (err) {
-      alert('Falha ao mover para Kanban.');
+    } catch (err: any) {
+      console.error('[KANBAN] Error moving to Kanban:', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Erro desconhecido';
+      alert(`Falha ao mover para Kanban: ${errorMsg}`);
     } finally {
       setMoving(false);
     }

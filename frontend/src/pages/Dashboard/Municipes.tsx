@@ -16,7 +16,10 @@ import {
   ArrowUp,
   ArrowDown,
   FileDown,
-  Star
+  Star,
+  Edit2,
+  Trash2,
+  Save
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -44,6 +47,11 @@ export default function Municipes() {
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
+
+  // Edit Modal State
+  const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', bairro: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadMunicipes();
@@ -148,6 +156,41 @@ export default function Municipes() {
       return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
     }
     return raw;
+  };
+
+  const handleEdit = (m: Municipe) => {
+    setEditingMunicipe(m);
+    setEditForm({
+      name: m.name,
+      phone: m.phone,
+      bairro: m.bairro || ''
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este munícipe? Esta ação não pode ser desfeita.')) return;
+    try {
+      await api.delete(`/demands/municipe/${id}`);
+      setMunicipes(prev => prev.filter(m => m.id !== id));
+      alert('Munícipe excluído com sucesso!');
+    } catch (err) {
+      alert('Falha ao excluir munícipe.');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMunicipe) return;
+    setSaving(true);
+    try {
+      await api.patch(`/demands/municipe/${editingMunicipe.id}`, editForm);
+      loadMunicipes();
+      setEditingMunicipe(null);
+      alert('Dados atualizados com sucesso!');
+    } catch (err) {
+      alert('Falha ao atualizar dados.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const exportToPDF = () => {
@@ -265,7 +308,7 @@ export default function Municipes() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <div className="min-w-[800px]">
+          <div className="min-w-[1000px]">
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
@@ -315,6 +358,7 @@ export default function Municipes() {
                     ) : <ArrowUpDown size={14} className="opacity-30" />}
                   </div>
                 </th>
+                <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -322,7 +366,11 @@ export default function Municipes() {
                 <tr 
                   key={m.id} 
                   className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/30' : ''}`}
-                  onClick={() => toggleSelect(m.id)}
+                  onClick={(e) => {
+                    // Prevent row selection if clicking on buttons
+                    if ((e.target as HTMLElement).closest('button')) return;
+                    toggleSelect(m.id);
+                  }}
                 >
                   <td className="px-4 md:px-6 py-4">
                     {selectedMunicipes.includes(m.id) ? (
@@ -362,6 +410,24 @@ export default function Municipes() {
                   <td className="px-4 md:px-6 py-4 text-slate-500 text-sm">
                     {new Date(m.createdAt).toLocaleDateString('pt-BR')}
                   </td>
+                  <td className="px-4 md:px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => handleEdit(m)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        title="Editar Munícipe"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(m.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Excluir Munícipe"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -373,6 +439,67 @@ export default function Municipes() {
       {filteredMunicipes.length === 0 && (
         <div className="p-20 text-center">
           <p className="text-slate-500 font-medium">Nenhum munícipe encontrado com esses filtros.</p>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingMunicipe && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-900">Editar Munícipe</h3>
+              <button onClick={() => setEditingMunicipe(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-5">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                  value={editForm.name}
+                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp (Número)</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                  value={editForm.phone}
+                  onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                  value={editForm.bairro}
+                  onChange={e => setEditForm({...editForm, bairro: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingMunicipe(null)}
+                className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {saving ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
