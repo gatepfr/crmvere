@@ -145,17 +145,24 @@ export default function Municipes() {
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
-    let raw = phone.startsWith('55') ? phone.slice(2) : phone;
-    if (raw.length === 10 && ['7', '8', '9'].includes(raw[2])) {
-      raw = raw.slice(0, 2) + '9' + raw.slice(2);
+    let cleaned = phone.replace(/\D/g, '');
+    
+    // Remove Brazilian country code if present
+    if (cleaned.length >= 12 && cleaned.startsWith('55')) {
+      cleaned = cleaned.slice(2);
     }
-    if (raw.length === 11) {
-      return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+    
+    // Intelligent Fix: If it has 10 digits, it's missing the 9th digit. Add it.
+    if (cleaned.length === 10) {
+      cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
     }
-    if (raw.length === 10) {
-      return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+    
+    // Final format (99) 99999-9999
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     }
-    return raw;
+    
+    return phone;
   };
 
   const handleEdit = (m: Municipe) => {
