@@ -67,6 +67,10 @@ services:
       - BACKEND_URL=https://api.crmvere.com.br
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PRICE_ID=${STRIPE_PRICE_ID}
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - db
       - redis
