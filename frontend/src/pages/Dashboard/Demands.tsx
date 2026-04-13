@@ -169,8 +169,14 @@ export default function Demands() {
   const formatPhone = (phone: string) => {
     if (!phone) return '';
     const cleaned = phone.replace(/\D/g, '');
-    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
     
+    // Logic: if more than 11 digits and starts with 55, it's Brazil. Remove 55.
+    let finalNumber = cleaned;
+    if (cleaned.length > 11 && cleaned.startsWith('55')) {
+      finalNumber = cleaned.slice(2);
+    }
+    
+    // Re-check length of what's left
     if (finalNumber.length === 11) {
       return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
     } else if (finalNumber.length === 10) {
