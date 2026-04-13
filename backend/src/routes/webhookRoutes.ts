@@ -217,7 +217,16 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
       // 7. ALERT HUMAN if needed
       if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {
         console.log(`[WEBHOOK] Alerting human at ${tenant.whatsappNotificationNumber}`);
-        const alertMsg = `🚨 *ALERTA DE ATENDIMENTO HUMANO*\n\n*Munícipe:* ${municipe.name}\n*Telefone:* ${normalized.from}\n*Bairro:* ${municipe.bairro || 'Não informado'}\n*Resumo:* ${aiResult.resumo_ia}\n\nO cidadão solicitou atenção humana ou a IA não soube responder. Acesse o painel para assumir.`;
+        
+        // Clean up the summary from AI (remove markdown bold markers)
+        const cleanSummary = aiResult.resumo_ia?.replace(/\*\*/g, '').replace(/\*/g, '') || 'Sem resumo disponível';
+        
+        const alertMsg = `🚨 ALERTA DE ATENDIMENTO HUMANO\n\n` +
+                        `Cidadão: ${municipe.name}\n` +
+                        `Telefone: ${normalized.from}\n` +
+                        `Bairro: ${municipe.bairro || 'Não informado'}\n\n` +
+                        `RESUMO DA DEMANDA:\n${cleanSummary}\n\n` +
+                        `O cidadão solicitou atenção humana ou a IA não soube responder. Acesse o painel para assumir.`;
         
         await evolution.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, alertMsg)
           .catch(e => console.error('[WEBHOOK] Alert Send Error:', e.message));
