@@ -135,7 +135,7 @@ export default function Tenants() {
               <LayoutDashboard size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tighter text-yellow-400">CENTRAL SUPER ADMIN</h1>
+              <h1 className="text-xl font-black tracking-tighter text-amber-400">CENTRAL SUPER ADMIN</h1>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Painel de Controle do Sistema</p>
             </div>
           </div>
@@ -427,29 +427,16 @@ export default function Tenants() {
           </div>
         )}
 
-        {/* Zona de Perigo */}
-        <div className="pt-12 border-t border-slate-200">
-          <div className="bg-red-50 rounded-3xl p-8 border border-red-100 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div>
-              <h3 className="text-xl font-black text-red-900 flex items-center gap-2">
-                <Trash2 className="text-red-600" size={24} />
-                Zona de Perigo
-              </h3>
-              <p className="text-sm text-red-700 mt-1 font-medium">Use estas ferramentas com extrema cautela. As ações são irreversíveis.</p>
-            </div>
-            <button 
-              onClick={handleResetDatabase}
-              disabled={loading}
-              className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black shadow-xl shadow-red-200 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {loading ? 'Limpando...' : 'Zerar Todo o Banco de Dados'}
-            </button>
-          </div>
-        </div>
-
       </main>
 
-      <footer className="p-6 text-center">
+      <footer className="p-6 flex flex-col items-center gap-4">
+        <button 
+          onClick={handleResetDatabase}
+          disabled={loading}
+          className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50 disabled:opacity-50"
+        >
+          {loading ? 'Processando...' : 'Zerar Banco de Dados'}
+        </button>
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CRM do Verê - v1.0.0 © 2026</p>
       </footer>
     </div>
