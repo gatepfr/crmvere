@@ -302,23 +302,23 @@ export default function Municipes() {
         </div>
       </div>
 
-      {/* Filters Bar - Refined */}
-      <div className="bg-slate-900 rounded-[2.5rem] p-4 flex flex-col lg:flex-row items-center gap-4 shadow-2xl shadow-slate-900/20 border border-slate-800">
+      {/* Filters Bar - Back to Light/Gray Style */}
+      <div className="bg-white rounded-[2rem] p-6 flex flex-col lg:flex-row items-center gap-4 shadow-sm border border-slate-200">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text"
             placeholder="Buscar por nome ou telefone..."
-            className="w-full pl-12 pr-4 py-3.5 bg-slate-800/50 border border-slate-700 text-white rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-500 font-medium"
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400 font-medium"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
 
         <div className="relative flex-1 w-full">
-          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <select 
-            className="w-full pl-12 pr-10 py-3.5 bg-slate-800/50 border border-slate-700 text-white rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-bold text-sm"
+            className="w-full pl-12 pr-10 py-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-bold text-sm"
             value={selectedBairro}
             onChange={e => setSelectedBairro(e.target.value)}
           >
@@ -332,10 +332,10 @@ export default function Municipes() {
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <button 
             onClick={() => setOnlyEngaged(!onlyEngaged)}
-            className={`flex-1 lg:flex-none px-6 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 border uppercase tracking-widest ${
+            className={`flex-1 lg:flex-none px-6 py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 border uppercase tracking-widest ${
               onlyEngaged 
                 ? 'bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/20' 
-                : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
             }`}
           >
             <Star size={14} className={onlyEngaged ? 'fill-white' : ''} />
@@ -344,7 +344,7 @@ export default function Municipes() {
           
           <button 
             onClick={toggleSelectAll}
-            className="px-6 py-3.5 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all whitespace-nowrap"
+            className="px-6 py-3 bg-blue-50 text-blue-600 border border-blue-100 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 transition-all whitespace-nowrap"
           >
             {selectedMunicipes.length === filteredMunicipes.length ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
           </button>
