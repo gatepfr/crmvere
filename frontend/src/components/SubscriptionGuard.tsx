@@ -7,6 +7,8 @@ interface SubscriptionInfo {
   subscriptionStatus: 'trial' | 'active' | 'past_due' | 'unpaid' | 'lifetime';
   trialEndsAt: string;
   gracePeriodEndsAt?: string;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
 }
 
 interface SubscriptionContextType {

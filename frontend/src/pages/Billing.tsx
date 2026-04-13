@@ -53,7 +53,7 @@ const Billing: React.FC = () => {
               ? 'bg-blue-100 text-blue-800'
               : 'bg-red-100 text-red-800'
           }`}>
-            {info?.subscriptionStatus.toUpperCase()}
+            {info?.subscriptionStatus?.toUpperCase() || '---'}
           </span>
         </div>
         <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
