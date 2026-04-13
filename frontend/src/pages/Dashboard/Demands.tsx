@@ -166,6 +166,15 @@ export default function Demands() {
     }
   };
 
+  const formatPhone = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    const match = cleaned.match(/^(?:55)?(\d{2})(\d{5})(\d{4})$/);
+    if (match) {
+      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    }
+    return phone;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -343,7 +352,7 @@ export default function Demands() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500 font-normal">{demand.municipes.phone}</div>
+                      <div className="text-xs text-slate-500 font-normal">{formatPhone(demand.municipes.phone)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
                       {demand.demandas.categoria}

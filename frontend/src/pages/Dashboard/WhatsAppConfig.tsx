@@ -131,10 +131,13 @@ export default function WhatsAppConfig() {
       const res = await api.post('/whatsapp/instance/create');
       console.log('Instância criada:', res.data);
       
-      // Give it a moment then fetch status and qrcode
-      setTimeout(() => {
-        fetchStatus();
-        fetchQrCode();
+      // Intensive polling for the first few seconds to get the QR code fast
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        await fetchStatus();
+        await fetchQrCode();
+        attempts++;
+        if (attempts > 5) clearInterval(interval);
       }, 2000);
       
     } catch (err: unknown) {
