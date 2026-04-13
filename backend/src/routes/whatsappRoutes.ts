@@ -95,6 +95,14 @@ router.post('/instance/create', async (req, res) => {
       return res.status(400).json({ error: 'Evolution API credentials not configured' });
     }
 
+    // Save credentials to tenant if they were missing, so frontend/webhooks can use them
+    if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken) {
+      await db.update(tenants).set({ 
+        evolutionApiUrl, 
+        evolutionGlobalToken 
+      }).where(eq(tenants.id, tenantId));
+    }
+
     const evo = new EvolutionService(evolutionApiUrl, evolutionGlobalToken);
     
     // Create new instance without prior deletion to simplify
