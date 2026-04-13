@@ -17,6 +17,13 @@ const router = Router();
 router.post('/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 /**
+ * Health check/Ping endpoint.
+ */
+router.get('/ping', (req, res) => {
+  res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+});
+
+/**
  * Webhook endpoint for Evolution API.
  * Route: POST /api/webhook/evolution/:tenantId
  */
