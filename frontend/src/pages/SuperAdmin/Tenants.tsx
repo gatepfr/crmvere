@@ -135,7 +135,7 @@ export default function Tenants() {
               <LayoutDashboard size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tighter">CENTRAL SUPER ADMIN</h1>
+              <h1 className="text-xl font-black tracking-tighter text-yellow-400">CENTRAL SUPER ADMIN</h1>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Painel de Controle do Sistema</p>
             </div>
           </div>
