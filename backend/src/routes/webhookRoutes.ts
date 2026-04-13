@@ -26,9 +26,9 @@ router.get('/ping', (req, res) => {
 /**
  * Webhook endpoint for Evolution API.
  * Route: POST /api/webhook/evolution/:tenantId
- * Note: Added :eventName? to support Evolution API v2 sub-paths in Express 5
+ * Note: Supporting both base and sub-paths for Evolution API v2 events
  */
-router.post('/evolution/:tenantId/:eventName?', express.json(), async (req: Request, res: Response) => {
+router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express.json(), async (req: Request, res: Response) => {
   const tenantId = req.params.tenantId as string;
   const payload = req.body;
 
