@@ -26,12 +26,14 @@ router.get('/ping', (req, res) => {
 /**
  * Webhook endpoint for Evolution API.
  * Route: POST /api/webhook/evolution/:tenantId
+ * Note: Added * to support Evolution API v2 sub-paths when byEvents is true
  */
-router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Response) => {
+router.post('/evolution/:tenantId*', express.json(), async (req: Request, res: Response) => {
   const tenantId = req.params.tenantId as string;
   const payload = req.body;
 
-  console.log(`[WEBHOOK] Incoming from tenant ${tenantId}`);
+  console.log(`[WEBHOOK] Incoming from tenant ${tenantId} (Event: ${payload?.event || 'unknown'})`);
+  console.log(`[WEBHOOK] Full URL Path: ${req.originalUrl}`);
   console.log(`[WEBHOOK] Payload structure:`, JSON.stringify(payload, null, 2).substring(0, 500));
 
   try {
