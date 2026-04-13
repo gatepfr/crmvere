@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposta Comercial - CRM do Verê</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none; }
+            body { background: white; }
+            .shadow-custom { box-shadow: none !important; border: 1px solid #e2e8f0; }
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased">
+
+    <!-- Container Principal -->
+    <div class="max-w-4xl mx-auto my-10 bg-white shadow-2xl rounded-[3rem] overflow-hidden border border-slate-100 shadow-custom">
+        
+        <!-- Header -->
+        <header class="bg-slate-900 p-12 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full opacity-10">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path d="M0 100 C 20 0 50 0 100 100 Z" fill="white"></path>
+                </svg>
+            </div>
+            <div class="relative z-10">
+                <img src="../frontend/public/logo_site.png" alt="CRM do Verê" class="h-20 mx-auto mb-6 object-contain grayscale invert">
+                <h1 class="text-white text-4xl font-black tracking-tighter uppercase mb-2">Proposta Comercial</h1>
+                <p class="text-blue-400 font-bold tracking-widest text-sm uppercase">Inteligência Artificial para Mandatos de Alta Performance</p>
+            </div>
+        </header>
+
+        <div class="p-12 space-y-12">
+            
+            <!-- Introdução -->
+            <section class="text-center space-y-4">
+                <h2 class="text-3xl font-black text-slate-900 leading-tight">Transforme seu Gabinete em uma <br><span class="gradient-text">Central de Inteligência Política</span></h2>
+                <p class="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
+                    O CRM do Verê é a primeira plataforma desenhada exclusivamente para parlamentares que desejam modernizar sua gestão, aproximar-se do eleitor e otimizar a produção legislativa através de IA.
+                </p>
+            </section>
+
+            <!-- Grid de Funcionalidades -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- WhatsApp -->
+                <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex flex-col gap-4">
+                    <div class="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-900">Atendimento 24h via WhatsApp</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">Sua IA atende, tria e categoriza demandas (Saúde, Obras, etc) instantaneamente, silenciando automaticamente quando a equipe assume.</p>
+                </div>
+
+                <!-- Lab IA -->
+                <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex flex-col gap-4">
+                    <div class="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-900">Lab IA: Fábrica de Conteúdo</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">Crie Projetos de Lei completos com justificativa técnica, roteiros para Reels e posts de redes sociais em segundos, mantendo o contexto histórico.</p>
+                </div>
+
+                <!-- Mapa -->
+                <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex flex-col gap-4">
+                    <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-900">Inteligência Territorial</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">Mapa interativo de demandas por bairro, segmentação da base de contatos por região e identificação automática dos apoiadores mais engajados.</p>
+                </div>
+
+                <!-- Gestão -->
+                <div class="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 flex flex-col gap-4">
+                    <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-900">Gestão Estratégica</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">Dashboard de métricas reais, sistema de Kanban (CRM) para acompanhamento de solicitações e emissão de relatórios PDF com um clique.</p>
+                </div>
+            </section>
+
+            <!-- Seção de Preço -->
+            <section class="bg-blue-600 rounded-[3rem] p-12 text-center text-white relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                <div class="relative z-10">
+                    <h4 class="text-lg font-black uppercase tracking-[0.3em] mb-4 opacity-80">Investimento Único</h4>
+                    <div class="flex items-center justify-center gap-2 mb-4">
+                        <span class="text-2xl font-bold opacity-70">R$</span>
+                        <span class="text-7xl font-black tracking-tighter">297</span>
+                        <span class="text-xl font-bold opacity-70">/mês</span>
+                    </div>
+                    <p class="text-blue-100 font-medium mb-8">Acesso total a todas as funcionalidades, suporte técnico <br>e atualizações de inteligência artificial inclusas.</p>
+                    <div class="bg-white text-blue-600 px-10 py-4 rounded-2xl font-black inline-block shadow-xl uppercase tracking-widest no-print">
+                        Contratar Agora
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer da Proposta -->
+            <footer class="pt-8 border-t border-slate-100 text-center space-y-4">
+                <img src="../frontend/public/logo_site.png" alt="CRM do Verê" class="h-10 mx-auto opacity-30 grayscale object-contain">
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">CRM do Verê © 2026 - A tecnologia que humaniza o seu mandato.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instruções -->
+    <div class="max-w-4xl mx-auto mb-20 px-8 flex justify-between items-center no-print">
+        <p class="text-slate-400 text-xs font-medium">Esta página foi gerada para visualização direta no navegador ou impressão em PDF.</p>
+        <button onclick="window.print()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Imprimir PDF
+        </button>
+    </div>
+
+</body>
+</html>
