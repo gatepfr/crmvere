@@ -147,6 +147,7 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
     // 4. AI Processing
     let aiResult = null;
     const apiKey = tenant?.aiApiKey || process.env.GEMINI_API_KEY;
+    console.log(`[WEBHOOK] AI Start - apiKey present: ${!!apiKey}`);
     if (apiKey) {
       try {
         aiResult = await processDemand(promptContext, {
@@ -156,9 +157,12 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
           aiBaseUrl: tenant?.aiBaseUrl || undefined,
           systemPrompt: tenant?.systemPrompt || ''
         }, undefined, knowledgeBaseContent);
+        console.log(`[WEBHOOK] AI Result: "${aiResult?.resposta_usuario?.substring(0, 50)}..."`);
       } catch (aiError: any) {
         console.error('[WEBHOOK] AI Error:', aiError.message);
       }
+    } else {
+      console.warn(`[WEBHOOK] No API Key for tenant ${tenantId}. AI will not process.`);
     }
 
     // 5. Save updated conversation to database
@@ -190,22 +194,27 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
 
     // 6. Send WhatsApp Response
     if (aiResult?.resposta_usuario && tenant.whatsappInstanceId) {
+      console.log(`[WEBHOOK] Sending AI response to ${normalized.jid} via instance ${tenant.whatsappInstanceId}`);
       const evolution = new EvolutionService(
         tenant.evolutionApiUrl || 'http://localhost:8080',
         tenant.evolutionGlobalToken || 'mestre123'
       );
       
       // Send main response to citizen
-      await evolution.sendMessage(tenant.whatsappInstanceId, normalized.from, aiResult.resposta_usuario)
-        .catch(e => console.error('[WEBHOOK] Send Error:', e.message));
+      await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario)
+        .then(() => console.log(`[WEBHOOK] AI message sent successfully to ${normalized.jid}`))
+        .catch(e => console.error(`[WEBHOOK] Send Error to ${normalized.jid}:`, e.message));
 
       // 7. ALERT HUMAN if needed
       if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {
+        console.log(`[WEBHOOK] Alerting human at ${tenant.whatsappNotificationNumber}`);
         const alertMsg = `🚨 *ALERTA DE ATENDIMENTO HUMANO*\n\n*Munícipe:* ${municipe.name}\n*Telefone:* ${normalized.from}\n*Bairro:* ${municipe.bairro || 'Não informado'}\n*Resumo:* ${aiResult.resumo_ia}\n\nO cidadão solicitou atenção humana ou a IA não soube responder. Acesse o painel para assumir.`;
         
         await evolution.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, alertMsg)
           .catch(e => console.error('[WEBHOOK] Alert Send Error:', e.message));
       }
+    } else {
+      console.warn(`[WEBHOOK] Skip sending message: AI Resposta: ${!!aiResult?.resposta_usuario}, InstanceId: ${tenant.whatsappInstanceId}`);
     }
 
     res.status(200).json({ status: 'received' });

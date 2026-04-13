@@ -148,14 +148,37 @@ export async function processDemand(
 
     console.log(`[AI SERVICE] Response received (length: ${responseText.length})`);
 
-
-    const jsonMatch = responseText.match(/\|\|\|JSON\|\|\|([\s\S]*?)\|\|\|JSON\|\|\|/);
-    if (!jsonMatch || !jsonMatch[1]) {
-      throw new Error("Falha ao processar resposta da IA: Formato inválido");
+    // Try to extract JSON from |||JSON||| delimiters first
+    let cleanJson = "";
+    const delimiterMatch = responseText.match(/\|\|\|JSON\|\|\|([\s\S]*?)\|\|\|JSON\|\|\|/);
+    
+    if (delimiterMatch && delimiterMatch[1]) {
+      cleanJson = delimiterMatch[1].trim();
+    } else {
+      // Fallback: Try to find JSON block in markdown format
+      const markdownMatch = responseText.match(/```json([\s\S]*?)```/) || responseText.match(/```([\s\S]*?)```/);
+      if (markdownMatch && markdownMatch[1]) {
+        cleanJson = markdownMatch[1].trim();
+      } else {
+        // Last resort: Try to find anything that looks like a JSON object
+        const objectMatch = responseText.match(/\{[\s\S]*\}/);
+        if (objectMatch) {
+          cleanJson = objectMatch[0].trim();
+        }
+      }
     }
 
-    const cleanJson = jsonMatch[1].trim();
-    return JSON.parse(cleanJson);
+    if (!cleanJson) {
+      console.error("[AI SERVICE] Raw Response:", responseText);
+      throw new Error("Falha ao extrair JSON da resposta da IA");
+    }
+
+    try {
+      return JSON.parse(cleanJson);
+    } catch (parseError) {
+      console.error("[AI SERVICE] Parse Error on JSON:", cleanJson);
+      throw new Error("Falha ao processar JSON da IA: Formato inválido");
+    }
 
   } catch (error) {
     console.error(`Erro ao processar demanda com IA (${config.provider}):`, error);

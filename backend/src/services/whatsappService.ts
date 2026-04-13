@@ -1,6 +1,7 @@
 export interface IncomingMessage {
   event: string;
   from: string;
+  jid: string;
   name: string;
   text: string;
   tenantId: string;
@@ -43,18 +44,30 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
 
   const name = payload.data?.pushName || '';
   
-  // Extract text from various message types
-  const message = payload.data?.message;
-  const text = message?.conversation || 
-               message?.extendedTextMessage?.text || 
-               message?.imageMessage?.caption ||
-               message?.videoMessage?.caption ||
-               message?.documentWithCaptionMessage?.message?.documentMessage?.caption ||
-               '';
+  // Extract text from various message types (including nested messages like ephemeralMessage)
+  const extractText = (m: any): string => {
+    if (!m) return '';
+    
+    // Handle nested structures (ephemeral, viewOnce)
+    if (m.ephemeralMessage?.message) return extractText(m.ephemeralMessage.message);
+    if (m.viewOnceMessage?.message) return extractText(m.viewOnceMessage.message);
+    if (m.viewOnceMessageV2?.message) return extractText(m.viewOnceMessageV2.message);
+    if (m.documentWithCaptionMessage?.message) return extractText(m.documentWithCaptionMessage.message);
+
+    return m.conversation || 
+           m.extendedTextMessage?.text || 
+           m.imageMessage?.caption ||
+           m.videoMessage?.caption ||
+           m.documentMessage?.caption ||
+           '';
+  };
+
+  const text = extractText(payload.data?.message);
 
   return {
     event,
     from,
+    jid: remoteJid,
     name,
     text,
     tenantId,
