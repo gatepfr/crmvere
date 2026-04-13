@@ -368,6 +368,7 @@ export default function Municipes() {
           </table>
         </div>
       </div>
+    </div>
         
       {filteredMunicipes.length === 0 && (
         <div className="p-20 text-center">

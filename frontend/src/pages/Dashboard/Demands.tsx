@@ -386,11 +386,11 @@ export default function Demands() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
+          </div>
+          </div>
+          </div>
 
-      {selectedDemand && (
-        <DemandModal 
+          {selectedDemand && (        <DemandModal 
           demand={selectedDemand} 
           onClose={() => setSelectedDemand(null)} 
           onUpdate={fetchDemands} 
