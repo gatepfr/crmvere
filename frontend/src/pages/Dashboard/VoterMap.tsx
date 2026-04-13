@@ -85,12 +85,12 @@ export default function VoterMap() {
         </div>
       </header>
 
-      <div className="bg-white p-2 rounded-2xl shadow-lg border border-slate-200 overflow-hidden relative" style={{ height: '600px' }}>
+      <div className="bg-white p-2 rounded-2xl shadow-lg border border-slate-200 overflow-hidden relative z-0" style={{ height: '600px' }}>
         <MapContainer 
           key={`${center[0]}-${center[1]}`}
           center={center} 
           zoom={13} 
-          style={{ height: '100%', width: '100%', borderRadius: '1rem' }}
+          style={{ height: '100%', width: '100%', borderRadius: '1rem', zIndex: 0 }}
           scrollWheelZoom={true}
         >
           <TileLayer
@@ -123,7 +123,7 @@ export default function VoterMap() {
         </MapContainer>
 
         {data.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 z-[1000] backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 z-[10] backdrop-blur-sm">
             <div className="text-center p-8 bg-white rounded-2xl shadow-xl border border-slate-200 max-w-sm">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Info className="text-slate-400" size={32} />

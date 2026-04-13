@@ -44,7 +44,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Hamburger Menu Mobile */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      <div className="lg:hidden fixed top-4 left-4 z-[1001]">
         <button 
           onClick={toggleSidebar}
           className="p-2 rounded-lg bg-slate-900 text-white shadow-lg"
@@ -56,13 +56,13 @@ export default function Sidebar() {
       {/* Overlay Mobile */}
       {isOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-slate-900/50 z-40 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 bg-slate-900/50 z-[1000] backdrop-blur-sm"
           onClick={toggleSidebar}
         />
       )}
 
       <div className={`
-        fixed inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col z-40 transition-transform duration-300
+        fixed inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col z-[1000] transition-transform duration-300
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6">

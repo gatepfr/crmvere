@@ -264,9 +264,10 @@ export default function Municipes() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px] md:min-w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
+        <div className="overflow-x-auto custom-scrollbar">
+          <div className="min-w-[800px]">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-10"></th>
                 <th 
