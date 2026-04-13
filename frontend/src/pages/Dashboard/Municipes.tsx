@@ -247,29 +247,33 @@ export default function Municipes() {
   if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-            <Users className="text-blue-600" />
-            Base de Munícipes
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+              Base de Contatos
+            </span>
+          </div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            Munícipes
           </h1>
-          <p className="text-slate-500 mt-1">Gerencie seus contatos e realize disparos segmentados por bairro.</p>
+          <p className="text-slate-500 mt-1 font-medium">Gerencie e segmente sua base de eleitores e apoiadores.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <button 
             onClick={exportToPDF}
-            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm active:scale-95"
           >
-            <FileDown size={20} className="text-slate-400" />
-            Exportar PDF
+            <FileDown size={18} className="text-slate-400" />
+            Relatório PDF
           </button>
 
           {selectedMunicipes.length > 0 && (
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="bg-green-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2 animate-in zoom-in duration-200"
+              className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 flex items-center gap-2 animate-in zoom-in duration-300 active:scale-95"
             >
               <MessageCircle size={20} />
               Enviar para {selectedMunicipes.length}
@@ -278,174 +282,180 @@ export default function Municipes() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 text-slate-400" size={18} />
+      {/* Stats Cards - New Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Munícipes</span>
+          <span className="text-3xl font-black text-slate-900">{municipes.length}</span>
+        </div>
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bairros Atendidos</span>
+          <span className="text-3xl font-black text-blue-600">{bairros.length}</span>
+        </div>
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Altamente Engajados</span>
+          <span className="text-3xl font-black text-amber-500">{municipes.filter(m => m.demandCount >= 5).length}</span>
+        </div>
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-1">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionados</span>
+          <span className="text-3xl font-black text-indigo-600">{selectedMunicipes.length}</span>
+        </div>
+      </div>
+
+      {/* Filters Bar - Refined */}
+      <div className="bg-slate-900 rounded-[2.5rem] p-4 flex flex-col lg:flex-row items-center gap-4 shadow-2xl shadow-slate-900/20 border border-slate-800">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <input 
             type="text"
             placeholder="Buscar por nome ou telefone..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            className="w-full pl-12 pr-4 py-3.5 bg-slate-800/50 border border-slate-700 text-white rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-500 font-medium"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="relative">
-          <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+        <div className="relative flex-1 w-full">
+          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <select 
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium"
+            className="w-full pl-12 pr-10 py-3.5 bg-slate-800/50 border border-slate-700 text-white rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-bold text-sm"
             value={selectedBairro}
             onChange={e => setSelectedBairro(e.target.value)}
           >
             <option value="">Todos os Bairros</option>
-            {bairros.map(b => (
+            {bairros.sort().map(b => (
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full lg:w-auto">
           <button 
             onClick={() => setOnlyEngaged(!onlyEngaged)}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border ${
+            className={`flex-1 lg:flex-none px-6 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 border uppercase tracking-widest ${
               onlyEngaged 
-                ? 'bg-amber-100 border-amber-200 text-amber-700 shadow-sm' 
-                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                ? 'bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/20' 
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
             }`}
           >
-            <Star size={16} className={onlyEngaged ? 'fill-amber-500' : ''} />
-            Apenas Engajados (+5)
+            <Star size={14} className={onlyEngaged ? 'fill-white' : ''} />
+            Engajados
           </button>
           
           <button 
             onClick={toggleSelectAll}
-            className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-2 whitespace-nowrap"
+            className="px-6 py-3.5 bg-blue-600/10 text-blue-400 border border-blue-500/20 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-600/20 transition-all whitespace-nowrap"
           >
-            {selectedMunicipes.length === filteredMunicipes.length ? <CheckSquare size={18} /> : <Square size={18} />}
-            {selectedMunicipes.length === filteredMunicipes.length ? 'Desmarcar' : 'Selecionar'}
+            {selectedMunicipes.length === filteredMunicipes.length ? 'Desmarcar Tudo' : 'Selecionar Tudo'}
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* Main Table Container */}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <div className="min-w-[1000px]">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-10"></th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest w-10"></th>
                 <th 
-                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                  className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group"
                   onClick={() => handleSort('name')}
                 >
-                  <div className="flex items-center gap-2">
-                    Nome
+                  <div className="flex items-center gap-2 group-hover:text-blue-600 transition-colors">
+                    Nome Completo
                     {sortConfig.key === 'name' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                    ) : <ArrowUpDown size={14} className="opacity-30" />}
+                      sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                    ) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}
                   </div>
                 </th>
-                <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Telefone</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contato</th>
                 <th 
-                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
+                  className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group"
                   onClick={() => handleSort('bairro')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 group-hover:text-blue-600 transition-colors">
                     Bairro
                     {sortConfig.key === 'bairro' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                    ) : <ArrowUpDown size={14} className="opacity-30" />}
+                      sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                    ) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}
                   </div>
                 </th>
-                <th 
-                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
-                  onClick={() => handleSort('demandCount')}
-                >
-                  <div className="flex items-center gap-2">
-                    Demandas
-                    {sortConfig.key === 'demandCount' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                    ) : <ArrowUpDown size={14} className="opacity-30" />}
-                  </div>
-                </th>
-                <th 
-                  className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-600 transition-colors"
-                  onClick={() => handleSort('createdAt')}
-                >
-                  <div className="flex items-center gap-2">
-                    Data Cadastro
-                    {sortConfig.key === 'createdAt' ? (
-                      sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                    ) : <ArrowUpDown size={14} className="opacity-30" />}
-                  </div>
-                </th>
-                <th className="px-4 md:px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Engajamento</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredMunicipes.map(m => (
                 <tr 
                   key={m.id} 
-                  className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/30' : ''}`}
+                  className={`group transition-all duration-200 cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/80'}`}
                   onClick={(e) => {
-                    // Prevent row selection if clicking on buttons
                     if ((e.target as HTMLElement).closest('button')) return;
                     toggleSelect(m.id);
                   }}
                 >
-                  <td className="px-4 md:px-6 py-4">
-                    {selectedMunicipes.includes(m.id) ? (
-                      <CheckSquare size={20} className="text-blue-600" />
-                    ) : (
-                      <Square size={20} className="text-slate-300" />
-                    )}
+                  <td className="px-8 py-5">
+                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                      selectedMunicipes.includes(m.id) 
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                        : 'bg-white border-slate-200 group-hover:border-slate-300'
+                    }`}>
+                      {selectedMunicipes.includes(m.id) && <CheckCircle2 size={14} strokeWidth={3} />}
+                    </div>
                   </td>
-                  <td className="px-4 md:px-6 py-4 font-bold text-slate-900">{m.name}</td>
-                  <td className="px-4 md:px-6 py-4 text-slate-600 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Phone size={14} className="text-slate-400" />
+                  <td className="px-6 py-5">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{m.name}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                        Cadastrado em {new Date(m.createdAt).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-600 font-bold text-xs shadow-sm">
+                      <Phone size={12} className="text-blue-500" />
                       {formatPhone(m.phone)}
                     </div>
                   </td>
-                  <td className="px-4 md:px-6 py-4">
+                  <td className="px-6 py-5">
                     {m.bairro ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-widest">
                         {m.bairro}
                       </span>
                     ) : (
-                      <span className="text-slate-400 italic text-xs">Não informado</span>
+                      <span className="text-slate-300 italic text-[10px] font-bold uppercase tracking-widest">Não informado</span>
                     )}
                   </td>
-                  <td className="px-4 md:px-6 py-4">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-sm ${
-                      m.demandCount >= 5 
-                        ? 'bg-amber-500 text-white' 
-                        : m.demandCount >= 3 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {m.demandCount >= 5 && <Star size={12} className="fill-white" />}
-                      {m.demandCount} {m.demandCount === 1 ? 'Demanda' : 'Demandas'}
+                  <td className="px-6 py-5">
+                    <div className="flex justify-center">
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black shadow-sm border ${
+                        m.demandCount >= 5 
+                          ? 'bg-amber-500 border-amber-400 text-white' 
+                          : m.demandCount >= 3 
+                            ? 'bg-blue-600 border-blue-500 text-white' 
+                            : 'bg-white border-slate-200 text-slate-500'
+                      }`}>
+                        {m.demandCount >= 5 && <Star size={10} className="fill-white" />}
+                        {m.demandCount} {m.demandCount === 1 ? 'DEMANDA' : 'DEMANDAS'}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 md:px-6 py-4 text-slate-500 text-sm">
-                    {new Date(m.createdAt).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-4 md:px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                  <td className="px-6 py-5">
+                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={() => handleEdit(m)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm bg-white border border-slate-100"
                         title="Editar Munícipe"
                       >
-                        <Edit2 size={18} />
+                        <Edit2 size={16} />
                       </button>
                       <button 
                         onClick={() => handleDelete(m.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm bg-white border border-slate-100"
                         title="Excluir Munícipe"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -454,14 +464,17 @@ export default function Municipes() {
             </tbody>
           </table>
         </div>
+
+        {filteredMunicipes.length === 0 && (
+          <div className="p-24 text-center">
+            <div className="inline-flex p-6 rounded-[2.5rem] bg-slate-50 mb-4">
+              <Users size={48} className="text-slate-200" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900">Nenhum munícipe encontrado</h3>
+            <p className="text-slate-500 font-medium max-w-xs mx-auto mt-2">Tente ajustar seus filtros ou busca para encontrar quem você procura.</p>
+          </div>
+        )}
       </div>
-    </div>
-        
-      {filteredMunicipes.length === 0 && (
-        <div className="p-20 text-center">
-          <p className="text-slate-500 font-medium">Nenhum munícipe encontrado com esses filtros.</p>
-        </div>
-      )}
 
       {/* Edit Modal */}
       {editingMunicipe && (
