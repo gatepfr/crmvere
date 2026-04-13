@@ -71,7 +71,7 @@ export default function AIConfig() {
   if (fetching) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="space-y-8">
       <header>
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Hub Multi-IA</h2>
         <p className="text-slate-500 mt-2">Escolha e configure o provedor de inteligência artificial que alimentará seu gabinete.</p>

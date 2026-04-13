@@ -92,7 +92,7 @@ export default function Team() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="space-y-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">Gestão de Equipe</h1>
         <p className="text-slate-500 mt-2">Gerencie os assessores e membros do seu gabinete.</p>

@@ -67,7 +67,7 @@ export default function KnowledgeBase() {
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="space-y-8">
       <header>
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Base de Conhecimento</h2>
         <p className="text-slate-500 mt-2">Envie leis, decretos e documentos para que a IA use como referência.</p>

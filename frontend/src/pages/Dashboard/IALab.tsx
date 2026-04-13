@@ -108,7 +108,7 @@ export default function IALab() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
           <Sparkles className="text-blue-600" />
