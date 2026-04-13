@@ -64,6 +64,27 @@ interface PendingDemand {
   }
 }
 
+const formatPhone = (phone: string | null) => {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Logic: if it starts with 55, remove it for easier handling
+  if (cleaned.length >= 12 && cleaned.startsWith('55')) {
+    cleaned = cleaned.slice(2);
+  }
+  
+  // Intelligent Fix: If it has 10 digits, it's missing the 9. Add it.
+  if (cleaned.length === 10) {
+    cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
+  }
+  
+  // Final format (99) 99999-9999
+  if (cleaned.length === 11) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  }
+  return phone;
+};
+
 function SortableLeadCard({ lead, onDelete }: { lead: Lead, onDelete: (id: string) => void }) {
   const {
     attributes,
@@ -100,7 +121,7 @@ function SortableLeadCard({ lead, onDelete }: { lead: Lead, onDelete: (id: strin
           {lead.phone && (
             <div className="flex items-center text-xs text-slate-500">
               <Phone size={12} className="mr-1.5 text-slate-400" />
-              {lead.phone}
+              {formatPhone(lead.phone)}
             </div>
           )}
         </div>
@@ -439,7 +460,7 @@ export default function KanbanLeads() {
                   {activeId ? (
                     <div className="bg-white p-4 rounded-xl shadow-2xl border-2 border-blue-500 w-80 rotate-3 cursor-grabbing scale-105 transition-transform">
                       <h4 className="font-bold text-slate-900">{leads.find(l => l.id === activeId)?.name}</h4>
-                      <p className="text-xs text-slate-500 mt-1">{leads.find(l => l.id === activeId)?.phone}</p>
+                      <p className="text-xs text-slate-500 mt-1">{formatPhone(leads.find(l => l.id === activeId)?.phone || '')}</p>
                     </div>
                   ) : null}
                 </DragOverlay>
@@ -501,7 +522,7 @@ export default function KanbanLeads() {
                       <p className="text-xs text-slate-500 line-clamp-3 italic mb-3 leading-relaxed">"{demand.resumoIa}"</p>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase">{demand.categoria}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{demand.municipe.phone}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{formatPhone(demand.municipe.phone)}</span>
                       </div>
                     </div>
                   ))

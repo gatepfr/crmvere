@@ -168,19 +168,21 @@ export default function Demands() {
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
-    const cleaned = phone.replace(/\D/g, '');
+    let cleaned = phone.replace(/\D/g, '');
     
-    // Logic: if more than 11 digits and starts with 55, it's Brazil. Remove 55.
-    let finalNumber = cleaned;
-    if (cleaned.length > 11 && cleaned.startsWith('55')) {
-      finalNumber = cleaned.slice(2);
+    // Logic: if it starts with 55, remove it for easier handling
+    if (cleaned.length >= 12 && cleaned.startsWith('55')) {
+      cleaned = cleaned.slice(2);
     }
     
-    // Re-check length of what's left
-    if (finalNumber.length === 11) {
-      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
-    } else if (finalNumber.length === 10) {
-      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
+    // Intelligent Fix: If it has 10 digits, it's missing the 9. Add it.
+    if (cleaned.length === 10) {
+      cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
+    }
+    
+    // Final format (99) 99999-9999
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     }
     return phone;
   };

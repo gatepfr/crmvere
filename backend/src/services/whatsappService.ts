@@ -22,12 +22,20 @@ export interface IncomingMessage {
 export const normalizeEvolution = (payload: any, tenantId: string): IncomingMessage => {
   let from = payload.data?.key?.remoteJid?.replace('@s.whatsapp.net', '') || '';
   
-  // Clean phone number: remove non-digits and ensure it starts with 55 if it's a mobile
+  // Clean phone number: remove non-digits
   from = from.replace(/\D/g, '');
   
-  // Brazilian logic: if it's a mobile number (usually 12 or 13 digits)
-  // Ensure we don't save weird strings from groups or other sources
-  if (from.length < 8) from = '';
+  // Intelligent Brazilian correction (9th digit)
+  // If it's a Brazilian number (starts with 55)
+  if (from.startsWith('55')) {
+    const rawNumber = from.slice(2); // Get everything after 55
+    // If it has 10 digits (DD + 8 numbers), it's missing the 9th digit
+    if (rawNumber.length === 10) {
+      const ddd = rawNumber.slice(0, 2);
+      const phone = rawNumber.slice(2);
+      from = `55${ddd}9${phone}`; // Insert the 9
+    }
+  }
 
   const name = payload.data?.pushName || '';
   const text = payload.data?.message?.conversation || 
