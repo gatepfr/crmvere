@@ -11,7 +11,7 @@ router.use(authenticate);
 router.post('/generate-content', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    const { type, prompt } = req.body;
+    const { type, prompt, history } = req.body;
 
     if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
@@ -24,20 +24,30 @@ router.post('/generate-content', async (req, res) => {
       systemPrompt = `Você é um consultor jurídico legislativo especialista em direito municipal brasileiro. 
       Sua tarefa é redigir a estrutura de um Projeto de Lei com base no tema fornecido.
       Inclua: Título, Ementa, Artigos detalhados e uma Justificativa política e social robusta.
-      Use uma linguagem formal e técnica.`;
+      Use uma linguagem formal e técnica.
+      IMPORTANTE: Se houver histórico de conversa, mantenha a coerência com o que foi discutido anteriormente. Se o usuário pedir alterações, aplique-as ao texto original.`;
     } else if (type === 'reels') {
       systemPrompt = `Você é um estrategista de marketing político digital especialista em vídeos curtos (Reels/TikTok).
       Crie um roteiro dinâmico para o vereador. 
       Inclua: Gancho inicial (primeiros 3 segundos), desenvolvimento com falas sugeridas e indicações de cenas/cortes, e uma chamada para ação (CTA) forte ao final.
-      O tom deve ser carismático, direto e autêntico.`;
+      O tom deve ser carismático, direto e autêntico.
+      IMPORTANTE: Se houver histórico de conversa, mantenha a coerência. Se o usuário pedir para mudar o tom ou adicionar cenas, siga as instruções mantendo a base anterior.`;
     } else if (type === 'social') {
       systemPrompt = `Você é um social media manager de gabinete parlamentar.
       Transforme o relato de uma ação ou demanda resolvida em um post engajador para Instagram/Facebook.
       Use emojis, parágrafos curtos e foque nos benefícios para a comunidade.
-      Sugira 5 hashtags relevantes ao final.`;
+      Sugira 5 hashtags relevantes ao final.
+      IMPORTANTE: Se houver histórico de conversa, mantenha a coerência. Se o usuário pedir para ser mais curto, mais longo ou mudar o foco, ajuste o texto anterior.`;
     }
 
-    const aiResult = await processDemand(prompt, {
+    // Incorporate history into the prompt if present
+    let finalPrompt = prompt;
+    if (history && Array.isArray(history) && history.length > 0) {
+      const historyText = history.map((m: any) => `${m.role === 'user' ? 'Usuário' : 'IA'}: ${m.content}`).join('\n');
+      finalPrompt = `Histórico da conversa:\n${historyText}\n\nNova solicitação do Usuário: ${prompt}`;
+    }
+
+    const aiResult = await processDemand(finalPrompt, {
       provider: tenant.aiProvider as any || 'gemini',
       apiKey: tenant.aiApiKey || '',
       model: tenant.aiModel || 'gemini-1.5-flash',
