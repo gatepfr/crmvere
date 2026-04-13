@@ -49,11 +49,26 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
       knowledgeBaseContent = knowledgeBaseContent.substring(0, 10000) + '...';
     }
 
-    // 1. Get/Create Citizen
-    let [municipe] = await db.select().from(municipes).where(and(eq(municipes.phone, normalized.from), eq(municipes.tenantId, tenantId)));
+    // 1. Get/Create Citizen (Munícipe Único)
+    const cleanPhone = normalized.from.replace(/\D/g, ''); // Ensure search is only numbers
+    let [municipe] = await db.select().from(municipes).where(
+      and(
+        eq(municipes.phone, cleanPhone), 
+        eq(municipes.tenantId, tenantId)
+      )
+    );
+
     if (!municipe) {
-      const [newMunicipe] = await db.insert(municipes).values({ tenantId, name: normalized.name || 'Cidadão', phone: normalized.from }).returning();
+      const [newMunicipe] = await db.insert(municipes).values({ 
+        tenantId, 
+        name: normalized.name || 'Cidadão', 
+        phone: cleanPhone 
+      }).returning();
       municipe = newMunicipe;
+    } else if (normalized.name && municipe.name === 'Cidadão') {
+      // If we already had the phone but now we have a real name, update it
+      await db.update(municipes).set({ name: normalized.name }).where(eq(municipes.id, municipe.id));
+      municipe.name = normalized.name;
     }
 
     // 2. Get LATEST open demand (created TODAY since 00:00 AND status is active)

@@ -58,6 +58,10 @@ export const municipes = pgTable("municipes", {
   phone: varchar("phone", { length: 255 }).notNull(),
   bairro: varchar("bairro", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    uniqueMunicipe: sql`unique(${table.tenantId}, ${table.phone})`
+  };
 });
 
 export const demandas = pgTable("demandas", {
