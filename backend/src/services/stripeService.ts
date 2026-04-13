@@ -1,10 +1,10 @@
 import Stripe from 'stripe';
 
-const stripe: Stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16' as any,
 });
 
-export const createCheckoutSession = async (tenantId: string, customerEmail: string, priceId: string): Promise<Stripe.Checkout.Session> => {
+export const createCheckoutSession = async (tenantId: string, customerEmail: string, priceId: string): Promise<any> => {
   return await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
@@ -17,7 +17,7 @@ export const createCheckoutSession = async (tenantId: string, customerEmail: str
   });
 };
 
-export const createPortalSession = async (stripeCustomerId: string): Promise<Stripe.BillingPortal.Session> => {
+export const createPortalSession = async (stripeCustomerId: string): Promise<any> => {
   return await stripe.billingPortal.sessions.create({
     customer: stripeCustomerId,
     return_url: `${process.env.FRONTEND_URL}/billing`,
