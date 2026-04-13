@@ -21,6 +21,7 @@ export default function WhatsAppConfig() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -31,11 +32,6 @@ export default function WhatsAppConfig() {
         whatsappNotificationNumber: res.data.whatsappNotificationNumber || '',
       });
       
-      // Only show config if URL is missing
-      if (!res.data.evolutionApiUrl) {
-        setShowConfig(true);
-      }
-      
       return res.data;
     } catch (err) {
       console.error('Erro ao carregar config:', err);
@@ -44,6 +40,17 @@ export default function WhatsAppConfig() {
       setFetching(false);
     }
   }, []);
+
+  const handleHeaderClick = () => {
+    if (user?.role === 'super_admin') {
+      const newCount = clickCount + 1;
+      setClickCount(newCount);
+      if (newCount === 5) {
+        setShowConfig(true);
+        setClickCount(0);
+      }
+    }
+  };
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -184,7 +191,7 @@ export default function WhatsAppConfig() {
 
   return (
     <div className="max-w-4xl space-y-8">
-      <header>
+      <header onClick={handleHeaderClick} className="cursor-default">
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Conexão WhatsApp</h2>
         <p className="text-slate-500">Integre o CRM diretamente com seu número de WhatsApp via Evolution API.</p>
       </header>
