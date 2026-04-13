@@ -343,21 +343,19 @@ export default function WhatsAppConfig() {
                     Abra o WhatsApp no seu celular, vá em Aparelhos Conectados e escaneie o código acima.
                   </p>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Atualizando status automaticamente...
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-400">
-                  <Smartphone className="w-10 h-10" />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-slate-900">Aguardando Credenciais</h4>
-                  <p className="text-slate-500 max-w-xs mx-auto mt-2">
-                    Configure a URL do servidor e o Token Global para iniciar a conexão.
-                  </p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Atualizando status automaticamente...
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    disabled={loading}
+                    className="text-red-500 hover:text-red-700 text-sm font-bold flex items-center gap-2 mx-auto transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Cancelar e Reiniciar
+                  </button>
                 </div>
               </div>
             )}
