@@ -358,6 +358,14 @@ export default function WhatsAppConfig() {
                   </button>
                 </div>
               </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
+                  <RefreshCw className="w-8 h-8 animate-spin" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-900">Iniciando...</h4>
+                <p className="text-slate-500 text-sm">Aguarde enquanto preparamos a conexão.</p>
+              </div>
             )}
           </div>
         </div>
