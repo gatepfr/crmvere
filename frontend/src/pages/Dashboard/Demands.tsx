@@ -167,10 +167,14 @@ export default function Demands() {
   };
 
   const formatPhone = (phone: string) => {
+    if (!phone) return '';
     const cleaned = phone.replace(/\D/g, '');
-    const match = cleaned.match(/^(?:55)?(\d{2})(\d{5})(\d{4})$/);
-    if (match) {
-      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
+    
+    if (finalNumber.length === 11) {
+      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
+    } else if (finalNumber.length === 10) {
+      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
     }
     return phone;
   };

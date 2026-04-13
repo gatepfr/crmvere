@@ -33,21 +33,35 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
   });
   const [displayPhone, setDisplayPhone] = useState('');
 
+  const formatPhone = (phone: string) => {
+    if (!phone) return '';
+    const cleaned = phone.replace(/\D/g, '');
+    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
+    
+    if (finalNumber.length === 11) {
+      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
+    } else if (finalNumber.length === 10) {
+      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
+    }
+    return phone;
+  };
+
   useEffect(() => {
     if (demand.municipes.phone) {
-      // Remove o 55 inicial para exibir na máscara
-      const raw = demand.municipes.phone.startsWith('55') ? demand.municipes.phone.slice(2) : demand.municipes.phone;
-      applyPhoneMask(raw);
+      setDisplayPhone(formatPhone(demand.municipes.phone));
     }
   }, [demand.municipes.phone]);
 
   const applyPhoneMask = (value: string) => {
-    const raw = value.replace(/\D/g, '').slice(0, 11);
+    const raw = value.replace(/\D/g, '');
     let masked = raw;
     if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
-    if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+    if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
     setDisplayPhone(masked);
-    setMunicipe(prev => ({ ...prev, phone: raw ? `55${raw}` : '' }));
+    
+    // Always store with 55 in the database
+    const dbNumber = raw.startsWith('55') ? raw : `55${raw}`;
+    setMunicipe(prev => ({ ...prev, phone: dbNumber }));
   };
 
   const handleUpdateField = async (field: string, value: string) => {

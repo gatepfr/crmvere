@@ -53,6 +53,19 @@ export default function DashboardHome() {
 
   if (!metrics) return <div className="p-8">Falha ao carregar métricas.</div>;
 
+  const formatPhone = (phone: string) => {
+    if (!phone) return '';
+    const cleaned = phone.replace(/\D/g, '');
+    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
+    
+    if (finalNumber.length === 11) {
+      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
+    } else if (finalNumber.length === 10) {
+      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
+    }
+    return phone;
+  };
+
   const COLORS = ['#2563eb', '#4f46e5', '#7c3aed', '#c026d3', '#db2777'];
 
   return (
