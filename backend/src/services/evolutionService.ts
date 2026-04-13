@@ -22,7 +22,9 @@ export class EvolutionService {
       instanceName,
       token: Math.random().toString(36).substring(7),
       qrcode: true,
-      integration: "WHATSAPP-BAILEYS"
+      integration: "WHATSAPP-BAILEYS",
+      groupsIgnore: true,
+      alwaysOnline: true
     });
     return response.data;
   }
@@ -53,6 +55,7 @@ export class EvolutionService {
         enabled: true,
         url: webhookUrl,
         byEvents: false,
+        ignore_groups: true,
         events: [
           "MESSAGES_UPSERT",
           "MESSAGES_UPDATE",

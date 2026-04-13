@@ -29,6 +29,12 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
   try {
     const normalized = normalizeEvolution(payload, tenantId);
     
+    // Ignore Group Messages
+    if (normalized.isGroup) {
+      console.log(`[WEBHOOK] Ignoring message from group ${normalized.from}`);
+      return res.status(200).json({ status: 'ignored_group' });
+    }
+    
     if (!normalized.text || normalized.text === '') {
       return res.status(200).json({ status: 'ignored_no_text' });
     }
