@@ -213,33 +213,33 @@ export default function WhatsAppConfig() {
             </div>
           </div>
 
-          {/* Config Side - Only visible for Super Admin */}
-          {isSuperAdmin && (
+          {/* Config Side - Visible for Super Admin OR if config is missing */}
+          {(isSuperAdmin || !config.evolutionApiUrl) && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
                 <Database className="w-4 h-4 text-blue-500" />
-                Infraestrutura (Admin)
+                Configuração de Servidor
               </h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">API URL</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">URL da API</label>
                   <input 
                     type="text" 
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     value={config.evolutionApiUrl}
                     onChange={e => setConfig({...config, evolutionApiUrl: e.target.value})}
-                    placeholder="https://api.seuservidor.com"
+                    placeholder="https://wa.crmvere.com.br"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Global Token</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Token Global</label>
                   <input 
                     type="password" 
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     value={config.evolutionGlobalToken}
                     onChange={e => setConfig({...config, evolutionGlobalToken: e.target.value})}
-                    placeholder="Seu Global API Key"
+                    placeholder="Token de Segurança"
                   />
                 </div>
                 <button 
@@ -247,7 +247,7 @@ export default function WhatsAppConfig() {
                   disabled={loading}
                   className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm shadow-md"
                 >
-                  {loading ? 'Salvando...' : 'Salvar Tudo'}
+                  {loading ? 'Salvando...' : 'Salvar Configurações'}
                 </button>
               </div>
             </div>
