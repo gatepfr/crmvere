@@ -3,17 +3,42 @@ import request from 'supertest';
 import app from '../app';
 import { db } from '../db';
 
-vi.mock('../db', () => ({
-  db: {
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockResolvedValue([{ id: 'm1', name: 'John Doe', phone: '5511999999999' }])
-    }),
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 'd1' }])
-    })
-  },
+vi.mock('../db', () => {
+  const mockResolve = vi.fn().mockResolvedValue([{ id: 'm1', name: 'John Doe', phone: '5511999999999', tenantId: 'tenant-123', slug: 'tenant-1' }]);
+  const mockQuery = {
+    from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockImplementation(() => ({
+      orderBy: vi.fn().mockReturnThis(),
+      limit: mockResolve,
+      then: (onFullfilled: any) => mockResolve().then(onFullfilled)
+    })),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: mockResolve,
+    then: (onFullfilled: any) => mockResolve().then(onFullfilled)
+  };
+
+  return {
+    db: {
+      select: vi.fn().mockReturnValue(mockQuery),
+      insert: vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockResolvedValue([{ id: 'd1' }])
+      }),
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([{ id: 'd1' }])
+      })
+    }
+  };
+});
+
+vi.mock('../services/stripeService', () => ({
+  default: {
+    webhooks: {
+      constructEvent: vi.fn()
+    }
+  }
 }));
 
 vi.mock('../services/aiService', () => ({
@@ -31,9 +56,11 @@ describe('POST /api/webhook/evolution/:tenantId', () => {
 
   it('should receive and process Evolution API webhook', async () => {
     const payload = {
+      event: 'MESSAGES_UPSERT',
       data: {
         key: {
-          remoteJid: '5511999999999@s.whatsapp.net'
+          remoteJid: '5511999999999@s.whatsapp.net',
+          fromMe: false
         },
         pushName: 'John Doe',
         message: {
@@ -48,5 +75,65 @@ describe('POST /api/webhook/evolution/:tenantId', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'received' });
+  });
+
+  it('should ignore group messages', async () => {
+    const payload = {
+      event: 'MESSAGES_UPSERT',
+      data: {
+        key: {
+          remoteJid: '123456789@g.us',
+          fromMe: false
+        },
+        message: { conversation: 'Group message' }
+      }
+    };
+
+    const response = await request(app)
+      .post('/api/webhook/evolution/tenant-123')
+      .send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ignored_group' });
+  });
+
+  it('should ignore fromMe messages', async () => {
+    const payload = {
+      event: 'MESSAGES_UPSERT',
+      data: {
+        key: {
+          remoteJid: '5511999999999@s.whatsapp.net',
+          fromMe: true
+        },
+        message: { conversation: 'My own message' }
+      }
+    };
+
+    const response = await request(app)
+      .post('/api/webhook/evolution/tenant-123')
+      .send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ignored_from_me' });
+  });
+
+  it('should ignore non-UPSERT events', async () => {
+    const payload = {
+      event: 'MESSAGES_UPDATE',
+      data: {
+        key: {
+          remoteJid: '5511999999999@s.whatsapp.net',
+          fromMe: false
+        },
+        message: { conversation: 'Updated message' }
+      }
+    };
+
+    const response = await request(app)
+      .post('/api/webhook/evolution/tenant-123')
+      .send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ignored_event', event: 'MESSAGES_UPDATE' });
   });
 });

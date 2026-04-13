@@ -29,17 +29,27 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
   try {
     const normalized = normalizeEvolution(payload, tenantId);
     
-    // Ignore Group Messages
+    // 1. Only process new messages (upsert)
+    if (normalized.event !== 'MESSAGES_UPSERT' && normalized.event !== 'messages.upsert') {
+      return res.status(200).json({ status: 'ignored_event', event: normalized.event });
+    }
+
+    // 2. Ignore messages sent by the bot itself
+    if (normalized.fromMe) {
+      return res.status(200).json({ status: 'ignored_from_me' });
+    }
+
+    // 3. Ignore Group/Broadcast/Newsletter Messages
     if (normalized.isGroup) {
-      console.log(`[WEBHOOK] Ignoring message from group ${normalized.from}`);
+      console.log(`[WEBHOOK] Ignoring group/broadcast message from ${normalized.from}`);
       return res.status(200).json({ status: 'ignored_group' });
     }
     
-    if (!normalized.text || normalized.text === '') {
+    if (!normalized.text || normalized.text.trim() === '') {
       return res.status(200).json({ status: 'ignored_no_text' });
     }
 
-    console.log(`[WEBHOOK] Message: "${normalized.text}" from ${normalized.from}`);
+    console.log(`[WEBHOOK] Valid message from ${normalized.from}: "${normalized.text.substring(0, 50)}..."`);
 
     // Fetch tenant config
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));

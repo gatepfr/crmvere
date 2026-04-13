@@ -9,7 +9,13 @@ router.use(authenticate);
 
 router.get('/me', async (req, res) => {
   const tenantId = req.user?.tenantId;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  
+  if (!tenantId) {
+    if (req.user?.role === 'super_admin') {
+      return res.json({ name: 'Central Super Admin', isSuperAdmin: true });
+    }
+    return res.status(403).json({ error: 'No tenant context' });
+  }
   
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
   res.json(tenant);
