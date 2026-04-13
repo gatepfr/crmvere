@@ -127,9 +127,19 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
     const lastGabineteIndex = history.lastIndexOf('Gabinete:');
     const lastAIIndex = history.lastIndexOf('AI:');
     const isHumanLastSpeaker = lastGabineteIndex > lastAIIndex;
-    const wasRecentlyUpdatedByHuman = existingDemanda && existingDemanda.updatedAt > tenMinutesAgo;
+    const wasRecentlyUpdatedByHuman = existingDemanda && existingDemanda.updatedAt && existingDemanda.updatedAt > tenMinutesAgo;
+
+    console.log(`[WEBHOOK] Human Intervention Check - tenantId: ${tenantId}`);
+    console.log(`[WEBHOOK]   history: "${history.substring(0, 100)}"`);
+    console.log(`[WEBHOOK]   lastGabineteIndex: ${lastGabineteIndex}`);
+    console.log(`[WEBHOOK]   lastAIIndex: ${lastAIIndex}`);
+    console.log(`[WEBHOOK]   isHumanLastSpeaker: ${isHumanLastSpeaker}`);
+    console.log(`[WEBHOOK]   existingDemanda.updatedAt: ${existingDemanda?.updatedAt}`);
+    console.log(`[WEBHOOK]   tenMinutesAgo: ${tenMinutesAgo}`);
+    console.log(`[WEBHOOK]   wasRecentlyUpdatedByHuman: ${wasRecentlyUpdatedByHuman}`);
 
     if (isHumanLastSpeaker && wasRecentlyUpdatedByHuman) {
+      console.log(`[WEBHOOK] AI is SILENCED by Human Intervention logic for tenant ${tenantId}.`);
       console.log(`[WEBHOOK] AI is SILENCED for tenant ${tenantId} because human was the last speaker in the last 10 min.`);
       return res.status(200).json({ status: 'ignored_human_active' });
     }
