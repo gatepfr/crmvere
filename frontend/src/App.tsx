@@ -59,41 +59,43 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 
 function AppContent() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/superadmin"
-          element={
-            <ProtectedRoute role="super_admin">
-              <Tenants />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<DashboardHome />} />
-          <Route path="agenda" element={<Agenda />} />
-          <Route path="municipes" element={<Municipes />} />
-          <Route path="ai-lab" element={<IALab />} />
-          <Route path="demands" element={<Demands />} />
-          <Route path="map" element={<VoterMap />} />
-          <Route path="cabinet" element={<CabinetConfig />} />
-          <Route path="kanban" element={<KanbanLeads />} />
-          <Route path="whatsapp" element={<WhatsAppConfig />} />
-          <Route path="ai" element={<AIConfig />} />
-          <Route path="knowledge" element={<KnowledgeBase />} />
-          <Route path="team" element={<Team />} />
-          <Route path="profile" element={<Profile />} />
-          <Route path="billing" element={<Billing />} />
-        </Route>
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-      </Routes>
+      <SubscriptionProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/superadmin"
+            element={
+              <ProtectedRoute role="super_admin">
+                <Tenants />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DashboardHome />} />
+            <Route path="agenda" element={<Agenda />} />
+            <Route path="municipes" element={<Municipes />} />
+            <Route path="ai-lab" element={<IALab />} />
+            <Route path="demands" element={<Demands />} />
+            <Route path="map" element={<VoterMap />} />
+            <Route path="cabinet" element={<CabinetConfig />} />
+            <Route path="kanban" element={<KanbanLeads />} />
+            <Route path="whatsapp" element={<WhatsAppConfig />} />
+            <Route path="ai" element={<AIConfig />} />
+            <Route path="knowledge" element={<KnowledgeBase />} />
+            <Route path="team" element={<Team />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="billing" element={<Billing />} />
+          </Route>
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+        </Routes>
+      </SubscriptionProvider>
     </BrowserRouter>
   );
 }
@@ -101,9 +103,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <SubscriptionProvider>
-        <AppContent />
-      </SubscriptionProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
