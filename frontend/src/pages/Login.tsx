@@ -39,7 +39,7 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
         <div className="text-center">
-          <h1 className="text-4xl font-black text-slate-900 mb-2">CRM do Verê</h1>
+          <img src="/logo_site.png" alt="CRM do Verê" className="h-16 w-auto mx-auto mb-4 object-contain" />
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Plataforma de Gestão Parlamentar</p>
         </div>
         

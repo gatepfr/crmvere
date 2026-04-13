@@ -437,7 +437,10 @@ export default function Tenants() {
         >
           {loading ? 'Processando...' : 'Zerar Banco de Dados'}
         </button>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CRM do Verê - v1.0.0 © 2026</p>
+        <div className="flex flex-col items-center gap-2 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+          <img src="/logo_site.png" alt="CRM do Verê" className="h-8 w-auto object-contain" />
+          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">v1.0.0 © 2026</p>
+        </div>
       </footer>
     </div>
   );
