@@ -57,6 +57,8 @@ services:
     restart: always
     ports:
       - "3001:3001"
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=3001
       - DATABASE_URL=postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-vereador_crm}
@@ -67,10 +69,6 @@ services:
       - BACKEND_URL=https://api.crmvere.com.br
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - STRIPE_PRICE_ID=${STRIPE_PRICE_ID}
-      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - db
       - redis
