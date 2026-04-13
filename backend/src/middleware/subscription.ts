@@ -13,27 +13,29 @@ export const checkSubscription = async (req: Request, res: Response, next: NextF
   if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
   const now = new Date();
+  const status = tenant.subscriptionStatus || 'trial';
+  const trialEndsAt = tenant.trialEndsAt ? new Date(tenant.trialEndsAt) : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  if (tenant.subscriptionStatus === 'lifetime' || tenant.subscriptionStatus === 'active') {
+  if (status === 'lifetime' || status === 'active') {
     return next();
   }
 
-  if (tenant.subscriptionStatus === 'trial') {
-    if (now > tenant.trialEndsAt) {
+  if (status === 'trial') {
+    if (now > trialEndsAt) {
       return res.status(402).json({ error: 'Trial expired', status: 'trial_expired' });
     }
     return next();
   }
 
-  if (tenant.subscriptionStatus === 'past_due') {
-    if (tenant.gracePeriodEndsAt && now > tenant.gracePeriodEndsAt) {
+  if (status === 'past_due') {
+    const graceEndsAt = tenant.gracePeriodEndsAt ? new Date(tenant.gracePeriodEndsAt) : null;
+    if (graceEndsAt && now > graceEndsAt) {
       return res.status(402).json({ error: 'Subscription unpaid', status: 'unpaid' });
     }
-    // Allow access but frontend should show warning
     return next();
   }
 
-  if (tenant.subscriptionStatus === 'unpaid') {
+  if (status === 'unpaid') {
     return res.status(402).json({ error: 'Subscription unpaid', status: 'unpaid' });
   }
 

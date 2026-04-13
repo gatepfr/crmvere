@@ -13,12 +13,14 @@ export const login = async (req: Request, res: Response) => {
   const user = userList[0];
 
   if (!user) {
-    return res.status(401).json({ message: 'Invalid credentials' });
+    console.log('Login failed: User not found', email);
+    return res.status(401).json({ error: 'Invalid credentials' });
   }
 
   const isMatch = await bcrypt.compare(password, user.passwordHash);
   if (!isMatch) {
-    return res.status(401).json({ message: 'Invalid credentials' });
+    console.log('Login failed: Password mismatch for', email);
+    return res.status(401).json({ error: 'Invalid credentials' });
   }
 
   const token = jwt.sign(
