@@ -20,6 +20,7 @@ export default function WhatsAppConfig() {
   const [status, setStatus] = useState<WhatsAppStatus | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -29,6 +30,12 @@ export default function WhatsAppConfig() {
         evolutionGlobalToken: res.data.evolutionGlobalToken || '',
         whatsappNotificationNumber: res.data.whatsappNotificationNumber || '',
       });
+      
+      // Only show config if URL is missing
+      if (!res.data.evolutionApiUrl) {
+        setShowConfig(true);
+      }
+      
       return res.data;
     } catch (err) {
       console.error('Erro ao carregar config:', err);
@@ -214,7 +221,7 @@ export default function WhatsAppConfig() {
           </div>
 
           {/* Config Side - Visible for Super Admin OR if config is missing */}
-          {(isSuperAdmin || !config.evolutionApiUrl) && (
+          {(isSuperAdmin || showConfig) && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
                 <Database className="w-4 h-4 text-blue-500" />
