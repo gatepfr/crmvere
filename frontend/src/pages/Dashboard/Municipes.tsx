@@ -51,6 +51,7 @@ export default function Municipes() {
   // Edit Modal State
   const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
   const [editForm, setEditForm] = useState({ name: '', phone: '', bairro: '' });
+  const [displayEditPhone, setDisplayEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -165,6 +166,18 @@ export default function Municipes() {
     return phone;
   };
 
+  const applyEditPhoneMask = (value: string) => {
+    const raw = value.replace(/\D/g, '');
+    let masked = raw;
+    if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+    if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
+    setDisplayEditPhone(masked);
+    
+    // Alway store with 55 in DB for backend compatibility
+    const dbNumber = raw.startsWith('55') ? raw : `55${raw}`;
+    setEditForm(prev => ({ ...prev, phone: dbNumber }));
+  };
+
   const handleEdit = (m: Municipe) => {
     setEditingMunicipe(m);
     setEditForm({
@@ -172,6 +185,7 @@ export default function Municipes() {
       phone: m.phone,
       bairro: m.bairro || ''
     });
+    setDisplayEditPhone(formatPhone(m.phone));
   };
 
   const handleDelete = async (id: string) => {
@@ -475,8 +489,9 @@ export default function Municipes() {
                 <input 
                   type="text"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
-                  value={editForm.phone}
-                  onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                  value={displayEditPhone}
+                  onChange={e => applyEditPhoneMask(e.target.value)}
+                  placeholder="(43) 99999-9999"
                 />
               </div>
               <div>
