@@ -9,7 +9,7 @@
     "build": "tsc",
     "db:migrate": "drizzle-kit push",
     "db:migrate:force": "drizzle-kit push",
-    "seed": "ts-node src/scripts/seed.ts",
+    "seed": "node dist/scripts/seed.js",
     "start": "node dist/app.js"
   },
   "keywords": [],
