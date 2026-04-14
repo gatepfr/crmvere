@@ -7,8 +7,8 @@
     "test": "vitest run",
     "dev": "nodemon src/app.ts",
     "build": "tsc",
-    "db:migrate": "drizzle-kit migrate",
-    "db:migrate:force": "drizzle-kit migrate || echo 'Migration failed, but continuing...'",
+    "db:migrate": "drizzle-kit push",
+    "db:migrate:force": "drizzle-kit push",
     "seed": "ts-node src/scripts/seed.ts",
     "start": "node dist/app.js"
   },
