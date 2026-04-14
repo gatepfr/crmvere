@@ -34,6 +34,10 @@ export const tenants = pgTable("tenants", {
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   isManual: boolean("is_manual").default(false).notNull(),
   monthlyPrice: integer("monthly_price").default(24700).notNull(),
+  // AI Control
+  dailyTokenLimit: integer("daily_token_limit").default(50000).notNull(), // Default 50k tokens
+  tokenUsageTotal: integer("token_usage_total").default(0).notNull(),
+  blocked: boolean("blocked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -129,4 +133,10 @@ export const leads = pgTable("leads", {
   phone: varchar("phone", { length: 255 }),
   notes: varchar("notes", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const systemConfigs = pgTable("system_configs", {
+  id: varchar("id", { length: 50 }).primaryKey().default("default"),
+  defaultDailyTokenLimit: integer("default_daily_token_limit").default(50000).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

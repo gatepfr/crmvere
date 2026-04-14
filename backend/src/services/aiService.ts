@@ -12,6 +12,15 @@ export interface AIDemandResult {
   resposta_usuario: string; // Resposta direta para enviar ao cidadão
 }
 
+export interface AIResponse {
+  data: AIDemandResult;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
 export interface AIConfig {
   provider: 'gemini' | 'openai' | 'anthropic' | 'groq' | 'custom' | 'openrouter';
   apiKey: string;
@@ -28,7 +37,7 @@ export async function processDemand(
   config: AIConfig,
   context?: string,
   knowledgeBaseContent?: string
-): Promise<AIDemandResult> {
+): Promise<AIResponse> {
   
   const systemPersonality = config.systemPrompt || 'Você é um assistente de IA para um vereador. Sua tarefa é analisar a mensagem de um cidadão e extrair informações úteis para o gabinete.';
 
@@ -65,6 +74,7 @@ export async function processDemand(
   `;
 
   let responseText = "";
+  let usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
 
   try {
     console.log(`[AI SERVICE] Using provider: ${config.provider}, model: ${config.model}`);
@@ -85,6 +95,13 @@ export async function processDemand(
             messages: [{ role: "user", content: prompt }],
           });
           responseText = completion.choices[0]?.message.content || "";
+          if (completion.usage) {
+            usage = {
+              prompt_tokens: completion.usage.prompt_tokens,
+              completion_tokens: completion.usage.completion_tokens,
+              total_tokens: completion.usage.total_tokens
+            };
+          }
         } catch (err: any) {
           console.error(`[AI SERVICE] OpenRouter primary model failed: ${err.message}. Trying fallback...`);
           // Fallback to a very stable and cheap model
@@ -93,6 +110,13 @@ export async function processDemand(
             messages: [{ role: "user", content: prompt }],
           });
           responseText = fallback.choices[0]?.message.content || "";
+          if (fallback.usage) {
+            usage = {
+              prompt_tokens: fallback.usage.prompt_tokens,
+              completion_tokens: fallback.usage.completion_tokens,
+              total_tokens: fallback.usage.total_tokens
+            };
+          }
         }
         break;
       }
@@ -108,6 +132,13 @@ export async function processDemand(
           messages: [{ role: "user", content: prompt }],
         });
         responseText = completion.choices[0]?.message.content || "";
+        if (completion.usage) {
+          usage = {
+            prompt_tokens: completion.usage.prompt_tokens,
+            completion_tokens: completion.usage.completion_tokens,
+            total_tokens: completion.usage.total_tokens
+          };
+        }
         break;
       }
 
@@ -119,6 +150,13 @@ export async function processDemand(
           messages: [{ role: "user", content: prompt }],
         });
         responseText = (msg.content[0] as any).text || "";
+        if (msg.usage) {
+          usage = {
+            prompt_tokens: msg.usage.input_tokens,
+            completion_tokens: msg.usage.output_tokens,
+            total_tokens: msg.usage.input_tokens + msg.usage.output_tokens
+          };
+        }
         break;
       }
 
@@ -132,6 +170,13 @@ export async function processDemand(
           messages: [{ role: "user", content: prompt }],
         });
         responseText = completion.choices[0]?.message.content || "";
+        if (completion.usage) {
+          usage = {
+            prompt_tokens: completion.usage.prompt_tokens,
+            completion_tokens: completion.usage.completion_tokens,
+            total_tokens: completion.usage.total_tokens
+          };
+        }
         break;
       }
 
@@ -142,11 +187,28 @@ export async function processDemand(
         const result = await model.generateContent(prompt);
         const response = await result.response;
         responseText = response.text();
+        
+        // Extract Gemini Usage (if available in this version of SDK)
+        if (response.usageMetadata) {
+          usage = {
+            prompt_tokens: response.usageMetadata.promptTokenCount || 0,
+            completion_tokens: response.usageMetadata.candidatesTokenCount || 0,
+            total_tokens: response.usageMetadata.totalTokenCount || 0
+          };
+        } else {
+          // Approximate for older Gemini SDK versions
+          const approxTotal = Math.ceil((prompt.length + responseText.length) / 4);
+          usage = { 
+            prompt_tokens: Math.ceil(prompt.length / 4), 
+            completion_tokens: Math.ceil(responseText.length / 4), 
+            total_tokens: approxTotal 
+          };
+        }
         break;
       }
     }
 
-    console.log(`[AI SERVICE] Response received (length: ${responseText.length})`);
+    console.log(`[AI SERVICE] Response received (Tokens used: ${usage.total_tokens})`);
 
     // Try to extract JSON from |||JSON||| delimiters first
     let cleanJson = "";
@@ -174,7 +236,11 @@ export async function processDemand(
     }
 
     try {
-      return JSON.parse(cleanJson);
+      const parsedData = JSON.parse(cleanJson);
+      return {
+        data: parsedData,
+        usage: usage
+      };
     } catch (parseError) {
       console.error("[AI SERVICE] Parse Error on JSON:", cleanJson);
       throw new Error("Falha ao processar JSON da IA: Formato inválido");

@@ -14,7 +14,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { FileText, Clock, TrendingUp, BarChart2 } from 'lucide-react';
+import { FileText, Clock, TrendingUp, BarChart2, Zap, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface MetricsData {
   summary: {
@@ -31,15 +31,28 @@ interface MetricsData {
   }[];
 }
 
+interface AIQuota {
+  usage: number;
+  limit: number;
+  isBlocked: boolean;
+}
+
 export default function DashboardHome() {
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
+  const [quota, setAIQuota] = useState<AIQuota | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/metrics')
-      .then(res => setMetrics(res.data))
-      .catch(err => console.error('Erro ao buscar métricas:', err))
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.get('/metrics'),
+      api.get('/config/me')
+    ])
+    .then(([metricsRes, configRes]) => {
+      setMetrics(metricsRes.data);
+      setAIQuota(configRes.data.aiQuota);
+    })
+    .catch(err => console.error('Erro ao buscar dados do dashboard:', err))
+    .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -53,27 +66,73 @@ export default function DashboardHome() {
 
   if (!metrics) return <div className="p-8">Falha ao carregar métricas.</div>;
 
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    const cleaned = phone.replace(/\D/g, '');
-    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
-    
-    if (finalNumber.length === 11) {
-      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
-    } else if (finalNumber.length === 10) {
-      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
-    }
-    return phone;
-  };
+  const usagePercent = quota ? (quota.usage / quota.limit) * 100 : 0;
+  const isNearLimit = usagePercent >= 80;
 
   const COLORS = ['#2563eb', '#4f46e5', '#7c3aed', '#c026d3', '#db2777'];
 
   return (
     <div className="space-y-10">
-      <header>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard de Gestão</h1>
-        <p className="text-slate-500">Métricas reais extraídas do banco de dados.</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard de Gestão</h1>
+          <p className="text-slate-500">Métricas reais extraídas do banco de dados.</p>
+        </div>
+
+        {quota && (
+          <div className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${
+            quota.isBlocked ? 'bg-red-50 border-red-100' : 
+            isNearLimit ? 'bg-amber-50 border-amber-100' : 'bg-white border-slate-200'
+          }`}>
+            <div className={`p-2 rounded-lg ${
+              quota.isBlocked ? 'bg-red-100 text-red-600' :
+              isNearLimit ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-blue-600'
+            }`}>
+              {quota.isBlocked ? <ShieldAlert size={20} /> : <Zap size={20} />}
+            </div>
+            <div className="min-w-[150px]">
+              <div className="flex justify-between text-xs font-black uppercase tracking-wider mb-1">
+                <span className="text-slate-500">Consumo IA Diário</span>
+                <span className={quota.isBlocked ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-blue-600'}>
+                  {quota.isBlocked ? 'BLOQUEADO' : `${Math.round(usagePercent)}%`}
+                </span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-1000 ${
+                    quota.isBlocked ? 'bg-red-500' :
+                    isNearLimit ? 'bg-amber-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.min(usagePercent, 100)}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 font-bold">
+                {quota.usage.toLocaleString()} / {quota.limit.toLocaleString()} TOKENS
+              </p>
+            </div>
+          </div>
+        )}
       </header>
+
+      {quota?.isBlocked && (
+        <div className="bg-red-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg shadow-red-200 animate-pulse">
+          <ShieldAlert size={24} />
+          <div>
+            <p className="font-black text-sm uppercase tracking-tight">IA Temporariamente Bloqueada</p>
+            <p className="text-xs opacity-90 font-medium">Seu acesso à inteligência artificial foi suspenso pela administração central.</p>
+          </div>
+        </div>
+      )}
+
+      {isNearLimit && !quota?.isBlocked && (
+        <div className="bg-amber-500 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg shadow-amber-200">
+          <AlertTriangle size={24} />
+          <div>
+            <p className="font-black text-sm uppercase tracking-tight">Limite de Tokens Próximo</p>
+            <p className="text-xs opacity-90 font-medium">Você atingiu {Math.round(usagePercent)}% da sua quota diária. Após 100%, a IA será pausada até amanhã.</p>
+          </div>
+        </div>
+      )}
       
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

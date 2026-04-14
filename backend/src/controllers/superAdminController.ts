@@ -1,8 +1,40 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { tenants, users, demandas, municipes } from '../db/schema';
+import { tenants, users, demandas, municipes, systemConfigs } from '../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
+import { redisService } from '../services/redisService';
+
+export const getGlobalConfig = async (_req: Request, res: Response) => {
+  try {
+    let [config] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
+    
+    if (!config) {
+      // Create default if not exists
+      [config] = await db.insert(systemConfigs).values({ id: 'default', defaultDailyTokenLimit: 50000 }).returning();
+    }
+    
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch global config' });
+  }
+};
+
+export const updateGlobalConfig = async (req: Request, res: Response) => {
+  const { defaultDailyTokenLimit } = req.body;
+  try {
+    const [config] = await db.insert(systemConfigs)
+      .values({ id: 'default', defaultDailyTokenLimit })
+      .onConflictDoUpdate({
+        target: systemConfigs.id,
+        set: { defaultDailyTokenLimit, updatedAt: new Date() }
+      })
+      .returning();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update global config' });
+  }
+};
 
 export const getSystemStats = async (_req: Request, res: Response) => {
   try {
@@ -65,11 +97,19 @@ export const createTenant = async (req: Request, res: Response) => {
   }
   
   try {
+    // Get default limit
+    const [config] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
+    const defaultLimit = config?.defaultDailyTokenLimit || 50000;
+
     const passwordHash = await bcrypt.hash('admin123', 12);
 
     const result = await db.transaction(async (tx) => {
       // 1. Create the tenant
-      const [newTenant] = await tx.insert(tenants).values({ name, slug }).returning();
+      const [newTenant] = await tx.insert(tenants).values({ 
+        name, 
+        slug, 
+        dailyTokenLimit: defaultLimit 
+      }).returning();
       
       if (!newTenant) {
         throw new Error('Failed to create tenant');
@@ -108,20 +148,43 @@ export const listTenants = async (_req: Request, res: Response) => {
 
 export const updateTenant = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, slug, active } = req.body;
+  const { name, slug, active, dailyTokenLimit, blocked, tokenAdjustment } = req.body;
   
   try {
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (slug) updateData.slug = slug;
+    if (active !== undefined) updateData.active = active;
+    if (blocked !== undefined) updateData.blocked = blocked;
+    
+    // Logic for token limit update
+    if (tokenAdjustment !== undefined) {
+      // Relative adjustment (add/subtract)
+      const [current] = await db.select({ limit: tenants.dailyTokenLimit }).from(tenants).where(eq(tenants.id, id));
+      updateData.dailyTokenLimit = Math.max(0, (current?.limit || 0) + tokenAdjustment);
+    } else if (dailyTokenLimit !== undefined) {
+      // Direct overwrite
+      updateData.dailyTokenLimit = dailyTokenLimit;
+    }
+
     const [updated] = await db.update(tenants)
-      .set({ name, slug, active })
+      .set(updateData)
       .where(eq(tenants.id, id))
       .returning();
     
     if (!updated) return res.status(404).json({ error: 'Tenant not found' });
+
+    // Sync changes to Redis
+    if (updateData.dailyTokenLimit !== undefined) await redisService.setLimit(id, updateData.dailyTokenLimit);
+    if (blocked !== undefined) await redisService.setBlockedStatus(id, blocked);
+
     res.json(updated);
   } catch (error) {
+    console.error('Update tenant error:', error);
     res.status(500).json({ error: 'Failed to update tenant' });
   }
 };
+
 
 export const deleteTenant = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
@@ -133,6 +196,9 @@ export const deleteTenant = async (req: Request, res: Response) => {
       await tx.delete(users).where(eq(users.tenantId, id));
       await tx.delete(tenants).where(eq(tenants.id, id));
     });
+    
+    // Cleanup Redis
+    await redisService.invalidateCache(id);
     
     res.json({ success: true });
   } catch (error) {
@@ -167,3 +233,4 @@ export const updateSubscriptionStatus = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to update subscription status' });
   }
 };
+

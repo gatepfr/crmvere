@@ -9,6 +9,11 @@ declare global {
         email: string;
         role: 'super_admin' | 'admin' | 'vereador' | 'assessor';
       };
+      aiQuota?: {
+        usage: number;
+        limit: number;
+        today: string;
+      };
     }
   }
 }

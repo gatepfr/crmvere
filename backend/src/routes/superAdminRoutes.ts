@@ -1,7 +1,18 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
-import { createTenant, listTenants, deleteTenant, updateTenant, updateSubscriptionStatus, getSystemStats, listAllUsers, resetDatabase } from '../controllers/superAdminController';
+import { 
+  createTenant, 
+  listTenants, 
+  deleteTenant, 
+  updateTenant, 
+  updateSubscriptionStatus, 
+  getSystemStats, 
+  listAllUsers, 
+  resetDatabase,
+  getGlobalConfig,
+  updateGlobalConfig
+} from '../controllers/superAdminController';
 
 const router = Router();
 
@@ -16,6 +27,10 @@ const checkSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
 router.use(authenticate);
 router.use(checkSuperAdmin);
 
+// Global Config
+router.get('/config', getGlobalConfig);
+router.patch('/config', updateGlobalConfig);
+
 router.post('/tenants', createTenant);
 router.get('/tenants', listTenants);
 router.patch('/tenants/:id', updateTenant);
@@ -27,3 +42,4 @@ router.get('/users', listAllUsers);
 router.post('/reset-database', resetDatabase);
 
 export default router;
+

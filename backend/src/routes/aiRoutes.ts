@@ -4,11 +4,12 @@ import { tenants } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
 import { processDemand } from '../services/aiService';
+import { checkAIQuota, trackAIUsage } from '../middleware/quotaMiddleware';
 
 const router = Router();
 router.use(authenticate);
 
-router.post('/generate-content', async (req, res) => {
+router.post('/generate-content', checkAIQuota, async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     const { type, prompt, history } = req.body;
@@ -62,7 +63,10 @@ router.post('/generate-content', async (req, res) => {
       systemPrompt: systemPrompt
     });
 
-    res.json({ text: aiResult.resposta_usuario });
+    // Track usage
+    await trackAIUsage(tenantId, aiResult.usage.total_tokens);
+
+    res.json({ text: aiResult.data.resposta_usuario });
   } catch (error: any) {
     console.error('Error in AI Lab:', error.message);
     res.status(500).json({ error: 'Failed to generate content' });

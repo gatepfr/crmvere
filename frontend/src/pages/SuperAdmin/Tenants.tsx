@@ -15,7 +15,10 @@ import {
   Clock,
   Star,
   Infinity,
-  CalendarDays
+  CalendarDays,
+  Zap,
+  ShieldAlert,
+  ShieldCheck
 } from 'lucide-react';
 
 interface Stats {
@@ -30,6 +33,7 @@ export default function Tenants() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats>({ tenants: 0, users: 0, demandas: 0, municipes: 0 });
+  const [globalConfig, setGlobalConfig] = useState<{ defaultDailyTokenLimit: number }>({ defaultDailyTokenLimit: 50000 });
   
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -41,14 +45,16 @@ export default function Tenants() {
 
   const loadData = useCallback(async () => {
     try {
-      const [tenantsRes, statsRes, usersRes] = await Promise.all([
+      const [tenantsRes, statsRes, usersRes, configRes] = await Promise.all([
         api.get('/superadmin/tenants'),
         api.get('/superadmin/stats'),
-        api.get('/superadmin/users')
+        api.get('/superadmin/users'),
+        api.get('/superadmin/config')
       ]);
       setTenants(tenantsRes.data);
       setStats(statsRes.data);
       setAllUsers(usersRes.data);
+      setGlobalConfig(configRes.data);
     } catch (err) {
       setError('Falha ao carregar dados do sistema.');
     }
@@ -57,6 +63,30 @@ export default function Tenants() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const updateGlobalTokenLimit = async () => {
+    const newVal = prompt('Novo limite diário PADRÃO para novos gabinetes:', globalConfig.defaultDailyTokenLimit.toString());
+    if (!newVal) return;
+    try {
+      await api.patch('/superadmin/config', { defaultDailyTokenLimit: parseInt(newVal) });
+      loadData();
+      alert('Configuração global atualizada!');
+    } catch (err) {
+      alert('Erro ao atualizar config global.');
+    }
+  };
+
+  const adjustTokens = async (id: string, current: number) => {
+    const adjustment = prompt('Ajustar tokens (Ex: 10000 para adicionar, -5000 para remover):', '10000');
+    if (!adjustment) return;
+    try {
+      await api.patch(`/superadmin/tenants/${id}`, { tokenAdjustment: parseInt(adjustment) });
+      loadData();
+      alert('Quota ajustada com sucesso!');
+    } catch (err) {
+      alert('Falha ao ajustar tokens.');
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja realmente excluir este gabinete? Todos os dados vinculados serão perdidos.')) return;
@@ -74,6 +104,26 @@ export default function Tenants() {
       loadData();
     } catch (err) {
       alert('Falha ao atualizar status.');
+    }
+  };
+
+  const toggleBlockIA = async (tenant: any) => {
+    try {
+      await api.patch(`/superadmin/tenants/${tenant.id}`, { blocked: !tenant.blocked });
+      loadData();
+      alert(`IA ${!tenant.blocked ? 'Bloqueada' : 'Desbloqueada'} para este gabinete.`);
+    } catch (err) {
+      alert('Falha ao atualizar Kill Switch.');
+    }
+  };
+
+  const updateQuota = async (id: string, limit: number) => {
+    try {
+      await api.patch(`/superadmin/tenants/${id}`, { dailyTokenLimit: limit });
+      loadData();
+      alert('Quota atualizada com sucesso!');
+    } catch (err) {
+      alert('Falha ao atualizar quota.');
     }
   };
 
@@ -171,6 +221,24 @@ export default function Tenants() {
               <h4 className="text-3xl font-black text-slate-900">{stats.tenants}</h4>
             </div>
           </div>
+          
+          {/* Global Config Card */}
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 transition-transform hover:scale-[1.02]">
+            <div className="bg-amber-50 p-4 rounded-2xl text-amber-600">
+              <Zap size={28} />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quota Padrão IA</p>
+              <h4 className="text-2xl font-black text-slate-900">{(globalConfig.defaultDailyTokenLimit / 1000).toFixed(0)}k</h4>
+              <button 
+                onClick={updateGlobalTokenLimit}
+                className="text-[9px] font-black text-blue-600 uppercase hover:underline mt-1"
+              >
+                Alterar Padrão
+              </button>
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 transition-transform hover:scale-[1.02]">
             <div className="bg-purple-50 p-4 rounded-2xl text-purple-600">
               <Users size={28} />
@@ -187,15 +255,6 @@ export default function Tenants() {
             <div>
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Demandas</p>
               <h4 className="text-3xl font-black text-slate-900">{stats.demandas}</h4>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 transition-transform hover:scale-[1.02]">
-            <div className="bg-amber-50 p-4 rounded-2xl text-amber-600">
-              <UserCheck size={28} />
-            </div>
-            <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Munícipes</p>
-              <h4 className="text-3xl font-black text-slate-900">{stats.municipes}</h4>
             </div>
           </div>
         </section>
@@ -293,9 +352,9 @@ export default function Tenants() {
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinete</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Identificador</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Consumo IA</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Limite Diário</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano/Status</th>
                       <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                     </tr>
                   </thead>
@@ -304,13 +363,23 @@ export default function Tenants() {
                       <tr key={tenant.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
                           <p className="font-bold text-slate-900">{tenant.name}</p>
-                          <p className="text-[10px] text-slate-400 flex items-center gap-1 font-bold">
-                            <Clock size={10} />
-                            Criado em: {new Date(tenant.createdAt).toLocaleDateString()}
-                          </p>
+                          <code className="text-[10px] font-bold text-slate-400">/{tenant.slug}</code>
                         </td>
                         <td className="px-6 py-4">
-                          <code className="bg-slate-100 px-2 py-1 rounded-lg text-xs font-bold text-slate-600">/{tenant.slug}</code>
+                          <div className="flex items-center gap-2">
+                            <Zap size={14} className="text-amber-500" />
+                            <span className="font-black text-slate-700">{(tenant.tokenUsageTotal / 1000).toFixed(1)}k</span>
+                            <span className="text-[9px] text-slate-400 uppercase font-bold">Tokens</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button 
+                            onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)}
+                            className="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg font-black text-xs text-slate-600 transition-all flex items-center gap-2"
+                          >
+                            {(tenant.dailyTokenLimit / 1000).toFixed(0)}k
+                            <PlusCircle size={12} className="text-blue-600" />
+                          </button>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1">
@@ -322,44 +391,30 @@ export default function Tenants() {
                             }`}>
                               {tenant.subscriptionStatus}
                             </span>
-                            {tenant.subscriptionStatus === 'trial' && (
-                              <span className="text-[9px] font-bold text-slate-400">
-                                Expira: {new Date(tenant.trialEndsAt).toLocaleDateString()}
-                              </span>
-                            )}
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black w-fit ${tenant.active ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                              {tenant.active ? 'ACESSO ATIVO' : 'ACESSO SUSPENSO'}
+                            </span>
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black ${tenant.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {tenant.active ? 'ATIVO' : 'INATIVO'}
-                          </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button 
+                              onClick={() => toggleBlockIA(tenant)}
+                              title={tenant.blocked ? "Desbloquear IA" : "BLOQUEAR IA (Kill Switch)"}
+                              className={`p-2 rounded-xl transition-all ${tenant.blocked ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600'}`}
+                            >
+                              {tenant.blocked ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
+                            </button>
+                            <button 
                               onClick={() => updateSubscription(tenant.id, 'lifetime')}
-                              title="Tornar Vitalício (Gratuito)"
+                              title="Tornar Vitalício"
                               className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl transition-all"
                             >
                               <Infinity size={18} />
                             </button>
                             <button 
-                              onClick={() => {
-                                const days = prompt('Quantos dias de trial extra?', '7');
-                                if (days) {
-                                  const date = new Date();
-                                  date.setDate(date.getDate() + parseInt(days));
-                                  updateSubscription(tenant.id, 'trial', date.toISOString());
-                                }
-                              }}
-                              title="Estender Trial"
-                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
-                            >
-                              <Star size={18} />
-                            </button>
-                            <button 
                               onClick={() => toggleStatus(tenant)}
-                              title={tenant.active ? "Desativar" : "Ativar"}
+                              title={tenant.active ? "Desativar Gabinete" : "Ativar Gabinete"}
                               className={`p-2 rounded-xl transition-all ${tenant.active ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
                             >
                               <Power size={18} />

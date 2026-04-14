@@ -3,6 +3,7 @@ import { db } from '../db';
 import { tenants } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
+import { redisService } from '../services/redisService';
 
 const router = Router();
 router.use(authenticate);
@@ -18,7 +19,21 @@ router.get('/me', async (req, res) => {
   }
   
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
-  res.json(tenant);
+  
+  if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+  // Get current daily usage from Redis
+  const today = new Date().toISOString().split('T')[0];
+  const currentUsage = await redisService.getUsage(tenantId, today);
+
+  res.json({
+    ...tenant,
+    aiQuota: {
+      usage: currentUsage,
+      limit: tenant.dailyTokenLimit,
+      isBlocked: tenant.blocked
+    }
+  });
 });
 
 router.patch('/update', async (req, res) => {
