@@ -138,5 +138,9 @@ export const leads = pgTable("leads", {
 export const systemConfigs = pgTable("system_configs", {
   id: varchar("id", { length: 50 }).primaryKey().default("default"),
   defaultDailyTokenLimit: integer("default_daily_token_limit").default(50000).notNull(),
+  aiProvider: aiProviderEnum("ai_provider").default("gemini"),
+  aiApiKey: varchar("ai_api_key", { length: 500 }),
+  aiModel: varchar("ai_model", { length: 100 }),
+  aiBaseUrl: varchar("ai_base_url", { length: 500 }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

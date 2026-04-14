@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { tenants } from '../db/schema';
+import { tenants, systemConfigs } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
 import { processDemand } from '../services/aiService';
@@ -19,8 +19,12 @@ router.post('/generate-content', checkAIQuota, async (req, res) => {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
+    // Fetch Global Config for AI
+    const [globalConfig] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
+
     let systemPrompt = '';
     
+    // ... systemPrompt logic remains same ...
     if (type === 'lei') {
       systemPrompt = `Você é um consultor jurídico legislativo especialista em direito municipal brasileiro. 
       Sua tarefa é redigir a estrutura de um Projeto de Lei com base no tema fornecido.
@@ -45,7 +49,7 @@ router.post('/generate-content', checkAIQuota, async (req, res) => {
       - Use emojis de forma moderada e parágrafos curtos.
       - NÃO use negritos (**) no texto principal do post, pois as redes sociais não renderizam markdown adequadamente.
       - Use apenas texto limpo.
-      - Sugira 5 hashtags relevantes ao final.`;
+      - Sugira 5 hashtags relevantes au final.`;
     }
 
     // Incorporate history into the prompt if present
@@ -55,13 +59,16 @@ router.post('/generate-content', checkAIQuota, async (req, res) => {
       finalPrompt = `Histórico da conversa:\n${historyText}\n\nNova solicitação do Usuário: ${prompt}`;
     }
 
-    const aiResult = await processDemand(finalPrompt, {
-      provider: tenant.aiProvider as any || 'gemini',
-      apiKey: tenant.aiApiKey || '',
-      model: tenant.aiModel || 'gemini-1.5-flash',
-      aiBaseUrl: tenant.aiBaseUrl || undefined,
+    // AI Logic: Use tenant config if available, otherwise use global admin config
+    const aiConfig = {
+      provider: (tenant.aiApiKey ? tenant.aiProvider : globalConfig?.aiProvider) as any || 'gemini',
+      apiKey: tenant.aiApiKey || globalConfig?.aiApiKey || '',
+      model: (tenant.aiApiKey ? tenant.aiModel : globalConfig?.aiModel) || 'gemini-1.5-flash',
+      aiBaseUrl: (tenant.aiApiKey ? tenant.aiBaseUrl : globalConfig?.aiBaseUrl) || undefined,
       systemPrompt: systemPrompt
-    });
+    };
+
+    const aiResult = await processDemand(finalPrompt, aiConfig);
 
     // Track usage
     await trackAIUsage(tenantId, aiResult.usage.total_tokens);

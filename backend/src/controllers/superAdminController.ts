@@ -21,13 +21,20 @@ export const getGlobalConfig = async (_req: Request, res: Response) => {
 };
 
 export const updateGlobalConfig = async (req: Request, res: Response) => {
-  const { defaultDailyTokenLimit } = req.body;
+  const { defaultDailyTokenLimit, aiProvider, aiApiKey, aiModel, aiBaseUrl } = req.body;
   try {
+    const updateData: any = { updatedAt: new Date() };
+    if (defaultDailyTokenLimit !== undefined) updateData.defaultDailyTokenLimit = defaultDailyTokenLimit;
+    if (aiProvider) updateData.aiProvider = aiProvider;
+    if (aiApiKey !== undefined) updateData.aiApiKey = aiApiKey;
+    if (aiModel) updateData.aiModel = aiModel;
+    if (aiBaseUrl !== undefined) updateData.aiBaseUrl = aiBaseUrl;
+
     const [config] = await db.insert(systemConfigs)
-      .values({ id: 'default', defaultDailyTokenLimit })
+      .values({ id: 'default', ...updateData })
       .onConflictDoUpdate({
         target: systemConfigs.id,
-        set: { defaultDailyTokenLimit, updatedAt: new Date() }
+        set: updateData
       })
       .returning();
     res.json(config);
