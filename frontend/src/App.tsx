@@ -63,6 +63,7 @@ function AppContent() {
       <SubscriptionProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/superadmin"
             element={
@@ -106,8 +107,5 @@ export default function App() {
     <AuthProvider>
       <AppContent />
     </AuthProvider>
-  );
-}
-uthProvider>
   );
 }
