@@ -19,4 +19,4 @@ ENV NODE_ENV=production
 ENV PORT=3001
 
 EXPOSE 3001
-CMD npx drizzle-kit migrate && npm run start
+CMD npm run db:migrate && npm run start

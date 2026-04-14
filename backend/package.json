@@ -7,7 +7,7 @@
     "test": "vitest run",
     "dev": "nodemon src/app.ts",
     "build": "tsc",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "sleep 5 && drizzle-kit migrate",
     "start": "node dist/app.js"
   },
   "keywords": [],
