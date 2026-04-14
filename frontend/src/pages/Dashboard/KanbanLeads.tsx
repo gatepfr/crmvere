@@ -189,6 +189,7 @@ export default function KanbanLeads() {
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [activeColumnTab, setActiveColumnTab] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -223,12 +224,15 @@ export default function KanbanLeads() {
       const res = await api.get(`/kanban/boards/${selectedCampaignId}`);
       setColumns(res.data.columns);
       setLeads(res.data.leads);
+      if (res.data.columns.length > 0 && !activeColumnTab) {
+        setActiveColumnTab(res.data.columns[0].id);
+      }
     } catch (err) {
       console.error('Failed to fetch board', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedCampaignId]);
+  }, [selectedCampaignId, activeColumnTab]);
 
   useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
   useEffect(() => { fetchBoard(); }, [fetchBoard]);

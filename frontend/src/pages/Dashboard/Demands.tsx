@@ -2,7 +2,22 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '../../api/client';
 import DemandModal from '../../components/DemandModal';
 import NewDemandModal from '../../components/NewDemandModal';
-import { FileDown, Download, Loader2, ClipboardList, ArrowUpDown, ArrowUp, ArrowDown, Plus, AlertCircle, Search, Tag, Clock } from 'lucide-react';
+import { 
+  FileDown, 
+  Download, 
+  Loader2, 
+  ClipboardList, 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown, 
+  Plus, 
+  AlertCircle, 
+  Search, 
+  Tag, 
+  Clock,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -21,6 +36,13 @@ interface Demand {
   };
 }
 
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 type SortField = 'name' | 'date' | 'priority' | 'category';
 type SortOrder = 'asc' | 'desc';
 
@@ -30,6 +52,7 @@ export default function Demands() {
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
   const [filterByAttention, setFilterByAttention] = useState(false);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,15 +65,19 @@ export default function Demands() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   const fetchDemands = () => {
-    api.get('/demands')
-      .then(res => setDemands(res.data))
+    setLoading(true);
+    api.get(`/demands?page=${pagination.page}&limit=${pagination.limit}`)
+      .then(res => {
+        setDemands(res.data.data || []);
+        setPagination(res.data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchDemands();
-  }, []);
+  }, [pagination.page]);
 
   const priorityWeight: Record<string, number> = {
     'urgente': 4,
