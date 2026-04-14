@@ -148,7 +148,18 @@ export const listTenants = async (_req: Request, res: Response) => {
 
 export const updateTenant = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, slug, active, dailyTokenLimit, blocked, tokenAdjustment } = req.body;
+  const { 
+    name, 
+    slug, 
+    active, 
+    dailyTokenLimit, 
+    blocked, 
+    tokenAdjustment,
+    aiProvider,
+    aiApiKey,
+    aiModel,
+    aiBaseUrl
+  } = req.body;
   
   try {
     const updateData: any = {};
@@ -156,6 +167,10 @@ export const updateTenant = async (req: Request, res: Response) => {
     if (slug) updateData.slug = slug;
     if (active !== undefined) updateData.active = active;
     if (blocked !== undefined) updateData.blocked = blocked;
+    if (aiProvider) updateData.aiProvider = aiProvider;
+    if (aiApiKey !== undefined) updateData.aiApiKey = aiApiKey;
+    if (aiModel) updateData.aiModel = aiModel;
+    if (aiBaseUrl !== undefined) updateData.aiBaseUrl = aiBaseUrl;
     
     // Logic for token limit update
     if (tokenAdjustment !== undefined) {

@@ -43,6 +43,15 @@ export default function Tenants() {
   const [error, setError] = useState('');
   const { logout } = useAuth();
 
+  // AI Hub State
+  const [editingAI, setEditingAI] = useState<any>(null);
+  const [aiConfig, setAIConfig] = useState({
+    aiProvider: 'gemini',
+    aiApiKey: '',
+    aiModel: 'gemini-1.5-flash',
+    aiBaseUrl: ''
+  });
+
   const loadData = useCallback(async () => {
     try {
       const [tenantsRes, statsRes, usersRes, configRes] = await Promise.all([
@@ -63,6 +72,31 @@ export default function Tenants() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleSaveAI = async () => {
+    if (!editingAI) return;
+    setLoading(true);
+    try {
+      await api.patch(`/superadmin/tenants/${editingAI.id}`, aiConfig);
+      alert('Configuração de IA atualizada!');
+      setEditingAI(null);
+      loadData();
+    } catch (err) {
+      alert('Erro ao salvar config de IA.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openAIHub = (tenant: any) => {
+    setEditingAI(tenant);
+    setAIConfig({
+      aiProvider: tenant.aiProvider || 'gemini',
+      aiApiKey: tenant.aiApiKey || '',
+      aiModel: tenant.aiModel || 'gemini-1.5-flash',
+      aiBaseUrl: tenant.aiBaseUrl || ''
+    });
+  };
 
   const updateGlobalTokenLimit = async () => {
     const newVal = prompt('Novo limite diário PADRÃO para novos gabinetes:', globalConfig.defaultDailyTokenLimit.toString());
@@ -399,6 +433,13 @@ export default function Tenants() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button 
+                              onClick={() => openAIHub(tenant)}
+                              title="Configurar Hub de IA"
+                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all"
+                            >
+                              <Settings size={18} />
+                            </button>
+                            <button 
                               onClick={() => toggleBlockIA(tenant)}
                               title={tenant.blocked ? "Desbloquear IA" : "BLOQUEAR IA (Kill Switch)"}
                               className={`p-2 rounded-xl transition-all ${tenant.blocked ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600'}`}
@@ -497,6 +538,95 @@ export default function Tenants() {
           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">v1.0.0 © 2026</p>
         </div>
       </footer>
+
+      {/* AI Hub Modal */}
+      {editingAI && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Zap className="text-amber-500" size={20} />
+                  Hub de IA: {editingAI.name}
+                </h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Configuração de Infraestrutura</p>
+              </div>
+              <button onClick={() => setEditingAI(null)} className="text-slate-400 hover:text-slate-600 font-black">X</button>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">Provedor</label>
+                  <select 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
+                    value={aiConfig.aiProvider}
+                    onChange={e => setAIConfig({...aiConfig, aiProvider: e.target.value})}
+                  >
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI (ChatGPT)</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                    <option value="groq">Groq</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="custom">Custom (Ollama/API)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">Modelo</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
+                    placeholder="Ex: gemini-1.5-flash"
+                    value={aiConfig.aiModel}
+                    onChange={e => setAIConfig({...aiConfig, aiModel: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">Chave de API</label>
+                  <input
+                    type="password"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
+                    placeholder="sk-..."
+                    value={aiConfig.aiApiKey}
+                    onChange={e => setAIConfig({...aiConfig, aiApiKey: e.target.value})}
+                  />
+                </div>
+
+                {aiConfig.aiProvider === 'custom' && (
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">Base URL</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm"
+                      placeholder="https://..."
+                      value={aiConfig.aiBaseUrl}
+                      onChange={e => setAIConfig({...aiConfig, aiBaseUrl: e.target.value})}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  onClick={() => setEditingAI(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveAI}
+                  disabled={loading}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-lg shadow-blue-200 transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Salvando...' : 'Salvar Configuração'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
