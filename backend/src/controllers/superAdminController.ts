@@ -87,7 +87,7 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash('admin123', 12);
     await db.update(users)
       .set({ passwordHash, passwordResetToken: null, passwordResetExpires: null })
-      .where(eq(users.id, id));
+      .where(eq(users.id, id as string));
     
     res.json({ success: true, message: 'Password reset to default (admin123) successfully' });
   } catch (error) {
