@@ -270,6 +270,7 @@ export default function Demands() {
             <option value="infraestrutura">Infraestrutura</option>
             <option value="seguranca">Segurança</option>
             <option value="educacao">Educação</option>
+            <option value="funcionario_publico">Funcionário Público</option>
             <option value="outro">Outros</option>
           </select>
         </div>
@@ -304,95 +305,158 @@ export default function Demands() {
         </div>
       </div>
       
-      <div className="bg-white shadow-sm rounded-2xl overflow-hidden border border-slate-200">
-        <div className="overflow-x-auto custom-scrollbar">
-          <div className="min-w-[800px]">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-              <tr>
+      <div className="bg-white shadow-sm rounded-3xl overflow-hidden border border-slate-100">
+        {/* Mobile Layout (Cards) */}
+        <div className="block lg:hidden divide-y divide-slate-100">
+          {sortedDemands.length === 0 ? (
+            <div className="p-10 text-center text-slate-500">Nenhuma demanda encontrada.</div>
+          ) : (
+            sortedDemands.map((demand: Demand) => (
+              <div 
+                key={demand.demandas.id} 
+                className={`p-5 space-y-3 active:bg-slate-50 ${demand.demandas.precisaRetorno ? 'bg-red-50/50' : ''}`}
+                onClick={() => handleOpenDemand(demand.demandas.id)}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-slate-900">{demand.municipes.name}</h4>
+                      {demand.demandas.precisaRetorno && (
+                        <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Equipe</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">{formatPhone(demand.municipes.phone)}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border uppercase ${getStatusColor(demand.demandas.status)}`}>
+                    {demand.demandas.status.replace('_', ' ')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-600 uppercase flex items-center gap-1">
+                    <Tag size={10} /> {demand.demandas.categoria.replace('_', ' ')}
+                  </span>
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase flex items-center gap-1 bg-slate-50 ${getPriorityColor(demand.demandas.prioridade)}`}>
+                    <AlertCircle size={10} /> {demand.demandas.prioridade}
+                  </span>
+                  <span className="px-2.5 py-1 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <Clock size={10} /> {new Date(demand.demandas.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Layout (Table) */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer"
                   onClick={() => toggleSort('name')}
                 >
                   <div className="flex items-center">Munícipe <SortIcon field="name" /></div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer"
                   onClick={() => toggleSort('category')}
                 >
                   <div className="flex items-center">Categoria <SortIcon field="category" /></div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer"
                   onClick={() => toggleSort('priority')}
                 >
                   <div className="flex items-center">Prioridade <SortIcon field="priority" /></div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer"
                   onClick={() => toggleSort('date')}
                 >
                   <div className="flex items-center">Data <SortIcon field="date" /></div>
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sortedDemands.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
-                    Nenhuma demanda encontrada.
+            <tbody className="divide-y divide-slate-100">
+              {sortedDemands.map((demand: Demand) => (
+                <tr 
+                  key={demand.demandas.id} 
+                  className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${demand.demandas.precisaRetorno ? 'bg-red-50/40' : ''}`}
+                  onClick={() => handleOpenDemand(demand.demandas.id)}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 font-bold text-slate-900">
+                      {demand.municipes.name}
+                      {demand.demandas.precisaRetorno && (
+                        <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">EQUIPE</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium">{formatPhone(demand.municipes.phone)}</div>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-slate-600 capitalize">
+                    {demand.demandas.categoria.replace('_', ' ')}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border uppercase ${getStatusColor(demand.demandas.status)}`}>
+                      {demand.demandas.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${getPriorityColor(demand.demandas.prioridade)}`}>
+                      {demand.demandas.prioridade}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-slate-400">
+                    {new Date(demand.demandas.createdAt).toLocaleDateString('pt-BR')}
                   </td>
                 </tr>
-              ) : (
-                sortedDemands.map((demand: Demand) => (
-                  <tr 
-                    key={demand.demandas.id} 
-                    className={`transition-colors cursor-pointer ${
-                      demand.demandas.precisaRetorno 
-                        ? 'bg-red-50/80 hover:bg-red-100/80' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => handleOpenDemand(demand.demandas.id)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-2">
-                        {demand.municipes.name}
-                        {demand.demandas.precisaRetorno && (
-                          <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse shadow-sm">
-                            <AlertCircle size={10} />
-                            EQUIPE
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-500 font-normal">{formatPhone(demand.municipes.phone)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                      {demand.demandas.categoria}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(demand.demandas.status)}`}>
-                        {demand.demandas.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(demand.demandas.prioridade)}`}>
-                        {demand.demandas.prioridade}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(demand.demandas.createdAt).toLocaleDateString('pt-BR')}
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
-          </div>
-          </div>
-          </div>
+        </div>
 
-          {selectedDemand && (        <DemandModal 
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-xs font-bold text-slate-500">
+            Página <strong>{pagination.page}</strong> de <strong>{pagination.totalPages}</strong> ({pagination.total} demandas)
+          </p>
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={pagination.page === 1 || loading}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="flex gap-1">
+              {[...Array(pagination.totalPages)].map((_, i) => i + 1).filter(p => Math.abs(p - pagination.page) <= 1 || p === 1 || p === pagination.totalPages).map((p, i, arr) => (
+                <div key={p} className="flex items-center">
+                  {i > 0 && arr[i-1] !== p - 1 && <span className="px-1 text-slate-400">...</span>}
+                  <button
+                    onClick={() => setPagination(prev => ({ ...prev, page: p }))}
+                    className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
+                      pagination.page === p ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button 
+              disabled={pagination.page === pagination.totalPages || loading}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {selectedDemand && (        <DemandModal 
           demand={selectedDemand} 
           onClose={() => setSelectedDemand(null)} 
           onUpdate={fetchDemands} 

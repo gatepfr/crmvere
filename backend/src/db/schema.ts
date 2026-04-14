@@ -48,6 +48,8 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   role: roleEnum("role").default("assessor").notNull(),
+  passwordResetToken: varchar("password_reset_token", { length: 255 }),
+  passwordResetExpires: timestamp("password_reset_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

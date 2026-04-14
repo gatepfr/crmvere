@@ -9,6 +9,7 @@ import {
   updateSubscriptionStatus, 
   getSystemStats, 
   listAllUsers, 
+  resetUserPassword,
   resetDatabase,
   getGlobalConfig,
   updateGlobalConfig
@@ -39,6 +40,7 @@ router.delete('/tenants/:id', deleteTenant);
 
 router.get('/stats', getSystemStats);
 router.get('/users', listAllUsers);
+router.post('/users/:id/reset-password', resetUserPassword);
 router.post('/reset-database', resetDatabase);
 
 export default router;

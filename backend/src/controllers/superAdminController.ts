@@ -81,6 +81,21 @@ export const listAllUsers = async (_req: Request, res: Response) => {
   }
 };
 
+export const resetUserPassword = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const passwordHash = await bcrypt.hash('admin123', 12);
+    await db.update(users)
+      .set({ passwordHash, passwordResetToken: null, passwordResetExpires: null })
+      .where(eq(users.id, id));
+    
+    res.json({ success: true, message: 'Password reset to default (admin123) successfully' });
+  } catch (error) {
+    console.error('Error resetting user password:', error);
+    res.status(500).json({ error: 'Failed to reset user password' });
+  }
+};
+
 export const resetDatabase = async (_req: Request, res: Response) => {
   try {
     await db.transaction(async (tx) => {

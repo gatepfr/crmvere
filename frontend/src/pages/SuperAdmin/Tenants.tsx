@@ -551,6 +551,7 @@ export default function Tenants() {
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinete</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo</th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cadastrado em</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -569,6 +570,22 @@ export default function Tenants() {
                       </td>
                       <td className="px-6 py-4 text-xs font-bold text-slate-400">
                         {new Date(u.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={async () => {
+                            if (!confirm(`Deseja realmente resetar a senha de ${u.email} para admin123?`)) return;
+                            try {
+                              await api.post(`/superadmin/users/${u.id}/reset-password`);
+                              alert('Senha resetada com sucesso para: admin123');
+                            } catch (err) {
+                              alert('Falha ao resetar senha.');
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-[10px] font-black border border-amber-100 transition-all"
+                        >
+                          RESETAR SENHA
+                        </button>
                       </td>
                     </tr>
                   ))}

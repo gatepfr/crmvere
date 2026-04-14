@@ -8,9 +8,26 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
   
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setForgotMessage('');
+    try {
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setForgotMessage('Se o e-mail estiver cadastrado, você receberá um link de redefinição.');
+    } catch (err) {
+      setForgotMessage('Erro ao processar solicitação. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +96,16 @@ export default function Login() {
             </div>
           </div>
 
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(true)}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
+
           <div>
             <button
               type="submit"
@@ -90,6 +117,49 @@ export default function Login() {
           </div>
         </form>
       </div>
+
+      {showForgotModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-sm p-6 bg-white rounded-2xl shadow-xl">
+            <h3 className="text-lg font-black text-slate-900 mb-2">Esqueci minha senha</h3>
+            <p className="text-xs text-slate-500 mb-4">Digite seu e-mail para receber um link de redefinição.</p>
+            
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              <input
+                type="email"
+                required
+                className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="seu@email.com"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+              />
+              
+              {forgotMessage && (
+                <p className={`text-xs font-bold ${forgotMessage.includes('Erro') ? 'text-red-500' : 'text-green-600'}`}>
+                  {forgotMessage}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotModal(false); setForgotMessage(''); }}
+                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 text-xs font-black text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50"
+                >
+                  Enviar Link
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -372,28 +372,28 @@ export default function KanbanLeads() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center">
             <KanbanIcon className="mr-3 h-8 w-8 text-blue-600" />
             Funil de Leads
           </h2>
-          <p className="text-slate-500 mt-1">Gerencie seu funil eleitoral e parcerias políticas.</p>
+          <p className="text-slate-500 mt-1 font-medium">Gerencie seu funil eleitoral e parcerias políticas.</p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <button 
             onClick={() => setShowImport(!showImport)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all border ${
-              showImport ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all border ${
+              showImport ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600'
             }`}
           >
             <MessageSquare size={18} />
-            Importar WhatsApp {pendingDemands.length > 0 && <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{pendingDemands.length}</span>}
+            WhatsApp {pendingDemands.length > 0 && <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">{pendingDemands.length}</span>}
           </button>
           
           <select 
-            className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 md:flex-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 font-bold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedCampaignId}
             onChange={(e) => setSelectedCampaignId(e.target.value)}
           >
@@ -401,23 +401,47 @@ export default function KanbanLeads() {
           </select>
           <button 
             onClick={handleCreateCampaign}
-            className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all shadow-sm"
-            title="Nova Campanha"
+            className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 shadow-sm"
           >
             <Plus size={20} />
           </button>
           <button 
             onClick={handleAddLead}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+            className="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black hover:bg-blue-700 shadow-lg shadow-blue-500/20"
           >
             + Novo Lead
           </button>
         </div>
       </header>
 
+      {/* Mobile Column Tabs */}
+      {columns.length > 0 && (
+        <div className="flex md:hidden overflow-x-auto gap-2 mb-6 pb-2 no-scrollbar">
+          {columns.map(col => (
+            <button
+              key={col.id}
+              onClick={() => setActiveColumnTab(col.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-black transition-all border ${
+                activeColumnTab === col.id 
+                  ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                  : 'bg-white border-slate-200 text-slate-500'
+              }`}
+            >
+              {col.name.toUpperCase()} ({leads.filter(l => l.columnId === col.id).length})
+            </button>
+          ))}
+          <button 
+            onClick={handleAddColumn}
+            className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-black bg-slate-100 border border-slate-200 text-slate-400"
+          >
+            + COLUNA
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 flex gap-6 min-h-0 relative">
         {/* Kanban Board */}
-        <div className="flex-1 flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
+        <div className="flex-1 flex gap-6 overflow-x-auto pb-6 custom-scrollbar h-full">
           {campaigns.length === 0 ? (
             <div className="flex-1 flex items-center justify-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
               <div className="text-center p-8">
@@ -425,12 +449,11 @@ export default function KanbanLeads() {
                   <KanbanIcon size={32} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">Nenhuma campanha criada</h3>
-                <p className="text-slate-500 mb-6">Comece criando sua primeira campanha de engajamento.</p>
                 <button onClick={handleCreateCampaign} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all">Criar Primeira Campanha</button>
               </div>
             </div>
           ) : (
-            <>
+            <div className="flex gap-6 h-full w-full">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
@@ -439,22 +462,19 @@ export default function KanbanLeads() {
                 onDragEnd={handleDragEnd}
               >
                 {columns.map((col) => (
-                  <KanbanColumn 
-                    key={col.id} 
-                    col={col} 
-                    leads={leads.filter(l => l.columnId === col.id)} 
-                    onDelete={handleDeleteColumn}
-                    onDeleteLead={handleDeleteLead}
-                  />
+                  <div key={col.id} className={`${activeColumnTab === col.id ? 'flex' : 'hidden'} md:flex h-full`}>
+                    <KanbanColumn 
+                      col={col} 
+                      leads={leads.filter(l => l.columnId === col.id)} 
+                      onDelete={handleDeleteColumn}
+                      onDeleteLead={handleDeleteLead}
+                    />
+                  </div>
                 ))}
                 
                 <DragOverlay dropAnimation={{
                   sideEffects: defaultDropAnimationSideEffects({
-                    styles: {
-                      active: {
-                        opacity: '0.5',
-                      },
-                    },
+                    styles: { active: { opacity: '0.5' } },
                   }),
                 }}>
                   {activeId ? (
@@ -468,14 +488,14 @@ export default function KanbanLeads() {
 
               <button 
                 onClick={handleAddColumn}
-                className="flex-shrink-0 w-80 h-full border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50/50 transition-all font-bold group min-h-[500px]"
+                className="hidden md:flex flex-shrink-0 w-80 h-full border-2 border-dashed border-slate-200 rounded-2xl flex-col items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50/50 transition-all font-bold group min-h-[500px]"
               >
                 <div className="p-3 bg-slate-100 rounded-full mb-3 group-hover:bg-blue-100 transition-colors">
                   <Plus size={24} />
                 </div>
                 Adicionar Nova Coluna
               </button>
-            </>
+            </div>
           )}
         </div>
 

@@ -1,7 +1,87 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { demandas, municipes } from '../db/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, count } from 'drizzle-orm';
+import fs from 'fs';
+import { parse } from 'csv-parse';
+
+export const createMunicipe = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const { name, phone, bairro } = req.body;
+
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  if (!name || !phone) return res.status(400).json({ error: 'Name and phone are required' });
+
+  try {
+    const [newMunicipe] = await db.insert(municipes)
+      .values({
+        tenantId,
+        name,
+        phone: phone.replace(/\D/g, ''),
+        bairro
+      })
+      .returning();
+
+    res.status(201).json(newMunicipe);
+  } catch (error: any) {
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Este número de telefone já está cadastrado.' });
+    }
+    console.error('Error creating manual municipe:', error);
+    res.status(500).json({ error: 'Failed to create municipe' });
+  }
+};
+
+export const importMunicipes = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const file = req.file;
+  const { mapping } = req.body; // Expecting { name: 'CSV_COLUMN_NAME', phone: 'CSV_COLUMN_PHONE', bairro: 'CSV_COLUMN_BAIRRO' }
+
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  if (!file) return res.status(400).json({ error: 'CSV file is required' });
+  
+  const parsedMapping = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
+
+  const records: any[] = [];
+  const parser = fs.createReadStream(file.path).pipe(parse({
+    columns: true,
+    skip_empty_lines: true,
+    trim: true
+  }));
+
+  try {
+    for await (const record of parser) {
+      const name = record[parsedMapping.name];
+      const phone = record[parsedMapping.phone]?.replace(/\D/g, '');
+      const bairro = record[parsedMapping.bairro];
+
+      if (name && phone) {
+        records.push({
+          tenantId,
+          name,
+          phone,
+          bairro
+        });
+      }
+    }
+
+    // Batch insert with onConflictDoNothing
+    if (records.length > 0) {
+      // Drizzle doesn't support onConflictDoNothing in all versions easily with returning, 
+      // but for import we can use it to avoid errors on duplicates
+      await db.insert(municipes).values(records).onConflictDoNothing();
+    }
+
+    // Cleanup file
+    fs.unlinkSync(file.path);
+
+    res.json({ success: true, imported: records.length });
+  } catch (error) {
+    console.error('Error importing municipes:', error);
+    if (file) fs.unlinkSync(file.path);
+    res.status(500).json({ error: 'Failed to import CSV' });
+  }
+};
 
 export const createDemand = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
@@ -53,6 +133,9 @@ export const createDemand = async (req: Request, res: Response) => {
 
 export const listDemands = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const offset = (page - 1) * limit;
   
   if (!tenantId) {
     res.status(403).json({ error: 'No tenant context' });
@@ -60,6 +143,10 @@ export const listDemands = async (req: Request, res: Response) => {
   }
 
   try {
+    const [totalCount] = await db.select({ count: count() })
+      .from(demandas)
+      .where(eq(demandas.tenantId, tenantId));
+
     const results = await db
       .select({
         demandas: demandas,
@@ -68,9 +155,19 @@ export const listDemands = async (req: Request, res: Response) => {
       .from(demandas)
       .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
       .where(eq(demandas.tenantId, tenantId))
-      .orderBy(desc(demandas.updatedAt));
+      .orderBy(desc(demandas.updatedAt))
+      .limit(limit)
+      .offset(offset);
 
-    res.status(200).json(results);
+    res.status(200).json({
+      data: results,
+      pagination: {
+        page,
+        limit,
+        total: Number(totalCount?.count || 0),
+        totalPages: Math.ceil(Number(totalCount?.count || 0) / limit)
+      }
+    });
   } catch (error) {
     console.error('Error listing demands:', error);
     res.status(500).json({ error: 'Failed to list demands' });
@@ -164,9 +261,17 @@ export const deleteMunicipe = async (req: Request, res: Response) => {
 
 export const listMunicipes = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const offset = (page - 1) * limit;
+
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
+    const [totalCount] = await db.select({ count: count() })
+      .from(municipes)
+      .where(eq(municipes.tenantId, tenantId));
+
     const results = await db.select({
       id: municipes.id,
       name: municipes.name,
@@ -179,9 +284,19 @@ export const listMunicipes = async (req: Request, res: Response) => {
     .leftJoin(demandas, eq(municipes.id, demandas.municipeId))
     .where(eq(municipes.tenantId, tenantId))
     .groupBy(municipes.id)
-    .orderBy(desc(municipes.createdAt));
+    .orderBy(desc(municipes.createdAt))
+    .limit(limit)
+    .offset(offset);
 
-    res.json(results);
+    res.json({
+      data: results,
+      pagination: {
+        page,
+        limit,
+        total: Number(totalCount?.count || 0),
+        totalPages: Math.ceil(Number(totalCount?.count || 0) / limit)
+      }
+    });
   } catch (error) {
     console.error('Error listing citizens with counts:', error);
     res.status(500).json({ error: 'Failed to list citizens' });

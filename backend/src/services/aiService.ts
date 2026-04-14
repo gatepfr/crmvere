@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
 export interface AIDemandResult {
-  categoria: 'saude' | 'infraestrutura' | 'seguranca' | 'educacao' | 'outro';
+  categoria: 'saude' | 'infraestrutura' | 'seguranca' | 'educacao' | 'funcionario_publico' | 'outro';
   subcategoria: string;
   resumo_ia: string;
   prioridade: 'baixa' | 'media' | 'alta' | 'urgente';

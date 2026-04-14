@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SubscriptionProvider, SubscriptionGuard } from './components/SubscriptionGuard';
 import { BillingBanner } from './components/BillingBanner';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Tenants from './pages/SuperAdmin/Tenants';
 import Demands from './pages/Dashboard/Demands';
 import DashboardHome from './pages/Dashboard/DashboardHome';
@@ -105,5 +106,8 @@ export default function App() {
     <AuthProvider>
       <AppContent />
     </AuthProvider>
+  );
+}
+uthProvider>
   );
 }
