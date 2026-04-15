@@ -435,7 +435,7 @@ export default function Municipes() {
         m.name,
         formatPhone(m.phone),
         m.bairro || '---',
-        m.birthDate ? new Date(m.birthDate).toLocaleDateString('pt-BR') : '---',
+        formatDateDisplay(m.birthDate),
         m.demandCount.toString()
       ]);
 
@@ -711,13 +711,13 @@ export default function Municipes() {
                         )}
                         {isTodayBirthday(m.birthDate) && <span className="animate-bounce">🎂</span>}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Desde {new Date(m.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600">
-                      <Phone size={12} className="text-slate-300" />
-                      {formatPhone(m.phone)}
+                      <div className="flex flex-col mt-1 gap-0.5">
+                        <span className="text-xs font-bold text-slate-600 flex items-center gap-1">
+                          <Phone size={10} className="text-slate-400" />
+                          {formatPhone(m.phone)}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Desde {formatDateDisplay(m.createdAt)}</span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
@@ -725,7 +725,7 @@ export default function Municipes() {
                   </td>
                   <td className="px-4 py-4 text-center">
                     <span className="text-xs font-bold text-slate-400">
-                      {m.birthDate ? new Date(m.birthDate).toLocaleDateString('pt-BR') : '---'}
+                      {formatDateDisplay(m.birthDate)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
