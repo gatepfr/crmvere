@@ -28,5 +28,11 @@ export const sendResetPasswordEmail = async (email: string, token: string) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL] Link de redefinição enviado para: ${email}`);
+  } catch (error: any) {
+    console.error(`[EMAIL] ❌ Erro ao enviar e-mail para ${email}:`, error.message);
+    throw new Error('Falha no serviço de e-mail');
+  }
 };
