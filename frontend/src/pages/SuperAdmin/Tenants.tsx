@@ -51,6 +51,11 @@ export default function Tenants() {
   const [stats, setStats] = useState<Stats>({ tenants: 0, users: 0, demandas: 0, municipes: 0 });
   const [globalConfig, setGlobalConfig] = useState<{ defaultDailyTokenLimit: number }>({ defaultDailyTokenLimit: 50000 });
   
+  // Busca e Paginacao
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [aiConfig, setAIConfig] = useState({
     aiProvider: 'gemini',
     aiApiKey: '',
@@ -232,6 +237,17 @@ export default function Tenants() {
       setLoading(false);
     }
   };
+
+  const filteredTenants = tenants.filter(t => 
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    t.slug.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
+  const paginatedTenants = filteredTenants.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -420,50 +436,97 @@ export default function Tenants() {
               </form>
             </div>
 
-            <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Gabinete</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Quota</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Plano</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {tenants.map(tenant => (
-                      <tr key={tenant.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900">{tenant.name}</p>
-                          <code className="text-[9px] text-slate-400">/{tenant.slug}</code>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)} className="px-3 py-1 bg-slate-100 rounded-lg font-black text-[10px]">{(tenant.dailyTokenLimit / 1000).toFixed(0)}k</button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                            tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' : 
-                            tenant.subscriptionStatus === 'lifetime' ? 'bg-purple-100 text-purple-700' :
-                            tenant.subscriptionStatus === 'trial' ? 'bg-amber-100 text-amber-700' :
-                            'bg-blue-100 text-blue-700'
-                          }`}>
-                            {tenant.subscriptionStatus}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-1.5">
-                            <button onClick={() => setTrial(tenant.id)} className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100" title="Definir Trial"><Clock size={16}/></button>
-                            <button onClick={() => setLifetime(tenant.id)} className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100" title="Definir Lifetime"><Infinity size={16}/></button>
-                            <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{tenant.blocked ? <ShieldAlert size={16}/> : <ShieldCheck size={16}/>}</button>
-                            <button onClick={() => toggleStatus(tenant)} className="p-2 bg-slate-100 rounded-xl"><Power size={16}/></button>
-                            <button onClick={() => handleDelete(tenant.id)} className="p-2 bg-red-50 text-red-600 rounded-xl"><Trash2 size={16}/></button>
-                          </div>
-                        </td>
+            <div className="lg:col-span-2 space-y-4">
+              {/* Barra de Busca */}
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
+                <Users className="text-slate-400" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar gabinete por nome ou slug..." 
+                  className="flex-1 outline-none font-bold text-sm text-slate-600"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+
+              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Gabinete</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Quota</th>
+                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Plano</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Ações</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paginatedTenants.map(tenant => (
+                        <tr key={tenant.id} className="hover:bg-slate-50">
+                          <td className="px-6 py-4">
+                            <p className="font-bold text-slate-900">{tenant.name}</p>
+                            <code className="text-[9px] text-slate-400">/{tenant.slug}</code>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)} className="px-3 py-1 bg-slate-100 rounded-lg font-black text-[10px]" title="Ajustar limite de tokens">{(tenant.dailyTokenLimit / 1000).toFixed(0)}k</button>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                              tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' : 
+                              tenant.subscriptionStatus === 'lifetime' ? 'bg-purple-100 text-purple-700' :
+                              tenant.subscriptionStatus === 'trial' ? 'bg-amber-100 text-amber-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {tenant.subscriptionStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-1.5">
+                              <button onClick={() => setTrial(tenant.id)} className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100" title="Definir dias de Trial gratuito"><Clock size={16}/></button>
+                              <button onClick={() => setLifetime(tenant.id)} className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100" title="Ativar acesso Vitalício (Lifetime)"><Infinity size={16}/></button>
+                              <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`} title={tenant.blocked ? "Desbloquear IA" : "Bloquear IA (Kill Switch)"}>{tenant.blocked ? <ShieldAlert size={16}/> : <ShieldCheck size={16}/>}</button>
+                              <button onClick={() => toggleStatus(tenant)} className="p-2 bg-slate-100 rounded-xl" title={tenant.active ? "Desativar Gabinete" : "Ativar Gabinete"}><Power size={16}/></button>
+                              <button onClick={() => handleDelete(tenant.id)} className="p-2 bg-red-50 text-red-600 rounded-xl" title="Excluir Gabinete Permanentemente"><Trash2 size={16}/></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {paginatedTenants.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-10 text-center text-slate-400 font-bold text-sm">
+                            Nenhum gabinete encontrado.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Controles de Paginação */}
+                {totalPages > 1 && (
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Página {currentPage} de {totalPages}</p>
+                    <div className="flex gap-2">
+                      <button 
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => prev - 1)}
+                        className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black disabled:opacity-50 hover:bg-slate-50 transition-all"
+                      >
+                        ANTERIOR
+                      </button>
+                      <button 
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => prev + 1)}
+                        className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black disabled:opacity-50 hover:bg-slate-50 transition-all"
+                      >
+                        PRÓXIMA
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
