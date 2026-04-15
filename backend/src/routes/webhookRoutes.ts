@@ -168,13 +168,14 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
 
     if (apiKey) {
       try {
-        aiResult = await processDemand(promptContext, {
+        const result = await processDemand(promptContext, {
           provider: provider as any,
           apiKey: apiKey,
           model: model,
           aiBaseUrl: baseUrl,
           systemPrompt: tenant?.systemPrompt || ''
         }, undefined, knowledgeBaseContent);
+        aiResult = result.data; // Now aiResult contains the actual JSON data
         console.log(`[WEBHOOK] AI Result generated successfully`);
       } catch (aiError: any) {
         console.error('[WEBHOOK] AI Error:', aiError.message);

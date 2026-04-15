@@ -62,7 +62,7 @@ export async function processDemand(
 
     |||JSON|||
     {
-      "categoria": "saude" | "infraestrutura" | "seguranca" | "educacao" | "outro",
+      "categoria": "saude" | "infraestrutura" | "seguranca" | "educacao" | "funcionario_publico" | "outro",
       "subcategoria": "2 ou 3 palavras sobre o tema",
       "resumo_ia": "Um resumo detalhado e organizado. Use tópicos (•) e negrito (**) para destacar pontos chave como: **Assunto**, **Localização**, **Urgência**.",
       "prioridade": "baixa" | "media" | "alta" | "urgente",
