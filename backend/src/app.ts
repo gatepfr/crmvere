@@ -37,6 +37,9 @@ app.use('/api/auth', authRoutes);
 // Protected routes (Require authentication)
 app.use(authenticate);
 
+// WhatsApp routes - Moved up to allow connection even if tenant context is unstable
+app.use('/api/whatsapp', whatsappRoutes);
+
 // Billing routes should skip subscription check
 app.use('/api/billing', billingRoutes);
 
@@ -52,7 +55,6 @@ app.use(checkTenant);
 app.use('/api/demands', demandRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/config', configRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/kanban', kanbanRoutes);
 app.use('/api/team', teamRoutes);
