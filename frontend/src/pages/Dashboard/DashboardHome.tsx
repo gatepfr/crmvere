@@ -13,7 +13,8 @@ import {
   MapPin,
   Loader2,
   ChevronRight,
-  ArrowUpRight
+  ArrowUpRight,
+  Zap
 } from 'lucide-react';
 import { 
   BarChart, 
