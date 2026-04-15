@@ -6,7 +6,6 @@ import { db } from '../db';
 import { tenants, municipes, demandas, documents, systemConfigs } from '../db/schema';
 import { processDemand } from '../services/aiService';
 import { EvolutionService } from '../services/evolutionService';
-import { normalizePhone } from '../utils/phoneUtils';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 const router = Router();
@@ -17,28 +16,24 @@ router.get('/ping', (req, res) => {
   res.status(200).json({ status: 'ok', time: new Date().toISOString() });
 });
 
-router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Response) => {
+router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express.json(), async (req: Request, res: Response) => {
   const tenantId = req.params.tenantId as string;
   const payload = req.body;
 
-  // LOG CRÍTICO - Mostra qualquer dado que chegar
-  console.log(`[WEBHOOK] >>> DADO RECEBIDO PARA TENANT: ${tenantId}`);
-  console.log(`[WEBHOOK] >>> EVENTO: ${payload?.event}`);
+  // Log de entrada para diagnóstico
+  console.log(`[WEBHOOK] Incoming from tenant ${tenantId} (Event: ${payload?.event || 'unknown'})`);
 
   try {
     const normalized = normalizeEvolution(payload, tenantId);
     
-    // Log da mensagem normalizada
-    console.log(`[WEBHOOK] Normalizado - De: ${normalized.from}, Texto: "${normalized.text}", IsGroup: ${normalized.isGroup}, FromMe: ${normalized.fromMe}`);
-
-    // 0. RESPONDER OK IMEDIATAMENTE (Evita duplicidade)
+    // 0. RESPONDER IMEDIATAMENTE para evitar duplicidade
     res.status(200).json({ status: 'received' });
 
-    // Filtros básicos
+    // Filtros de segurança
     if (normalized.fromMe || normalized.isGroup) return;
     if (!normalized.text || normalized.text.trim() === '') return;
 
-    // Processar IA em background
+    // 1. Processar em background
     (async () => {
       try {
         const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
@@ -49,7 +44,7 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
           .map(doc => `--- DOCUMENTO: ${doc.fileName} ---\n${doc.textContent}`)
           .join('\n\n');
 
-        const cleanPhone = normalizePhone(normalized.from);
+        const cleanPhone = normalized.from.replace(/\D/g, '');
         let [municipe] = await db.select().from(municipes).where(
           and(eq(municipes.phone, cleanPhone), eq(municipes.tenantId, tenantId))
         );
@@ -101,6 +96,9 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
         const aiResult = result.data;
         const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
+        // Salvar com bairro em MAIÚSCULO se a IA identificar o bairro
+        const updatedBairro = aiResult?.bairro ? aiResult.bairro.toUpperCase() : existingDemanda?.bairro;
+
         if (existingDemanda) {
           await db.update(demandas).set({
             resumoIa: updatedHistory,
@@ -127,7 +125,7 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
 
           const evolution = new EvolutionService(evoUrl, evoToken);
           await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario);
-          console.log(`[WEBHOOK] ✅ Resposta da IA enviada via WhatsApp.`);
+          console.log(`[WEBHOOK] ✅ Resposta enviada com sucesso.`);
         }
       } catch (err: any) {
         console.error('[WEBHOOK BACKGROUND ERROR]:', err.message);
