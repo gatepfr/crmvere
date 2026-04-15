@@ -17,7 +17,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     .from(tenants)
     .where(eq(tenants.id, tenantId));
 
-    // 1. Summary of Demands    const [summary] = await db.select({
+    // 1. Summary of Demands
+    const [summary] = await db.select({
       total: sql<number>`count(*)::int`,
       pending: sql<number>`count(*) filter (where ${demandas.status} = 'nova')::int`,
       needsAttention: sql<number>`count(*) filter (where ${demandas.precisaRetorno} = true)::int`
