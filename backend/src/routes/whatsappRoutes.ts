@@ -140,14 +140,14 @@ router.post('/instance/create', async (req, res) => {
       whatsappToken: token
     }).where(eq(tenants.id, tenantId));
 
-    // Webhook setup
-    const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
-    const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenantId}`;
-    console.log(`[WHATSAPP] Configurando Webhook para instância ${tenant.slug} -> URL: ${webhookUrl}`);
+    // Webhook setup - USANDO URL INTERNA DO DOCKER para maior estabilidade
+    // Isso garante que o container evolution_api consiga falar com o container backend
+    const webhookUrl = `http://backend:3001/api/webhook/evolution/${tenantId}`;
+    console.log(`[WHATSAPP] Configurando Webhook INTERNO para instância ${tenant.slug} -> URL: ${webhookUrl}`);
     
     try {
       await evo.setWebhook(tenant.slug, webhookUrl);
-      console.log(`[WHATSAPP] Webhook configurado com sucesso!`);
+      console.log(`[WHATSAPP] Webhook configurado com sucesso via rede interna!`);
     } catch (e: any) {
       console.error(`[WHATSAPP ERROR] Falha ao configurar Webhook:`, e.response?.data || e.message);
     }
