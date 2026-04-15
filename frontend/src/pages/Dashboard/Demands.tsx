@@ -293,9 +293,9 @@ export default function Demands() {
             value={pagination.limit}
             onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
           >
-            <option value="10">10 / pág</option>
             <option value="25">25 / pág</option>
             <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
             <option value="all">Ver Todos</option>
           </select>
         </div>

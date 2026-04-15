@@ -59,8 +59,8 @@ export default function Municipes() {
   const [onlyEngaged, setOnlyEngaged] = useState(false);
   const [onlyBirthdays, setOnlyBirthdays] = useState(false);
   const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro' | 'createdAt' | 'demandCount'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [allBairros, setAllBairros] = useState<string[]>([]);
   
   // Modal states
@@ -106,7 +106,7 @@ export default function Municipes() {
     try {
       const res = await api.get(`/demands/municipes/list?page=${pagination.page}&limit=${pagination.limit}`);
       setMunicipes(res.data.data || []);
-      setPagination(res.data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
+      setPagination(res.data.pagination || { page: 1, limit: 25, total: 0, totalPages: 0 });
     } catch (err) {
       console.error('Erro ao carregar munícipes:', err);
     } finally {
@@ -121,7 +121,7 @@ export default function Municipes() {
     return birthDate.getUTCDate() === today.getDate() && birthDate.getUTCMonth() === today.getMonth();
   };
 
-  const handleSort = (key: 'name' | 'bairro' | 'createdAt' | 'demandCount') => {
+  const handleSort = (key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -185,8 +185,14 @@ export default function Municipes() {
       const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target?.result as string;
-        const firstLine = text.split('\n')[0];
-        const headers = firstLine.split(',').map(h => h.trim().replace(/"/g, ''));
+        const firstLine = text.split(/\r?\n/)[0];
+        
+        // Detect delimiter: comma or semicolon
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const semicolonCount = (firstLine.match(/;/g) || []).length;
+        const delimiter = semicolonCount > commaCount ? ';' : ',';
+        
+        const headers = firstLine.split(delimiter).map(h => h.trim().replace(/"/g, ''));
         setCsvHeaders(headers);
       };
       reader.readAsText(file);
@@ -444,9 +450,9 @@ export default function Municipes() {
             value={pagination.limit}
             onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
           >
-            <option value="10">10 / pág</option>
             <option value="25">25 / pág</option>
             <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
             <option value="all">Ver Todos</option>
           </select>
         </div>
@@ -504,6 +510,9 @@ export default function Municipes() {
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  {isTodayBirthday(m.birthDate) && (
+                    <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-600 bg-pink-50 rounded-lg" title="Mandar Parabéns"><MessageSquare size={14} /></button>
+                  )}
                   <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Edit2 size={16} /></button>
                   <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                 </div>
@@ -535,7 +544,12 @@ export default function Municipes() {
                     {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}
                   </div>
                 </th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contato</th>
+                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('phone')}>
+                  <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">
+                    Contato
+                    {sortConfig.key === 'phone' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}
+                  </div>
+                </th>
                 <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('bairro')}>
                   <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">
                     Bairro
