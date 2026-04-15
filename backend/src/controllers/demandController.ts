@@ -7,7 +7,7 @@ import { parse } from 'csv-parse';
 
 export const createMunicipe = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  const { name, phone, bairro } = req.body;
+  const { name, phone, bairro, birthDate } = req.body;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   if (!name || !phone) return res.status(400).json({ error: 'Name and phone are required' });
@@ -18,7 +18,8 @@ export const createMunicipe = async (req: Request, res: Response) => {
         tenantId,
         name,
         phone: phone.replace(/\D/g, ''),
-        bairro
+        bairro,
+        birthDate: birthDate ? new Date(birthDate) : null
       })
       .returning();
 
@@ -35,7 +36,7 @@ export const createMunicipe = async (req: Request, res: Response) => {
 export const importMunicipes = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const file = req.file;
-  const { mapping } = req.body; // Expecting { name: 'CSV_COLUMN_NAME', phone: 'CSV_COLUMN_PHONE', bairro: 'CSV_COLUMN_BAIRRO' }
+  const { mapping } = req.body;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   if (!file) return res.status(400).json({ error: 'CSV file is required' });
@@ -54,27 +55,24 @@ export const importMunicipes = async (req: Request, res: Response) => {
       const name = record[parsedMapping.name];
       const phone = record[parsedMapping.phone]?.replace(/\D/g, '');
       const bairro = record[parsedMapping.bairro];
+      const rawBirthDate = parsedMapping.birthDate ? record[parsedMapping.birthDate] : null;
 
       if (name && phone) {
         records.push({
           tenantId,
           name,
           phone,
-          bairro
+          bairro,
+          birthDate: rawBirthDate ? new Date(rawBirthDate) : null
         });
       }
     }
 
-    // Batch insert with onConflictDoNothing
     if (records.length > 0) {
-      // Drizzle doesn't support onConflictDoNothing in all versions easily with returning, 
-      // but for import we can use it to avoid errors on duplicates
       await db.insert(municipes).values(records).onConflictDoNothing();
     }
 
-    // Cleanup file
     fs.unlinkSync(file.path);
-
     res.json({ success: true, imported: records.length });
   } catch (error) {
     console.error('Error importing municipes:', error);
@@ -91,7 +89,6 @@ export const createDemand = async (req: Request, res: Response) => {
 
   try {
     const result = await db.transaction(async (tx) => {
-      // 1. Find or create citizen
       let [municipe] = await tx.select()
         .from(municipes)
         .where(and(eq(municipes.phone, municipePhone), eq(municipes.tenantId, tenantId)));
@@ -108,7 +105,6 @@ export const createDemand = async (req: Request, res: Response) => {
         municipe = newMunicipe;
       }
 
-      // 2. Create demand
       const [newDemand] = await tx.insert(demandas)
         .values({
           tenantId,
@@ -137,10 +133,7 @@ export const listDemands = async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const offset = (page - 1) * limit;
   
-  if (!tenantId) {
-    res.status(403).json({ error: 'No tenant context' });
-    return;
-  }
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
     const [totalCount] = await db.select({ count: count() })
@@ -188,11 +181,7 @@ export const getDemand = async (req: Request, res: Response) => {
       .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
       .where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
 
-    if (!demand) {
-      res.status(404).json({ error: 'Demand not found' });
-      return;
-    }
-
+    if (!demand) return res.status(404).json({ error: 'Demand not found' });
     res.status(200).json(demand);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get demand' });
@@ -208,10 +197,7 @@ export const updateDemand = async (req: Request, res: Response) => {
     const updateData: any = {};
     if (status) {
       updateData.status = status;
-      // If status is concluded, automatically clear the team alert
-      if (status === 'concluida') {
-        updateData.precisaRetorno = false;
-      }
+      if (status === 'concluida') updateData.precisaRetorno = false;
     }
     if (prioridade) updateData.prioridade = prioridade;
     if (categoria) updateData.categoria = categoria;
@@ -232,12 +218,17 @@ export const updateDemand = async (req: Request, res: Response) => {
 
 export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, phone, bairro } = req.body;
+  const { name, phone, bairro, birthDate } = req.body;
   const tenantId = req.user?.tenantId;
 
   try {
     const [updated] = await db.update(municipes)
-      .set({ name, phone, bairro })
+      .set({ 
+        name, 
+        phone: phone.replace(/\D/g, ''), 
+        bairro, 
+        birthDate: birthDate ? new Date(birthDate) : null 
+      })
       .where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId!)))
       .returning();
 
@@ -277,6 +268,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
       name: municipes.name,
       phone: municipes.phone,
       bairro: municipes.bairro,
+      birthDate: municipes.birthDate,
       createdAt: municipes.createdAt,
       demandCount: sql<number>`count(${demandas.id})::int`
     })

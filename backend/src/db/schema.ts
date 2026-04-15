@@ -58,11 +58,11 @@ export const statusEnum = pgEnum("status", ["nova", "em_andamento", "concluida",
 export const municipes = pgTable("municipes", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
-    .references(() => tenants.id, { onDelete: "cascade" })
-    .notNull(),
+    .references(() => tenants.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
   bairro: varchar("bairro", { length: 255 }),
+  birthDate: timestamp("birth_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {

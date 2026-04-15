@@ -35,6 +35,7 @@ interface Municipe {
   name: string;
   phone: string;
   bairro: string | null;
+  birthDate: string | null;
   createdAt: string;
   demandCount: number;
 }
@@ -53,6 +54,7 @@ export default function Municipes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
   const [onlyEngaged, setOnlyEngaged] = useState(false);
+  const [onlyBirthdays, setOnlyBirthdays] = useState(false);
   const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'bairro' | 'createdAt' | 'demandCount'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
@@ -66,18 +68,18 @@ export default function Municipes() {
 
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', phone: '', bairro: '' });
+  const [createForm, setCreateForm] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
   const [displayCreatePhone, setDisplayCreatePhone] = useState('');
 
   // Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [mapping, setMapping] = useState({ name: '', phone: '', bairro: '' });
+  const [mapping, setMapping] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
 
   // Edit Modal State
   const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', bairro: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
   const [displayEditPhone, setDisplayEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -100,13 +102,20 @@ export default function Municipes() {
     setLoading(true);
     try {
       const res = await api.get(`/demands/municipes/list?page=${pagination.page}&limit=${pagination.limit}`);
-      setMunicipes(res.data.data);
-      setPagination(res.data.pagination);
+      setMunicipes(res.data.data || []);
+      setPagination(res.data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
     } catch (err) {
       console.error('Erro ao carregar munícipes:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const isTodayBirthday = (dateStr: string | null) => {
+    if (!dateStr) return false;
+    const birthDate = new Date(dateStr);
+    const today = new Date();
+    return birthDate.getUTCDate() === today.getDate() && birthDate.getUTCMonth() === today.getMonth();
   };
 
   const handleSort = (key: 'name' | 'bairro' | 'createdAt' | 'demandCount') => {
@@ -117,13 +126,14 @@ export default function Municipes() {
     setSortConfig({ key, direction });
   };
 
-  const filteredMunicipes = municipes
+  const filteredMunicipes = (municipes || [])
     .filter(m => {
       const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            m.phone.includes(searchTerm);
       const matchesBairro = !selectedBairro || m.bairro === selectedBairro;
       const matchesEngaged = !onlyEngaged || m.demandCount >= 5;
-      return matchesSearch && matchesBairro && matchesEngaged;
+      const matchesBirthday = !onlyBirthdays || isTodayBirthday(m.birthDate);
+      return matchesSearch && matchesBairro && matchesEngaged && matchesBirthday;
     })
     .sort((a, b) => {
       const valA = (a[sortConfig.key] || '').toString().toLowerCase();
@@ -154,7 +164,7 @@ export default function Municipes() {
     try {
       await api.post('/demands/municipes', createForm);
       setIsCreateModalOpen(false);
-      setCreateForm({ name: '', phone: '', bairro: '' });
+      setCreateForm({ name: '', phone: '', bairro: '', birthDate: '' });
       setDisplayCreatePhone('');
       loadMunicipes();
       alert('Munícipe cadastrado com sucesso!');
@@ -206,6 +216,26 @@ export default function Municipes() {
     }
   };
 
+  const handleSendBirthdayMessage = async (m: Municipe) => {
+    const msg = `Olá ${m.name}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈`;
+    try {
+      const demandsRes = await api.get('/demands?limit=100');
+      const latestDemand = demandsRes.data.data.find((d: any) => d.municipes.id === m.id);
+      
+      if (latestDemand) {
+        await api.post('/whatsapp/send', {
+          demandId: latestDemand.demandas.id,
+          message: msg
+        });
+        alert('Mensagem de aniversário enviada!');
+      } else {
+        alert('Para enviar WhatsApp, é necessário que o munícipe tenha pelo menos uma demanda registrada.');
+      }
+    } catch (err) {
+      alert('Falha ao enviar mensagem.');
+    }
+  };
+
   const handleSendBroadcast = async () => {
     if (!broadcastMessage.trim()) return;
     setSending(true);
@@ -213,7 +243,7 @@ export default function Municipes() {
 
     for (let i = 0; i < selectedMunicipes.length; i++) {
       const municipeId = selectedMunicipes[i];
-      const municipe = municipes.find(m => m.id === municipeId);
+      const municipe = (municipes || []).find(m => m.id === municipeId);
       
       try {
         const demandsRes = await api.get('/demands');
@@ -266,7 +296,12 @@ export default function Municipes() {
 
   const handleEdit = (m: Municipe) => {
     setEditingMunicipe(m);
-    setEditForm({ name: m.name, phone: m.phone, bairro: m.bairro || '' });
+    setEditForm({ 
+      name: m.name, 
+      phone: m.phone, 
+      bairro: m.bairro || '', 
+      birthDate: m.birthDate ? m.birthDate.split('T')[0] : '' 
+    });
     setDisplayEditPhone(formatPhone(m.phone));
   };
 
@@ -388,7 +423,7 @@ export default function Municipes() {
         </div>
         <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-1">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Engajados</span>
-          <span className="text-2xl md:text-3xl font-black text-amber-500">{municipes.filter(m => m.demandCount >= 5).length}</span>
+          <span className="text-2xl md:text-3xl font-black text-amber-500">{(municipes || []).filter(m => m.demandCount >= 5).length}</span>
         </div>
         <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-1">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionados</span>
@@ -423,7 +458,7 @@ export default function Municipes() {
           </select>
         </div>
 
-        <div className="flex items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <button 
             onClick={() => setOnlyEngaged(!onlyEngaged)}
             className={`flex-1 lg:flex-none px-6 py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 border uppercase tracking-widest ${
@@ -432,6 +467,15 @@ export default function Municipes() {
           >
             <Star size={14} className={onlyEngaged ? 'fill-white' : ''} />
             Engajados
+          </button>
+
+          <button 
+            onClick={() => setOnlyBirthdays(!onlyBirthdays)}
+            className={`flex-1 lg:flex-none px-6 py-3 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2 border uppercase tracking-widest ${
+              onlyBirthdays ? 'bg-pink-500 border-pink-400 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-500'
+            }`}
+          >
+            🎂 Aniversariantes
           </button>
           
           <button 
@@ -473,11 +517,17 @@ export default function Municipes() {
                     {selectedMunicipes.includes(m.id) && <CheckCircle2 size={12} strokeWidth={3} />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">{m.name}</h4>
+                    <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                      {m.name}
+                      {isTodayBirthday(m.birthDate) && <span title="Aniversário Hoje!">🎂</span>}
+                    </h4>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Desde {new Date(m.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  {isTodayBirthday(m.birthDate) && (
+                    <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-600 bg-pink-50 rounded-lg" title="Mandar Parabéns"><MessageSquare size={14} /></button>
+                  )}
                   <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-blue-600 bg-blue-50 rounded-lg"><Edit2 size={14} /></button>
                   <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-red-600 bg-red-50 rounded-lg"><Trash2 size={14} /></button>
                 </div>
@@ -508,7 +558,7 @@ export default function Municipes() {
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer" onClick={() => handleSort('name')}>Nome Completo</th>
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contato</th>
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer" onClick={() => handleSort('bairro')}>Bairro</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Engajamento</th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Nascimento</th>
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
@@ -523,7 +573,10 @@ export default function Municipes() {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <span className="font-bold text-slate-900 group-hover:text-blue-600">{m.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 group-hover:text-blue-600">{m.name}</span>
+                      {isTodayBirthday(m.birthDate) && <span className="animate-bounce" title="Aniversário Hoje!">🎂</span>}
+                    </div>
                   </td>
                   <td className="px-6 py-5">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-600 font-bold text-xs">
@@ -534,10 +587,13 @@ export default function Municipes() {
                     <span className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-600 border border-blue-100 uppercase">{m.bairro || '---'}</span>
                   </td>
                   <td className="px-6 py-5 text-center">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">{m.demandCount} Demandas</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{m.birthDate ? new Date(m.birthDate).toLocaleDateString('pt-BR') : '---'}</span>
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100">
+                      {isTodayBirthday(m.birthDate) && (
+                        <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-600 hover:bg-pink-50 rounded-lg" title="Mandar Parabéns"><MessageSquare size={16} /></button>
+                      )}
                       <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16} /></button>
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                     </div>
@@ -609,9 +665,15 @@ export default function Municipes() {
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
                 <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="Ex: Maria da Silva" value={createForm.name} onChange={e => setCreateForm({...createForm, name: e.target.value})} />
               </div>
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
-                <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="(43) 99999-9999" value={displayCreatePhone} onChange={e => applyPhoneMask(e.target.value, 'create')} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
+                  <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="(43) 99999-9999" value={displayCreatePhone} onChange={e => applyPhoneMask(e.target.value, 'create')} />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nascimento</label>
+                  <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" value={createForm.birthDate} onChange={e => setCreateForm({...createForm, birthDate: e.target.value})} />
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
@@ -624,6 +686,79 @@ export default function Municipes() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingMunicipe && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-900">Editar Munícipe</h3>
+              <button onClick={() => setEditingMunicipe(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-5">
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                  value={editForm.name}
+                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
+                  <input 
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                    value={displayEditPhone}
+                    onChange={e => applyPhoneMask(e.target.value, 'edit')}
+                    placeholder="(43) 99999-9999"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nascimento</label>
+                  <input 
+                    type="date"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                    value={editForm.birthDate}
+                    onChange={e => setEditForm({...editForm, birthDate: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                  value={editForm.bairro}
+                  onChange={e => setEditForm({...editForm, bairro: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingMunicipe(null)}
+                className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+              >
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {saving ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -674,6 +809,13 @@ export default function Municipes() {
                         </select>
                       </div>
                       <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase ml-1 mb-1">Coluna: NASCIMENTO (Opcional)</label>
+                        <select className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" value={mapping.birthDate} onChange={e => setMapping({...mapping, birthDate: e.target.value})}>
+                          <option value="">Selecionar...</option>
+                          {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                      </div>
+                      <div>
                         <label className="block text-[10px] font-black text-slate-500 uppercase ml-1 mb-1">Coluna: BAIRRO (Opcional)</label>
                         <select className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500" value={mapping.bairro} onChange={e => setMapping({...mapping, bairro: e.target.value})}>
                           <option value="">Selecionar...</option>
@@ -696,8 +838,74 @@ export default function Municipes() {
         </div>
       )}
 
-      {/* Broadcast Modal - Rest of existing modal remains same or refined similarly */}
-      {/* Edit Modal - Rest of existing modal remains same or refined similarly */}
+      {/* Broadcast Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-900">Disparo Segmentado</h3>
+              <button onClick={() => !sending && setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-sm text-blue-800">
+                  Você está enviando uma mensagem para <strong>{selectedMunicipes.length}</strong> munícipes
+                  {selectedBairro ? ` do bairro ` : ''} 
+                  {selectedBairro && <strong className="text-blue-900">{selectedBairro}</strong>}.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Mensagem</label>
+                <textarea 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  rows={5}
+                  placeholder="Olá! Gostaria de informar sobre as obras na nossa região..."
+                  value={broadcastMessage}
+                  onChange={e => setBroadcastMessage(e.target.value)}
+                  disabled={sending}
+                />
+              </div>
+
+              {sending && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    <span>Enviando mensagens...</span>
+                    <span>{sendProgress.current} / {sendProgress.total}</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-600 transition-all duration-300"
+                      style={{ width: `${(sendProgress.current / sendProgress.total) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                disabled={sending}
+                className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSendBroadcast}
+                disabled={sending || !broadcastMessage.trim()}
+                className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+              >
+                {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                {sending ? 'Processando...' : 'Iniciar Disparo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
