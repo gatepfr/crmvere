@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -86,15 +86,7 @@ export default function Municipes() {
   const [displayEditPhone, setDisplayEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadMunicipes();
-  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyBirthdays]);
-
-  useEffect(() => {
-    loadAllBairros();
-  }, []);
-
-  const loadAllBairros = async () => {
+  const loadAllBairros = useCallback(async () => {
     try {
       const res = await api.get('/demands/municipes/list?limit=1000');
       const uniqueBairros = Array.from(new Set(res.data.data.map((m: any) => m.bairro).filter(Boolean))) as string[];
@@ -102,9 +94,9 @@ export default function Municipes() {
     } catch (err) {
       console.error('Erro ao carregar bairros');
     }
-  };
+  }, []);
 
-  const loadMunicipes = async () => {
+  const loadMunicipes = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -123,7 +115,20 @@ export default function Municipes() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyBirthdays]);
+
+  useEffect(() => {
+    loadMunicipes();
+  }, [loadMunicipes]);
+
+  useEffect(() => {
+    loadAllBairros();
+  }, [loadAllBairros]);
+
+  // Reset to page 1 when any filter changes
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchTerm, selectedBairro, onlyEngaged, onlyBirthdays]);
 
   const isTodayBirthday = (dateStr: string | null) => {
     if (!dateStr) return false;
@@ -140,14 +145,16 @@ export default function Municipes() {
     setSortConfig({ key, direction });
   };
 
-  const sortedMunicipes = [...municipes].sort((a, b) => {
-    const valA = (a[sortConfig.key] || '').toString().toLowerCase();
-    const valB = (b[sortConfig.key] || '').toString().toLowerCase();
-    
-    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-  });
+  const sortedMunicipes = useMemo(() => {
+    return [...municipes].sort((a, b) => {
+      const valA = (a[sortConfig.key] || '').toString().toLowerCase();
+      const valB = (b[sortConfig.key] || '').toString().toLowerCase();
+      
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [municipes, sortConfig]);
 
   const toggleSelect = (id: string) => {
     setSelectedSelectedMunicipes(prev => 
@@ -206,6 +213,7 @@ export default function Municipes() {
       alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
       return;
     }
+    
     setSaving(true);
     const formData = new FormData();
     formData.append('file', csvFile);
@@ -642,7 +650,7 @@ export default function Municipes() {
           </div>
         </div>
 
-        {sortedMunicipes.length === 0 && !loading && (
+        {filteredMunicipes.length === 0 && !loading && (
           <div className="p-20 text-center">
             <Users size={40} className="text-slate-200 mx-auto mb-3" />
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum registro encontrado</h3>

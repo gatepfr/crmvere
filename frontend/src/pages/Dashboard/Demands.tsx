@@ -134,7 +134,6 @@ export default function Demands() {
     return phone;
   };
 
-  // Only sorting is left on client-side for immediate feedback, but filtering is server-side
   const sortedDemands = useMemo(() => {
     return [...demands].sort((a, b) => {
       let valA: any, valB: any;
@@ -306,10 +305,9 @@ export default function Demands() {
         </div>
       </div>
 
-      {/* Main Container */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Mobile View */}
-        <div className="lg:hidden divide-y divide-slate-50">
+        {/* Mobile Layout */}
+        <div className="block lg:hidden divide-y divide-slate-50">
           {sortedDemands.map((demand: Demand) => (
             <div 
               key={demand.demandas.id} 
