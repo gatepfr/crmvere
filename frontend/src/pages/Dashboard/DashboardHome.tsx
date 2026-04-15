@@ -228,7 +228,7 @@ export default function DashboardHome() {
                   dataKey="value"
                 >
                   {data.categoryStats.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={8} />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
