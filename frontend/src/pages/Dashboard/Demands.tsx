@@ -54,7 +54,7 @@ export default function Demands() {
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
   const [filterByAttention, setFilterByAttention] = useState(false);
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');

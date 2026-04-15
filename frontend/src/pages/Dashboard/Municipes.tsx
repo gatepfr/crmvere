@@ -204,22 +204,30 @@ export default function Municipes() {
       alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
       return;
     }
+    
+    console.log('Iniciando importação no frontend...');
+    console.log('Arquivo:', csvFile.name);
+    console.log('Mapeamento:', mapping);
+
     setSaving(true);
     const formData = new FormData();
     formData.append('file', csvFile);
+    // Important: backend expects a string if it parses JSON.parse
     formData.append('mapping', JSON.stringify(mapping));
 
     try {
       const res = await api.post('/demands/municipes/import', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      console.log('Resposta do servidor:', res.data);
       setIsImportModalOpen(false);
       setCsvFile(null);
       setCsvHeaders([]);
       loadMunicipes();
       alert(`Importação concluída! ${res.data.imported} contatos processados.`);
-    } catch (err) {
-      alert('Falha ao importar CSV.');
+    } catch (err: any) {
+      console.error('Falha na importação:', err.response?.data || err.message);
+      alert('Falha ao importar CSV: ' + (err.response?.data?.error || 'Erro desconhecido'));
     } finally {
       setSaving(false);
     }
