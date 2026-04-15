@@ -29,7 +29,7 @@ router.get('/ping', (req, res) => {
  * Route: POST /api/webhook/evolution/:tenantId
  * Note: Supporting both base and sub-paths for Evolution API v2 events
  */
-router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express.json(), async (req: Request, res: Response) => {
+router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Response) => {
   const tenantId = req.params.tenantId as string;
   const payload = req.body;
 
