@@ -53,7 +53,7 @@ export default function DashboardHome() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('/metrics/dashboard')
+    api.get('/metrics')
       .then(res => {
         if (res.data && res.data.summary) {
           setData(res.data);
