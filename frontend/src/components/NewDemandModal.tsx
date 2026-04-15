@@ -29,7 +29,7 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
         const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const data = await response.json();
         if (!data.erro && data.bairro) {
-          setFormData(prev => ({ ...prev, municipeBairro: data.bairro }));
+          setFormData(prev => ({ ...prev, municipeBairro: data.bairro.toUpperCase() }));
         }
       } catch (err) {
         console.error('Erro ao buscar CEP:', err);
@@ -147,7 +147,7 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
                     className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
                     placeholder="Bairro do atendimento"
                     value={formData.municipeBairro}
-                    onChange={e => setFormData({...formData, municipeBairro: e.target.value})}
+                    onChange={e => setFormData({...formData, municipeBairro: e.target.value.toUpperCase()})}
                   />
                 </div>
               </div>

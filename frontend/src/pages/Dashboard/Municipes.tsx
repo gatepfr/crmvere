@@ -356,9 +356,9 @@ export default function Municipes() {
         const data = await response.json();
         if (!data.erro && data.bairro) {
           if (type === 'create') {
-            setCreateForm(prev => ({ ...prev, bairro: data.bairro }));
+            setCreateForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
           } else {
-            setEditForm(prev => ({ ...prev, bairro: data.bairro }));
+            setEditForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
           }
         }
       } catch (err) {
@@ -813,7 +813,7 @@ export default function Municipes() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
-                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="Ex: Centro" value={createForm.bairro} onChange={e => setCreateForm({...createForm, bairro: e.target.value})} />
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="Ex: CENTRO" value={createForm.bairro} onChange={e => setCreateForm({...createForm, bairro: e.target.value.toUpperCase()})} />
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
@@ -882,7 +882,7 @@ export default function Municipes() {
                     type="text"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
                     value={editForm.bairro}
-                    onChange={e => setEditForm({...editForm, bairro: e.target.value})}
+                    onChange={e => setEditForm({...editForm, bairro: e.target.value.toUpperCase()})}
                   />
                 </div>
               </div>
