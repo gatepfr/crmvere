@@ -1,5 +1,3 @@
-import { normalizePhone } from '../utils/phoneUtils';
-
 export interface IncomingMessage {
   event: string;
   from: string;
