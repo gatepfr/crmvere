@@ -212,16 +212,22 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
 
     // 6. Send WhatsApp Response
     if (aiResult?.resposta_usuario && tenant.whatsappInstanceId) {
-      console.log(`[WEBHOOK] Sending AI response to ${normalized.jid} via instance ${tenant.whatsappInstanceId}`);
+      console.log(`[WEBHOOK] Resposta gerada pela IA. Aguardando 2s para enviar...`);
+      
+      // Delay to ensure Evolution API is ready after receiving the message
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const evolution = new EvolutionService(
         tenant.evolutionApiUrl || 'http://localhost:8080',
         tenant.evolutionGlobalToken || 'mestre123'
       );
       
+      console.log(`[WEBHOOK] Enviando via Evolution para: ${normalized.jid}`);
+      
       // Send main response to citizen
       await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario)
-        .then(() => console.log(`[WEBHOOK] AI message sent successfully to ${normalized.jid}`))
-        .catch(e => console.error(`[WEBHOOK] Send Error to ${normalized.jid}:`, e.message));
+        .then(() => console.log(`[WEBHOOK] ✅ MENSAGEM ENVIADA com sucesso para ${normalized.jid}`))
+        .catch(e => console.error(`[WEBHOOK] ❌ ERRO NO ENVIO para ${normalized.jid}:`, e.message));
 
       // 7. ALERT HUMAN if needed
       if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {

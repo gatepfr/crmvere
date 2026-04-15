@@ -9,16 +9,16 @@ import {
   Trash2, 
   Power, 
   LayoutDashboard, 
-  Settings,
   PlusCircle,
   LogOut,
   Clock,
-  Star,
   Infinity,
   CalendarDays,
   Zap,
   ShieldAlert,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  Cpu
 } from 'lucide-react';
 
 interface Stats {
@@ -27,6 +27,22 @@ interface Stats {
   demandas: number;
   municipes: number;
 }
+
+const PROVIDER_MODELS: Record<string, string[]> = {
+  gemini: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
+  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+  anthropic: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'],
+  groq: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+  openrouter: ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-405b'],
+};
+
+const PROVIDER_URLS: Record<string, string> = {
+  openrouter: 'https://openrouter.ai/api/v1',
+  gemini: '',
+  openai: '',
+  anthropic: '',
+  groq: ''
+};
 
 export default function Tenants() {
   const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'stats'>('tenants');
@@ -79,6 +95,16 @@ export default function Tenants() {
     loadData();
   }, [loadData]);
 
+  const handleProviderChange = (provider: string) => {
+    const models = PROVIDER_MODELS[provider] || [];
+    setAIConfig({
+      ...aiConfig,
+      aiProvider: provider,
+      aiModel: models[0] || '',
+      aiBaseUrl: PROVIDER_URLS[provider] || ''
+    });
+  };
+
   const handleSaveGlobalIA = async () => {
     setLoading(true);
     try {
@@ -90,29 +116,6 @@ export default function Tenants() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleProviderChange = (provider: string) => {
-    let defaultModel = 'gemini-1.5-flash';
-    let defaultBaseUrl = '';
-
-    switch (provider) {
-      case 'gemini': defaultModel = 'gemini-1.5-flash'; break;
-      case 'openai': defaultModel = 'gpt-4o-mini'; break;
-      case 'anthropic': defaultModel = 'claude-3-5-sonnet-20240620'; break;
-      case 'groq': defaultModel = 'llama-3.1-70b-versatile'; break;
-      case 'openrouter': 
-        defaultModel = 'google/gemini-flash-1.5';
-        defaultBaseUrl = 'https://openrouter.ai/api/v1';
-        break;
-    }
-
-    setAIConfig({
-      ...aiConfig,
-      aiProvider: provider,
-      aiModel: defaultModel,
-      aiBaseUrl: defaultBaseUrl
-    });
   };
 
   const updateGlobalTokenLimit = async () => {
@@ -231,13 +234,6 @@ export default function Tenants() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-bold text-slate-300">Administrador Global</p>
-              <div className="flex items-center gap-1 text-[10px] text-green-400">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                SISTEMA ONLINE
-              </div>
-            </div>
             <button 
               onClick={logout} 
               className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-red-600 transition-all rounded-xl text-sm font-bold shadow-sm"
@@ -253,7 +249,7 @@ export default function Tenants() {
         
         {/* Hub de IA e Estatísticas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Coluna de Configuração Global de IA */}
+          {/* Hub de IA Reestilizado */}
           <section className="lg:col-span-1 bg-white rounded-3xl shadow-sm border-2 border-blue-100 overflow-hidden flex flex-col h-full transition-all hover:shadow-md">
             <div className="p-5 border-b border-slate-100 bg-blue-50/50 flex justify-between items-center">
               <div>
@@ -261,7 +257,6 @@ export default function Tenants() {
                   <Zap className="text-amber-500" size={16} />
                   Hub de IA Centralizado
                 </h3>
-                <p className="text-[9px] font-bold text-blue-600 uppercase">Todos os gabinetes usarão esta API</p>
               </div>
               <button 
                 onClick={handleSaveGlobalIA}
@@ -271,50 +266,69 @@ export default function Tenants() {
                 {loading ? '...' : 'SALVAR'}
               </button>
             </div>
-            <div className="p-5 space-y-4 flex-1 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Provedor</label>
-                  <select 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
-                    value={aiConfig.aiProvider}
-                    onChange={e => handleProviderChange(e.target.value)}
-                  >
-                    <option value="gemini">Google Gemini</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Claude</option>
-                    <option value="groq">Groq</option>
-                    <option value="openrouter">OpenRouter</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Modelo</label>
+            <div className="p-5 space-y-4 flex-1">
+              <div>
+                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Provedor de IA</label>
+                <select 
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                  value={aiConfig.aiProvider}
+                  onChange={e => handleProviderChange(e.target.value)}
+                >
+                  <option value="gemini">Google Gemini</option>
+                  <option value="openai">OpenAI (ChatGPT)</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="groq">Groq (Ultra Rápido)</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="custom">Outras (Personalizado)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1 flex justify-between">
+                  Modelo 
+                  {aiConfig.aiProvider !== 'custom' && <span className="text-blue-500 flex items-center gap-0.5"><Cpu size={8}/> Oficial</span>}
+                </label>
+                {aiConfig.aiProvider === 'custom' ? (
                   <input
                     type="text"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
-                    placeholder="gemini-1.5-flash"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                    placeholder="Escreva o nome do modelo..."
                     value={aiConfig.aiModel}
                     onChange={e => setAIConfig({...aiConfig, aiModel: e.target.value})}
                   />
-                </div>
+                ) : (
+                  <select 
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                    value={aiConfig.aiModel}
+                    onChange={e => setAIConfig({...aiConfig, aiModel: e.target.value})}
+                  >
+                    {(PROVIDER_MODELS[aiConfig.aiProvider] || []).map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                )}
               </div>
+
               {(aiConfig.aiProvider === 'openrouter' || aiConfig.aiProvider === 'custom') && (
-                <div>
-                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Base URL (Opcional)</label>
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1 flex items-center gap-1">
+                    <Globe size={10} /> Base URL da API
+                  </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
-                    placeholder="https://api.openai.com/v1"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                    placeholder="https://api..."
                     value={aiConfig.aiBaseUrl}
                     onChange={e => setAIConfig({...aiConfig, aiBaseUrl: e.target.value})}
                   />
                 </div>
               )}
+
               <div>
                 <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Chave de API (Geral)</label>
                 <input
                   type="password"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
                   placeholder="sk-..."
                   value={aiConfig.aiApiKey}
                   onChange={e => setAIConfig({...aiConfig, aiApiKey: e.target.value})}
@@ -323,9 +337,9 @@ export default function Tenants() {
             </div>
           </section>
 
-          {/* Coluna de Estatísticas Rápidas */}
+          {/* Coluna de Estatísticas */}
           <section className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6 h-fit">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 h-full transition-transform hover:scale-[1.02]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 transition-all hover:border-amber-200">
               <div className="bg-amber-50 p-4 rounded-2xl text-amber-600">
                 <Zap size={28} />
               </div>
@@ -333,230 +347,94 @@ export default function Tenants() {
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quota Diária Padrão</p>
                 <div className="flex items-center gap-2">
                   <h4 className="text-3xl font-black text-slate-900">{(globalConfig.defaultDailyTokenLimit / 1000).toFixed(0)}k</h4>
-                  <button onClick={updateGlobalTokenLimit} title="Alterar Limite Padrão" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
+                  <button onClick={updateGlobalTokenLimit} className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
                     <PlusCircle size={14} />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 h-full transition-transform hover:scale-[1.02]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4">
               <div className="bg-blue-50 p-4 rounded-2xl text-blue-600">
                 <Building2 size={28} />
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinetes Ativos</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinetes</p>
                 <h4 className="text-3xl font-black text-slate-900">{stats.tenants}</h4>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 h-full transition-transform hover:scale-[1.02]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4">
               <div className="bg-purple-50 p-4 rounded-2xl text-purple-600">
                 <Users size={28} />
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuários do Sistema</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuários</p>
                 <h4 className="text-3xl font-black text-slate-900">{stats.users}</h4>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4 h-full transition-transform hover:scale-[1.02]">
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex items-center gap-4">
               <div className="bg-green-50 p-4 rounded-2xl text-green-600">
                 <MessageSquare size={28} />
               </div>
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demandas Geradas</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demandas</p>
                 <h4 className="text-3xl font-black text-slate-900">{stats.demandas}</h4>
               </div>
             </div>
           </section>
         </div>
 
-        {/* Abas de Navegação */}
+        {/* Abas */}
         <nav className="flex gap-2 p-1.5 bg-slate-200 rounded-2xl w-fit">
-          <button 
-            onClick={() => setActiveTab('tenants')}
-            className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'tenants' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Lista de Gabinetes
-          </button>
-          <button 
-            onClick={() => setActiveTab('users')}
-            className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Usuários
-          </button>
+          <button onClick={() => setActiveTab('tenants')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'tenants' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Gabinetes</button>
+          <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Usuários</button>
         </nav>
 
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex items-center gap-3 font-bold text-sm">
-            <Trash2 size={18} />
-            {error}
-          </div>
-        )}
-
-        {/* Conteúdo: Gabinetes */}
         {activeTab === 'tenants' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Formulário Novo Gabinete */}
             <div className="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <PlusCircle className="text-blue-600" size={20} />
-                  Novo Gabinete
-                </h3>
-                <p className="text-xs font-medium text-slate-500 mt-1">O limite de tokens inicial será o padrão global.</p>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">Novo Gabinete</h3>
               </div>
               <form onSubmit={handleCreate} className="p-6 space-y-5">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome do Vereador</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                    placeholder="Ex: Vereador João"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Slug (Identificador único)</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                    placeholder="ex: vereador-joao"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email Principal</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                    placeholder="admin@exemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {loading ? 'Processando...' : 'Criar Gabinete Agora'}
-                </button>
+                <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm" placeholder="Nome do Vereador" value={name} onChange={e => setName(e.target.value)} />
+                <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm" placeholder="Slug (ex: vereador-joao)" value={slug} onChange={e => setSlug(e.target.value)} />
+                <input type="email" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm" placeholder="Email Principal" value={email} onChange={e => setEmail(e.target.value)} />
+                <button type="submit" disabled={loading} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg">Criar Gabinete</button>
               </form>
             </div>
 
-            {/* Tabela de Gabinetes */}
             <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <Building2 className="text-blue-600" size={20} />
-                  Lista de Gabinetes
-                </h3>
-                <span className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full text-slate-500 uppercase">{tenants.length} Registros</span>
-              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinete</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Consumo IA</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Quota Diária</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano / Trial</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Gabinete</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Quota</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Plano</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {tenants.map((tenant) => (
-                      <tr key={tenant.id} className="hover:bg-slate-50/50 transition-colors">
+                    {tenants.map(tenant => (
+                      <tr key={tenant.id} className="hover:bg-slate-50">
                         <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900 leading-tight">{tenant.name}</p>
-                          <code className="text-[9px] font-bold text-slate-400 uppercase">/{tenant.slug}</code>
+                          <p className="font-bold text-slate-900">{tenant.name}</p>
+                          <code className="text-[9px] text-slate-400">/{tenant.slug}</code>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)} className="px-3 py-1 bg-slate-100 rounded-lg font-black text-[10px]">{(tenant.dailyTokenLimit / 1000).toFixed(0)}k</button>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <Zap size={12} className="text-amber-500" />
-                            <span className="font-black text-slate-700">{(tenant.tokenUsageTotal / 1000).toFixed(1)}k</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button 
-                            onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)}
-                            className="bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg font-black text-[10px] text-slate-600 transition-all flex items-center gap-1.5 border border-slate-200 shadow-sm"
-                          >
-                            {(tenant.dailyTokenLimit / 1000).toFixed(0)}k
-                            <PlusCircle size={10} className="text-blue-600" />
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1">
-                            <span className={`w-fit px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                              tenant.subscriptionStatus === 'lifetime' ? 'bg-amber-100 text-amber-700' :
-                              tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' :
-                              tenant.subscriptionStatus === 'trial' ? 'bg-blue-100 text-blue-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {tenant.subscriptionStatus}
-                            </span>
-                            {tenant.subscriptionStatus === 'trial' && (
-                              <p className="text-[8px] font-black text-slate-400 flex items-center gap-1">
-                                <Clock size={8} /> Exp: {new Date(tenant.trialEndsAt).toLocaleDateString()}
-                              </p>
-                            )}
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black w-fit ${tenant.active ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                              {tenant.active ? 'ACESSO ATIVO' : 'SUSPENSO'}
-                            </span>
-                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{tenant.subscriptionStatus}</span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-1.5">
-                            <button 
-                              onClick={() => toggleBlockIA(tenant)}
-                              title={tenant.blocked ? "Desbloquear IA" : "BLOQUEAR IA"}
-                              className={`p-2 rounded-xl transition-all ${tenant.blocked ? 'bg-red-600 text-white animate-pulse shadow-lg shadow-red-200' : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 border border-slate-200'}`}
-                            >
-                              {tenant.blocked ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
-                            </button>
-                            <button 
-                              onClick={() => updateSubscription(tenant.id, 'lifetime')}
-                              title="Tornar Vitalício"
-                              className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl border border-amber-100 transition-all"
-                            >
-                              <Infinity size={16} />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                const days = prompt('Adicionar quantos dias de trial?', '7');
-                                if (days) {
-                                  const date = new Date(tenant.trialEndsAt);
-                                  date.setDate(date.getDate() + parseInt(days));
-                                  updateSubscription(tenant.id, 'trial', date.toISOString());
-                                }
-                              }}
-                              title="Estender Trial"
-                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl border border-blue-100 transition-all"
-                            >
-                              <CalendarDays size={16} />
-                            </button>
-                            <button 
-                              onClick={() => toggleStatus(tenant)}
-                              title={tenant.active ? "Desativar Gabinete" : "Ativar Gabinete"}
-                              className={`p-2 rounded-xl transition-all ${tenant.active ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-green-50 text-green-600 hover:bg-green-100'} border border-slate-200`}
-                            >
-                              <Power size={16} />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(tenant.id)}
-                              title="Excluir Definitivamente"
-                              className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl border border-red-100 transition-all"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{tenant.blocked ? <ShieldAlert size={16}/> : <ShieldCheck size={16}/>}</button>
+                            <button onClick={() => toggleStatus(tenant)} className="p-2 bg-slate-100 rounded-xl"><Power size={16}/></button>
+                            <button onClick={() => handleDelete(tenant.id)} className="p-2 bg-red-50 text-red-600 rounded-xl"><Trash2 size={16}/></button>
                           </div>
                         </td>
                       </tr>
@@ -568,44 +446,22 @@ export default function Tenants() {
           </div>
         )}
 
-        {/* Conteúdo: Usuários */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <Users className="text-blue-600" size={20} />
-                Gestão de Usuários do Sistema
-              </h3>
-              <p className="text-xs font-medium text-slate-500 mt-1">Todos os assessores e administradores cadastrados nos gabinetes.</p>
-            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuário</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gabinete</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cadastrado em</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Usuário</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Gabinete</th>
                     <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {allUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-slate-900">{u.email}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-blue-600 text-sm">{u.tenantName || '---'}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${u.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-slate-400">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </td>
+                  {allUsers.map(u => (
+                    <tr key={u.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 font-bold text-slate-900">{u.email}</td>
+                      <td className="px-6 py-4 text-blue-600 font-bold">{u.tenantName || '---'}</td>
                       <td className="px-6 py-4 text-right">
                         <button 
                           onClick={async () => {
@@ -629,20 +485,13 @@ export default function Tenants() {
             </div>
           </div>
         )}
-
       </main>
 
       <footer className="p-6 flex flex-col items-center gap-4">
-        <button 
-          onClick={handleResetDatabase}
-          disabled={loading}
-          className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors border border-red-200 px-3 py-1 rounded-lg hover:bg-red-50 disabled:opacity-50"
-        >
-          {loading ? 'Processando...' : 'Zerar Banco de Dados'}
-        </button>
-        <div className="flex flex-col items-center gap-2 opacity-50 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+        <button onClick={handleResetDatabase} className="text-[10px] font-black text-red-400 uppercase border border-red-200 px-3 py-1 rounded-lg">Zerar Banco de Dados</button>
+        <div className="flex flex-col items-center gap-2 opacity-50 grayscale">
           <img src="/logo_site.png" alt="CRM do Verê" className="h-8 w-auto object-contain" />
-          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">v1.0.0 © 2026</p>
+          <p className="text-[8px] font-black text-slate-400 uppercase">v1.0.0 © 2026</p>
         </div>
       </footer>
     </div>
