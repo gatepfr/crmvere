@@ -106,7 +106,7 @@ router.get('/instance/status', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     let [tenant] = tenantId 
-      ? await db.select().from(tenants).where(eq(tenantId, tenantId))
+      ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
       : await db.select().from(tenants).limit(1);
 
     if (!tenant?.whatsappInstanceId) return res.status(200).json({ state: 'not_created' });
