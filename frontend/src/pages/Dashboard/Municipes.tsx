@@ -85,6 +85,8 @@ export default function Municipes() {
   const [editForm, setEditForm] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
   const [displayEditPhone, setDisplayEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadAllBairros = useCallback(async () => {
     try {
@@ -105,7 +107,9 @@ export default function Municipes() {
         search: searchTerm,
         bairro: selectedBairro,
         engaged: onlyEngaged.toString(),
-        birthday: onlyBirthdays.toString()
+        birthday: onlyBirthdays.toString(),
+        sortBy: sortConfig.key,
+        sortOrder: sortConfig.direction
       });
       const res = await api.get(`/demands/municipes/list?${params.toString()}`);
       setMunicipes(res.data.data || []);
@@ -115,7 +119,7 @@ export default function Municipes() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyBirthdays]);
+  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyBirthdays, sortConfig]);
 
   useEffect(() => {
     loadMunicipes();
@@ -159,17 +163,6 @@ export default function Municipes() {
     setSortConfig({ key, direction });
   };
 
-  const sortedMunicipes = useMemo(() => {
-    return [...municipes].sort((a, b) => {
-      const valA = (a[sortConfig.key] || '').toString().toLowerCase();
-      const valB = (b[sortConfig.key] || '').toString().toLowerCase();
-      
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [municipes, sortConfig]);
-
   const toggleSelect = (id: string) => {
     setSelectedSelectedMunicipes(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -177,10 +170,10 @@ export default function Municipes() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedMunicipes.length === sortedMunicipes.length) {
+    if (selectedMunicipes.length === municipes.length) {
       setSelectedSelectedMunicipes([]);
     } else {
-      setSelectedSelectedMunicipes(sortedMunicipes.map(m => m.id));
+      setSelectedSelectedMunicipes(municipes.map(m => m.id));
     }
   };
 
@@ -355,28 +348,76 @@ export default function Municipes() {
     }
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('Relatório de Munícipes - CRM do Verê', 14, 20);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-    
-    const tableData = sortedMunicipes.map(m => [
-      m.name,
-      formatPhone(m.phone),
-      m.bairro || 'Não informado',
-      new Date(m.createdAt).toLocaleDateString('pt-BR')
-    ]);
+  const exportToPDF = async (mode: 'page' | 'all') => {
+    setExporting(true);
+    try {
+      let dataToExport = municipes;
 
-    autoTable(doc, {
-      startY: 40,
-      head: [['Nome', 'Telefone', 'Bairro', 'Data Cadastro']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [30, 41, 59] }
-    });
+      if (mode === 'all') {
+        const res = await api.get(`/demands/municipes/list?limit=all&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`);
+        dataToExport = res.data.data;
+      }
 
-    doc.save(`municipes-${new Date().getTime()}.pdf`);
+      const doc = new jsPDF();
+      
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RELATÓRIO DE MUNÍCIPES', 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('CRM DO VERÊ - GESTÃO DE GABINETE', 14, 28);
+      
+      doc.text(`GERADO EM: ${new Date().toLocaleString('pt-BR')}`, 140, 28);
+
+      const tableData = dataToExport.map(m => [
+        m.name,
+        formatPhone(m.phone),
+        m.bairro || '---',
+        m.birthDate ? new Date(m.birthDate).toLocaleDateString('pt-BR') : '---',
+        m.demandCount.toString()
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['NOME COMPLETO', 'WHATSAPP', 'BAIRRO', 'NASCIMENTO', 'DEMANDAS']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: 'bold',
+          halign: 'left'
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: [51, 65, 85]
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        margin: { top: 45 },
+        didDrawPage: (data) => {
+          const str = "Página " + doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(str, 14, doc.internal.pageSize.height - 10);
+          doc.text("CRM do Verê - Sistema de Gestão", 160, doc.internal.pageSize.height - 10);
+        }
+      });
+
+      doc.save(`municipes-${mode}-${new Date().getTime()}.pdf`);
+      setIsExportModalOpen(false);
+    } catch (err) {
+      alert('Erro ao exportar PDF');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -411,7 +452,7 @@ export default function Municipes() {
           )}
 
           <button 
-            onClick={exportToPDF}
+            onClick={() => setIsExportModalOpen(true)}
             className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
             title="Exportar PDF"
           >
@@ -515,7 +556,7 @@ export default function Municipes() {
         )}
         {/* Mobile View */}
         <div className="lg:hidden divide-y divide-slate-50">
-          {sortedMunicipes.map(m => (
+          {municipes.map(m => (
             <div 
               key={m.id} 
               className={`p-4 transition-all ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/50' : ''}`}
@@ -558,12 +599,12 @@ export default function Municipes() {
                   <div 
                     onClick={toggleSelectAll}
                     className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${
-                      selectedMunicipes.length === sortedMunicipes.length && sortedMunicipes.length > 0
+                      selectedMunicipes.length === municipes.length && municipes.length > 0
                         ? 'bg-blue-600 border-blue-600 text-white' 
                         : 'bg-white border-slate-300'
                     }`}
                   >
-                    {selectedMunicipes.length === sortedMunicipes.length && sortedMunicipes.length > 0 && <Check size={12} strokeWidth={4} />}
+                    {selectedMunicipes.length === municipes.length && municipes.length > 0 && <Check size={12} strokeWidth={4} />}
                   </div>
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('name')}>
@@ -589,7 +630,7 @@ export default function Municipes() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {sortedMunicipes.map(m => (
+              {municipes.map(m => (
                 <tr 
                   key={m.id} 
                   className={`group transition-all cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/50'}`}
@@ -934,6 +975,60 @@ export default function Municipes() {
                 {sending ? 'Processando...' : 'Iniciar Disparo'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Export Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">Exportar PDF</h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <button 
+                onClick={() => exportToPDF('page')}
+                disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors">
+                    <FileDown size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Página Atual</p>
+                    <p className="text-xs text-slate-500">Exportar apenas os {municipes.length} registros visíveis</p>
+                  </div>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => exportToPDF('all')}
+                disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Banco Completo</p>
+                    <p className="text-xs text-slate-500">Exportar todos os {pagination.total} registros</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            {exporting && (
+              <div className="px-6 pb-6 text-center">
+                <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
+                  <Loader2 className="animate-spin" size={16} />
+                  Gerando relatório...
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -304,12 +304,15 @@ export const deleteMunicipe = async (req: Request, res: Response) => {
 export const listMunicipes = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 25;
+  const limitQuery = req.query.limit as string;
+  const limit = limitQuery === 'all' ? 10000 : (parseInt(limitQuery) || 25);
   const search = req.query.search as string;
   const bairro = req.query.bairro as string;
   const engaged = req.query.engaged === 'true';
   const birthday = req.query.birthday === 'true';
-  const offset = (page - 1) * limit;
+  const sortBy = (req.query.sortBy as string) || 'name';
+  const sortOrder = (req.query.sortOrder as string) === 'desc' ? desc : sql`asc`;
+  const offset = limitQuery === 'all' ? 0 : (page - 1) * limit;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
@@ -332,6 +335,13 @@ export const listMunicipes = async (req: Request, res: Response) => {
       .from(municipes)
       .where(whereClause);
 
+    // Map sortBy field to schema column
+    let orderByField: any = municipes.name;
+    if (sortBy === 'phone') orderByField = municipes.phone;
+    if (sortBy === 'bairro') orderByField = municipes.bairro;
+    if (sortBy === 'createdAt') orderByField = municipes.createdAt;
+    if (sortBy === 'demandCount') orderByField = sql`count(${demandas.id})`;
+
     let query = db.select({
       id: municipes.id,
       name: municipes.name,
@@ -345,10 +355,9 @@ export const listMunicipes = async (req: Request, res: Response) => {
     .leftJoin(demandas, eq(municipes.id, demandas.municipeId))
     .where(whereClause)
     .groupBy(municipes.id)
-    .orderBy(desc(municipes.createdAt));
+    .orderBy(sortOrder === desc ? desc(orderByField) : orderByField);
 
     if (engaged) {
-      // Filtering group by counts requires having or a subquery, here we use having for simplicity
       query = query.having(sql`count(${demandas.id}) >= 5`) as any;
     }
 
@@ -360,7 +369,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
         page,
         limit,
         total: Number(totalCount?.count || 0),
-        totalPages: Math.ceil(Number(totalCount?.count || 0) / limit)
+        totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit || 1))
       }
     });
   } catch (error) {
