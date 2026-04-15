@@ -3,7 +3,7 @@ import express from 'express';
 import { handleStripeWebhook } from '../controllers/webhookController';
 import { normalizeEvolution } from '../services/whatsappService';
 import { db } from '../db';
-import { tenants, municipes, demandas, documents } from '../db/schema';
+import { tenants, municipes, demandas, documents, systemConfigs } from '../db/schema';
 import { processDemand } from '../services/aiService';
 import { EvolutionService } from '../services/evolutionService';
 import { eq, and, desc, sql } from 'drizzle-orm';
