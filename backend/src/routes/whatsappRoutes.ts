@@ -57,6 +57,31 @@ router.post('/send', async (req, res) => {
   }
 });
 
+router.post('/send-direct', async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const { phone, message } = req.body;
+
+    if (!tenantId || !phone || !message) {
+      return res.status(400).json({ error: 'Missing parameters (phone, message)' });
+    }
+
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+
+    if (!tenant || !tenant.whatsappInstanceId || !tenant.evolutionApiUrl || !tenant.evolutionGlobalToken) {
+      return res.status(400).json({ error: 'WhatsApp not configured for this tenant' });
+    }
+
+    const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+    await evo.sendMessage(tenant.whatsappInstanceId, phone, message);
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error sending direct message:', error.message);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
 router.post('/setup', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;

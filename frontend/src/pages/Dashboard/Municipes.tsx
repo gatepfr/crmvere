@@ -219,20 +219,13 @@ export default function Municipes() {
   const handleSendBirthdayMessage = async (m: Municipe) => {
     const msg = `Olá ${m.name}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈`;
     try {
-      const demandsRes = await api.get('/demands?limit=100');
-      const latestDemand = demandsRes.data.data.find((d: any) => d.municipes.id === m.id);
-      
-      if (latestDemand) {
-        await api.post('/whatsapp/send', {
-          demandId: latestDemand.demandas.id,
-          message: msg
-        });
-        alert('Mensagem de aniversário enviada!');
-      } else {
-        alert('Para enviar WhatsApp, é necessário que o munícipe tenha pelo menos uma demanda registrada.');
-      }
+      await api.post('/whatsapp/send-direct', {
+        phone: m.phone,
+        message: msg
+      });
+      alert('Mensagem de aniversário enviada!');
     } catch (err) {
-      alert('Falha ao enviar mensagem.');
+      alert('Falha ao enviar mensagem. Verifique a conexão com o WhatsApp.');
     }
   };
 
@@ -245,22 +238,19 @@ export default function Municipes() {
       const municipeId = selectedMunicipes[i];
       const municipe = (municipes || []).find(m => m.id === municipeId);
       
-      try {
-        const demandsRes = await api.get('/demands');
-        const latestDemand = demandsRes.data.data.find((d: any) => d.municipes.id === municipeId);
-        
-        if (latestDemand) {
-          await api.post('/whatsapp/send', {
-            demandId: latestDemand.demandas.id,
+      if (municipe) {
+        try {
+          await api.post('/whatsapp/send-direct', {
+            phone: municipe.phone,
             message: broadcastMessage
           });
+        } catch (err) {
+          console.error(`Erro ao enviar para ${municipe.name}:`, err);
         }
-      } catch (err) {
-        console.error(`Erro ao enviar para ${municipe?.name}:`, err);
       }
       
       setSendProgress(prev => ({ ...prev, current: i + 1 }));
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     setSending(false);
