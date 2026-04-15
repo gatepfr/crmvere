@@ -4,10 +4,11 @@ import { tenants } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export const checkSubscription = async (req: Request, res: Response, next: NextFunction) => {
-  if (req.user?.role === 'super_admin') return next();
+  const userRole = req.user?.role;
+  if (userRole === 'super_admin' || userRole === 'admin' || userRole === 'vereador') return next();
   
   const tenantId = req.user?.tenantId;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  if (!tenantId) return res.status(403).json({ error: 'Assinatura não identificada.' });
 
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
   if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
