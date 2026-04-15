@@ -171,6 +171,20 @@ export default function Tenants() {
     }
   };
 
+  const setTrial = async (id: string) => {
+    const days = prompt('Quantos dias de trial?', '7');
+    if (!days) return;
+    const date = new Date();
+    date.setDate(date.getDate() + parseInt(days));
+    updateSubscription(id, 'trial', date.toISOString());
+  };
+
+  const setLifetime = async (id: string) => {
+    if (confirm('Deseja ativar acesso LIFETIME (Vitalício) para este gabinete?')) {
+      updateSubscription(id, 'lifetime');
+    }
+  };
+
   const updateSubscription = async (id: string, status: string, trialEndsAt?: string) => {
     try {
       await api.patch(`/superadmin/tenants/${id}/subscription`, { status, trialEndsAt });
@@ -428,10 +442,19 @@ export default function Tenants() {
                           <button onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)} className="px-3 py-1 bg-slate-100 rounded-lg font-black text-[10px]">{(tenant.dailyTokenLimit / 1000).toFixed(0)}k</button>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{tenant.subscriptionStatus}</span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                            tenant.subscriptionStatus === 'active' ? 'bg-green-100 text-green-700' : 
+                            tenant.subscriptionStatus === 'lifetime' ? 'bg-purple-100 text-purple-700' :
+                            tenant.subscriptionStatus === 'trial' ? 'bg-amber-100 text-amber-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {tenant.subscriptionStatus}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-1.5">
+                            <button onClick={() => setTrial(tenant.id)} className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100" title="Definir Trial"><Clock size={16}/></button>
+                            <button onClick={() => setLifetime(tenant.id)} className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100" title="Definir Lifetime"><Infinity size={16}/></button>
                             <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{tenant.blocked ? <ShieldAlert size={16}/> : <ShieldCheck size={16}/>}</button>
                             <button onClick={() => toggleStatus(tenant)} className="p-2 bg-slate-100 rounded-xl"><Power size={16}/></button>
                             <button onClick={() => handleDelete(tenant.id)} className="p-2 bg-red-50 text-red-600 rounded-xl"><Trash2 size={16}/></button>
