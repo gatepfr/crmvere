@@ -155,23 +155,32 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
 
     // 4. AI Processing
     let aiResult = null;
-    const apiKey = tenant?.aiApiKey || process.env.GEMINI_API_KEY;
-    console.log(`[WEBHOOK] AI Start - apiKey present: ${!!apiKey}`);
+    
+    // Fetch global config if needed
+    const [globalConfig] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
+
+    const provider = tenant?.aiProvider || globalConfig?.aiProvider || 'gemini';
+    const apiKey = tenant?.aiApiKey || globalConfig?.aiApiKey || process.env.GEMINI_API_KEY;
+    const model = tenant?.aiModel || globalConfig?.aiModel || (provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o');
+    const baseUrl = tenant?.aiBaseUrl || globalConfig?.aiBaseUrl || undefined;
+
+    console.log(`[WEBHOOK] AI Config - Provider: ${provider}, Model: ${model}, API Key present: ${!!apiKey}`);
+
     if (apiKey) {
       try {
         aiResult = await processDemand(promptContext, {
-          provider: tenant?.aiProvider as any || 'gemini',
+          provider: provider as any,
           apiKey: apiKey,
-          model: tenant?.aiModel || (tenant?.aiProvider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o'),
-          aiBaseUrl: tenant?.aiBaseUrl || undefined,
+          model: model,
+          aiBaseUrl: baseUrl,
           systemPrompt: tenant?.systemPrompt || ''
         }, undefined, knowledgeBaseContent);
-        console.log(`[WEBHOOK] AI Result: "${aiResult?.resposta_usuario?.substring(0, 50)}..."`);
+        console.log(`[WEBHOOK] AI Result generated successfully`);
       } catch (aiError: any) {
         console.error('[WEBHOOK] AI Error:', aiError.message);
       }
     } else {
-      console.warn(`[WEBHOOK] No API Key for tenant ${tenantId}. AI will not process.`);
+      console.warn(`[WEBHOOK] No API Key found (Tenant or Global). AI will not process.`);
     }
 
     // 5. Save updated conversation to database

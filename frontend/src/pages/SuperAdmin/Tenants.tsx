@@ -92,6 +92,29 @@ export default function Tenants() {
     }
   };
 
+  const handleProviderChange = (provider: string) => {
+    let defaultModel = 'gemini-1.5-flash';
+    let defaultBaseUrl = '';
+
+    switch (provider) {
+      case 'gemini': defaultModel = 'gemini-1.5-flash'; break;
+      case 'openai': defaultModel = 'gpt-4o-mini'; break;
+      case 'anthropic': defaultModel = 'claude-3-5-sonnet-20240620'; break;
+      case 'groq': defaultModel = 'llama-3.1-70b-versatile'; break;
+      case 'openrouter': 
+        defaultModel = 'google/gemini-flash-1.5';
+        defaultBaseUrl = 'https://openrouter.ai/api/v1';
+        break;
+    }
+
+    setAIConfig({
+      ...aiConfig,
+      aiProvider: provider,
+      aiModel: defaultModel,
+      aiBaseUrl: defaultBaseUrl
+    });
+  };
+
   const updateGlobalTokenLimit = async () => {
     const newVal = prompt('Novo limite diário PADRÃO para novos gabinetes:', globalConfig.defaultDailyTokenLimit.toString());
     if (!newVal) return;
@@ -255,7 +278,7 @@ export default function Tenants() {
                   <select 
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
                     value={aiConfig.aiProvider}
-                    onChange={e => setAIConfig({...aiConfig, aiProvider: e.target.value})}
+                    onChange={e => handleProviderChange(e.target.value)}
                   >
                     <option value="gemini">Google Gemini</option>
                     <option value="openai">OpenAI</option>
@@ -275,6 +298,18 @@ export default function Tenants() {
                   />
                 </div>
               </div>
+              {(aiConfig.aiProvider === 'openrouter' || aiConfig.aiProvider === 'custom') && (
+                <div>
+                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Base URL (Opcional)</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                    placeholder="https://api.openai.com/v1"
+                    value={aiConfig.aiBaseUrl}
+                    onChange={e => setAIConfig({...aiConfig, aiBaseUrl: e.target.value})}
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Chave de API (Geral)</label>
                 <input
