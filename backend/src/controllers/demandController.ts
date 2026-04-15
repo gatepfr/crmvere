@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes } from '../db/schema';
+import { demandas, municipes, systemConfigs, tenants } from '../db/schema';
 import { eq, desc, and, sql, count } from 'drizzle-orm';
 import fs from 'fs';
-import { parse } from 'csv-parse';
+import { parse } from 'csv-parse/sync';
+import iconv from 'iconv-lite';
 
 export const createMunicipe = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
@@ -38,54 +39,102 @@ export const importMunicipes = async (req: Request, res: Response) => {
   const file = req.file;
   const { mapping } = req.body;
 
+  console.log('--- Início da Importação CSV (Modo Robusto) ---');
+
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   if (!file) return res.status(400).json({ error: 'CSV file is required' });
   
   const parsedMapping = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
 
-  const records: any[] = [];
-  
-  // Read first line to detect delimiter
-  const firstLine = fs.readFileSync(file.path, 'utf8').split(/\r?\n/)[0];
-  const commaCount = (firstLine.match(/,/g) || []).length;
-  const semicolonCount = (firstLine.match(/;/g) || []).length;
-  const delimiter = semicolonCount > commaCount ? ';' : ',';
-
-  const parser = fs.createReadStream(file.path).pipe(parse({
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-    delimiter: delimiter
-  }));
-
   try {
-    for await (const record of parser) {
+    // 1. Read file as buffer to handle encoding
+    const fileBuffer = fs.readFileSync(file.path);
+    
+    // 2. Try to detect encoding or default to common ones
+    let content = iconv.decode(fileBuffer, 'utf-8');
+    if (content.includes('')) { // Detection of encoding error
+      content = iconv.decode(fileBuffer, 'iso-8859-1');
+    }
+
+    // 3. Clean content (remove BOM, normalize line endings)
+    content = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+
+    // 4. Detect delimiter
+    const firstLine = content.split('\n')[0];
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const delimiter = semicolonCount > commaCount ? ';' : ',';
+    
+    console.log(`Delimitador: "${delimiter}", Encoding: Detectado, Linhas: ${content.split('\n').length}`);
+
+    // 5. Parse CSV
+    const records = parse(content, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      delimiter: delimiter,
+      relax_column_count: true
+    });
+
+    const toInsert: any[] = [];
+    let skipped = 0;
+
+    for (const record of records) {
       const name = record[parsedMapping.name];
-      const phone = record[parsedMapping.phone]?.replace(/\D/g, '');
+      let phone = record[parsedMapping.phone];
       const bairro = record[parsedMapping.bairro];
-      const rawBirthDate = parsedMapping.birthDate ? record[parsedMapping.birthDate] : null;
+      let birthDate = null;
 
       if (name && phone) {
-        records.push({
+        // Clean phone
+        phone = phone.toString().replace(/\D/g, '');
+        if (!phone.startsWith('55') && phone.length >= 10) phone = '55' + phone;
+
+        // Process Date
+        if (parsedMapping.birthDate && record[parsedMapping.birthDate]) {
+          try {
+            const rawDate = record[parsedMapping.birthDate].toString();
+            if (rawDate.includes('/')) {
+              const [d, m, y] = rawDate.split('/');
+              birthDate = new Date(`${y}-${m}-${d}T12:00:00Z`);
+            } else {
+              birthDate = new Date(rawDate);
+            }
+            if (isNaN(birthDate.getTime())) birthDate = null;
+          } catch (e) { birthDate = null; }
+        }
+
+        toInsert.push({
           tenantId,
-          name,
-          phone,
-          bairro,
-          birthDate: rawBirthDate ? new Date(rawBirthDate) : null
+          name: name.toString().substring(0, 255),
+          phone: phone.substring(0, 50),
+          bairro: bairro ? bairro.toString().substring(0, 255) : null,
+          birthDate
         });
+      } else {
+        skipped++;
       }
     }
 
-    if (records.length > 0) {
-      await db.insert(municipes).values(records).onConflictDoNothing();
+    console.log(`Válidos: ${toInsert.length}, Pulados: ${skipped}`);
+
+    // 6. Batch Insert (100 at a time)
+    if (toInsert.length > 0) {
+      const chunkSize = 100;
+      for (let i = 0; i < toInsert.length; i += chunkSize) {
+        const chunk = toInsert.slice(i, i + chunkSize);
+        await db.insert(municipes).values(chunk).onConflictDoNothing();
+      }
     }
 
-    fs.unlinkSync(file.path);
-    res.json({ success: true, imported: records.length });
-  } catch (error) {
-    console.error('Error importing municipes:', error);
-    if (file) fs.unlinkSync(file.path);
-    res.status(500).json({ error: 'Failed to import CSV' });
+    // Cleanup
+    if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    
+    res.json({ success: true, imported: toInsert.length, skipped });
+  } catch (error: any) {
+    console.error('ERRO CRÍTICO NA IMPORTAÇÃO:', error);
+    if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    res.status(500).json({ error: 'Erro no processamento do arquivo: ' + error.message });
   }
 };
 
