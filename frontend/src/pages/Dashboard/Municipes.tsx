@@ -7,6 +7,7 @@ import {
   MapPin, 
   Phone, 
   MessageCircle, 
+  MessageSquare,
   Loader2, 
   CheckSquare, 
   Square,
