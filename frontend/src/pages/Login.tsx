@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { Check } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function Login() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotMessage, setForgotMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -21,12 +23,21 @@ export default function Login() {
     setForgotMessage('');
     try {
       await api.post('/auth/forgot-password', { email: forgotEmail });
-      setForgotMessage('Se o e-mail estiver cadastrado, você receberá um link de redefinição.');
+      setForgotMessage('E-mail enviado com sucesso! Verifique sua caixa de entrada (e a pasta de spam).');
+      setIsSuccess(true);
     } catch (err) {
       setForgotMessage('Erro ao processar solicitação. Tente novamente.');
+      setIsSuccess(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeForgotModal = () => {
+    setShowForgotModal(false);
+    setForgotMessage('');
+    setIsSuccess(false);
+    setForgotEmail('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,44 +130,67 @@ export default function Login() {
       </div>
 
       {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="w-full max-w-sm p-6 bg-white rounded-2xl shadow-xl">
-            <h3 className="text-lg font-black text-slate-900 mb-2">Esqueci minha senha</h3>
-            <p className="text-xs text-slate-500 mb-4">Digite seu e-mail para receber um link de redefinição.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm p-8 bg-white rounded-[2rem] shadow-2xl animate-in zoom-in duration-200">
+            <h3 className="text-xl font-black text-slate-900 mb-2">Esqueci minha senha</h3>
+            <p className="text-sm text-slate-500 mb-6 font-medium">
+              {isSuccess 
+                ? 'Quase lá! Siga as instruções enviadas para o seu e-mail.' 
+                : 'Digite seu e-mail para receber um link de redefinição.'}
+            </p>
             
-            <form onSubmit={handleForgotSubmit} className="space-y-4">
-              <input
-                type="email"
-                required
-                className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="seu@email.com"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-              />
-              
-              {forgotMessage && (
-                <p className={`text-xs font-bold ${forgotMessage.includes('Erro') ? 'text-red-500' : 'text-green-600'}`}>
-                  {forgotMessage}
-                </p>
-              )}
+            {!isSuccess ? (
+              <form onSubmit={handleForgotSubmit} className="space-y-4">
+                <input
+                  type="email"
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm"
+                  placeholder="seu@email.com"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                />
+                
+                {forgotMessage && (
+                  <p className="text-xs font-bold text-red-500 bg-red-50 p-2 rounded-lg text-center">
+                    {forgotMessage}
+                  </p>
+                )}
 
-              <div className="flex gap-2 pt-2">
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={closeForgotModal}
+                    className="flex-1 px-4 py-3 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200"
+                  >
+                    CANCELAR
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-3 text-xs font-black text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200"
+                  >
+                    {loading ? 'ENVIANDO...' : 'ENVIAR LINK'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-green-50 border border-green-100 p-4 rounded-2xl flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg">
+                    <Check size={20} strokeWidth={4} />
+                  </div>
+                  <p className="text-xs font-bold text-green-700 text-center leading-relaxed">
+                    {forgotMessage}
+                  </p>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => { setShowForgotModal(false); setForgotMessage(''); }}
-                  className="flex-1 px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200"
+                  onClick={closeForgotModal}
+                  className="w-full px-4 py-3 text-xs font-black text-white bg-slate-900 rounded-xl hover:bg-slate-800 shadow-xl"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 text-xs font-black text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Enviar Link
+                  FECHAR E VOLTAR
                 </button>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
