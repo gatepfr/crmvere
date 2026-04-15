@@ -3,6 +3,7 @@ services:
     image: postgres:17-alpine
     container_name: vereador_crm_db
     restart: always
+    env_file: .env
     environment:
       POSTGRES_USER: ${DB_USER:-user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
@@ -27,6 +28,7 @@ services:
     image: evoapicloud/evolution-api:latest
     container_name: vereador_crm_whatsapp
     restart: always
+    env_file: .env
     environment:
       - SERVER_URL=https://wa.crmvere.com.br
       - DND_ENVIRONMENT=production
@@ -41,6 +43,7 @@ services:
       - CACHE_REDIS_PREFIX_KEY=EVO
       - STORE_MESSAGES=true
       - STORE_MESSAGE_UP_SERS=true
+      - TZ=America/Sao_Paulo
     ports:
       - "8080:8080"
     depends_on:
@@ -69,13 +72,6 @@ services:
       - EVOLUTION_API_URL=https://wa.crmvere.com.br
       - BACKEND_URL=https://api.crmvere.com.br
       - NODE_ENV=production
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - SMTP_FROM=${SMTP_FROM}
-      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - db
       - redis

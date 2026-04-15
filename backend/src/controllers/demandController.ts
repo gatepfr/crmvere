@@ -322,8 +322,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
       ) as any);
     }
     if (birthday) {
-      conditions.push(sql`EXTRACT(DAY FROM ${municipes.birthDate}) = EXTRACT(DAY FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
-      conditions.push(sql`EXTRACT(MONTH FROM ${municipes.birthDate}) = EXTRACT(MONTH FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
+      conditions.push(sql`to_char(${municipes.birthDate}, 'DD-MM') = to_char(now() AT TIME ZONE 'America/Sao_Paulo', 'DD-MM')`);
     }
 
     const whereClause = and(...conditions);

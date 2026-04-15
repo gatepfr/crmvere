@@ -134,7 +134,21 @@ export default function Municipes() {
     if (!dateStr) return false;
     const birthDate = new Date(dateStr);
     const today = new Date();
-    return birthDate.getUTCDate() === today.getDate() && birthDate.getUTCMonth() === today.getMonth();
+    
+    // Check if day and month match in Brazil time
+    const brDate = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      timeZone: 'America/Sao_Paulo'
+    }).format(today);
+    
+    const [todayDay, todayMonth] = brDate.split('/');
+    
+    // We use UTC methods for the birthDate because it's stored as a pure date (T12:00:00Z)
+    const birthDay = birthDate.getUTCDate().toString().padStart(2, '0');
+    const birthMonth = (birthDate.getUTCMonth() + 1).toString().padStart(2, '0');
+
+    return birthDay === todayDay && birthMonth === todayMonth;
   };
 
   const handleSort = (key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount') => {

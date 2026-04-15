@@ -22,8 +22,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const [municipeSummary] = await db.select({
       total: sql<number>`count(*)::int`,
       birthdaysToday: sql<number>`count(*) filter (where 
-        EXTRACT(DAY FROM ${municipes.birthDate}) = EXTRACT(DAY FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo') AND 
-        EXTRACT(MONTH FROM ${municipes.birthDate}) = EXTRACT(MONTH FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')
+        to_char(${municipes.birthDate}, 'DD-MM') = to_char(now() AT TIME ZONE 'America/Sao_Paulo', 'DD-MM')
       )::int`,
       uniqueBairros: sql<number>`count(distinct ${municipes.bairro})::int`
     })
