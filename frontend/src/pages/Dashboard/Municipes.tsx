@@ -182,9 +182,13 @@ export default function Municipes() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/demands/municipes', createForm);
+      const payload = {
+        ...createForm,
+        birthDate: parseDateToISO(createForm.birthDate)
+      };
+      await api.post('/demands/municipes', payload);
       setIsCreateModalOpen(false);
-      setCreateForm({ name: '', phone: '', bairro: '', birthDate: '' });
+      setCreateForm({ name: '', phone: '', cep: '', bairro: '', birthDate: '' });
       setDisplayCreatePhone('');
       loadMunicipes();
       alert('Munícipe cadastrado com sucesso!');
@@ -295,6 +299,32 @@ export default function Municipes() {
     if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
     if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     return phone;
+  };
+
+  const formatDateDisplay = (dateStr: string | null) => {
+    if (!dateStr) return '---';
+    try {
+      // Evita o problema do fuso horário pegando apenas a parte da data YYYY-MM-DD
+      const datePart = dateStr.split('T')[0];
+      const [year, month, day] = datePart.split('-');
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return '---';
+    }
+  };
+
+  const applyDateMask = (value: string) => {
+    const raw = value.replace(/\D/g, '').slice(0, 8);
+    let masked = raw;
+    if (raw.length > 2) masked = `${raw.slice(0, 2)}/${raw.slice(2)}`;
+    if (raw.length > 4) masked = `${raw.slice(0, 2)}/${raw.slice(2, 4)}/${raw.slice(4)}`;
+    return masked;
+  };
+
+  const parseDateToISO = (dateStr: string) => {
+    if (!dateStr || dateStr.length !== 10) return null;
+    const [day, month, year] = dateStr.split('/');
+    return `${year}-${month}-${day}`;
   };
 
   const applyPhoneMask = (value: string, type: 'create' | 'edit') => {
@@ -597,12 +627,12 @@ export default function Municipes() {
                     {selectedMunicipes.includes(m.id) && <Check size={12} strokeWidth={4} />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <h4 className="font-bold text-slate-900 flex items-center gap-1.5 leading-tight">
                       {m.name}
                       {m.demandCount > 0 && <span className="text-xs font-black text-blue-600">({m.demandCount})</span>}
                       {isTodayBirthday(m.birthDate) && <span>🎂</span>}
                     </h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{formatPhone(m.phone)}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">{formatPhone(m.phone)}</p>
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -766,7 +796,14 @@ export default function Municipes() {
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nascimento</label>
-                  <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" value={createForm.birthDate} onChange={e => setCreateForm({...createForm, birthDate: e.target.value})} />
+                  <input 
+                    type="text" 
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" 
+                    placeholder="DD/MM/AAAA" 
+                    value={createForm.birthDate} 
+                    onChange={e => setCreateForm({...createForm, birthDate: applyDateMask(e.target.value)})} 
+                    maxLength={10}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -825,10 +862,12 @@ export default function Municipes() {
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nascimento</label>
                   <input 
-                    type="date"
+                    type="text"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
                     value={editForm.birthDate}
-                    onChange={e => setEditForm({...editForm, birthDate: e.target.value})}
+                    onChange={e => setEditForm({...editForm, birthDate: applyDateMask(e.target.value)})}
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
                   />
                 </div>
               </div>
