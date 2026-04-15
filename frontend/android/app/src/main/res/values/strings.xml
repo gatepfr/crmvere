@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CRM do Vere</string>
+    <string name="title_activity_main">CRM do Vere</string>
+    <string name="package_name">com.crmvere.app</string>
+    <string name="custom_url_scheme">com.crmvere.app</string>
+</resources>
