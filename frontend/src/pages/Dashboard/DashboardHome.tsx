@@ -49,12 +49,22 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'
 export default function DashboardHome() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/metrics/dashboard')
-      .then(res => setData(res.data))
-      .catch(err => console.error(err))
+      .then(res => {
+        if (res.data && res.data.summary) {
+          setData(res.data);
+        } else {
+          setError(true);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -65,7 +75,21 @@ export default function DashboardHome() {
     </div>
   );
 
-  if (!data) return null;
+  if (error || !data) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-10">
+      <AlertCircle size={48} className="text-red-500 mb-4" />
+      <h3 className="text-lg font-black text-slate-900">Falha ao carregar indicadores</h3>
+      <p className="text-slate-500 mt-2">Verifique sua conexão ou tente novamente mais tarde.</p>
+      <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">Recarregar</button>
+    </div>
+  );
+
+  const summary = data.summary || {
+    total: 0, pending: 0, needsAttention: 0, municipesTotal: 0, birthdaysToday: 0, uniqueBairros: 0
+  };
+
+  const dailyStats = data.dailyStats || [];
+  const categoryStats = data.categoryStats || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -101,7 +125,7 @@ export default function DashboardHome() {
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total de Munícipes</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">{data.summary.municipesTotal}</h3>
+            <h3 className="text-3xl font-black text-slate-900">{summary.municipesTotal || 0}</h3>
             <span className="text-[10px] font-bold text-blue-500 flex items-center gap-0.5">
               Base Geral <ArrowUpRight size={10} />
             </span>
@@ -111,18 +135,18 @@ export default function DashboardHome() {
         {/* Card: Aniversariantes */}
         <div 
           onClick={() => navigate('/dashboard/municipes')}
-          className={`bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden ${data.summary.birthdaysToday > 0 ? 'border-pink-100 ring-4 ring-pink-50/50' : ''}`}
+          className={`bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden ${summary.birthdaysToday > 0 ? 'border-pink-100 ring-4 ring-pink-50/50' : ''}`}
         >
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-pink-600">
             <CalendarDays size={80} />
           </div>
-          <div className={`${data.summary.birthdaysToday > 0 ? 'bg-pink-100 text-pink-600 animate-bounce' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
+          <div className={`${summary.birthdaysToday > 0 ? 'bg-pink-100 text-pink-600 animate-bounce' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
             <CalendarDays size={24} />
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aniversariantes Hoje</p>
           <div className="flex items-baseline gap-2">
-            <h3 className={`text-3xl font-black ${data.summary.birthdaysToday > 0 ? 'text-pink-600' : 'text-slate-900'}`}>{data.summary.birthdaysToday}</h3>
-            {data.summary.birthdaysToday > 0 && (
+            <h3 className={`text-3xl font-black ${summary.birthdaysToday > 0 ? 'text-pink-600' : 'text-slate-900'}`}>{summary.birthdaysToday || 0}</h3>
+            {summary.birthdaysToday > 0 && (
               <span className="text-[10px] font-black text-pink-500 uppercase">Mandar Parabéns!</span>
             )}
           </div>
@@ -136,12 +160,12 @@ export default function DashboardHome() {
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-red-600">
             <AlertCircle size={80} />
           </div>
-          <div className={`${data.summary.needsAttention > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
+          <div className={`${summary.needsAttention > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
             <AlertCircle size={24} />
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Atenção da Equipe</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">{data.summary.needsAttention}</h3>
+            <h3 className="text-3xl font-black text-slate-900">{summary.needsAttention || 0}</h3>
             <span className="text-[10px] font-bold text-red-500 uppercase">Aguardando</span>
           </div>
         </div>
@@ -156,7 +180,7 @@ export default function DashboardHome() {
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bairros Atendidos</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">{data.summary.uniqueBairros}</h3>
+            <h3 className="text-3xl font-black text-slate-900">{summary.uniqueBairros || 0}</h3>
             <span className="text-[10px] font-bold text-indigo-500 uppercase">Diferentes</span>
           </div>
         </div>
@@ -177,7 +201,7 @@ export default function DashboardHome() {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.dailyStats}>
+              <LineChart data={dailyStats}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="date" 
@@ -221,13 +245,13 @@ export default function DashboardHome() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.categoryStats}
+                  data={categoryStats}
                   innerRadius={60}
                   outerRadius={80}
                   paddingAngle={8}
                   dataKey="value"
                 >
-                  {data.categoryStats.map((_, index) => (
+                  {categoryStats.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -236,7 +260,7 @@ export default function DashboardHome() {
             </ResponsiveContainer>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-4">
-            {data.categoryStats.slice(0, 4).map((item, index) => (
+            {categoryStats.slice(0, 4).map((item, index) => (
               <div key={item.name} className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
                 <span className="text-[10px] font-black text-slate-500 uppercase truncate">{item.name}</span>
