@@ -9,6 +9,17 @@ import { EvolutionService } from '../services/evolutionService';
 const router = Router();
 router.use(authenticate);
 
+// Utilitário para pegar as configurações da Evolution API
+const getEvoConfig = (tenant: any) => {
+  let url = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
+  // Correção de URL: se for https, removemos a porta 8080 que é para http
+  if (url.startsWith('https://') && url.includes(':8080')) {
+    url = url.replace(':8080', '');
+  }
+  const token = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
+  return { url, token };
+};
+
 router.post('/send', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
@@ -18,7 +29,6 @@ router.post('/send', async (req, res) => {
       return res.status(400).json({ error: 'Missing parameters' });
     }
 
-    // 1. Get tenant and demand info
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     const [demand] = await db.select({
       demand: demandas,
@@ -32,22 +42,14 @@ router.post('/send', async (req, res) => {
       return res.status(404).json({ error: 'Tenant or Demand not found' });
     }
 
-    if (!tenant.whatsappInstanceId || !tenant.evolutionApiUrl || !tenant.evolutionGlobalToken) {
-      return res.status(400).json({ error: 'WhatsApp not configured' });
-    }
+    const config = getEvoConfig(tenant);
+    const evo = new EvolutionService(config.url, config.token);
+    await evo.sendMessage(tenant.whatsappInstanceId!, demand.municipe.phone, message);
 
-    // 2. Send via Evolution API
-    const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
-    await evo.sendMessage(tenant.whatsappInstanceId, demand.municipe.phone, message);
-
-    // 3. Update conversation history in DB
     const updatedHistory = `${demand.demand.resumoIa}\n\nGabinete: ${message}`;
     
     await db.update(demandas)
-      .set({ 
-        resumoIa: updatedHistory,
-        updatedAt: new Date()
-      })
+      .set({ resumoIa: updatedHistory, updatedAt: new Date() })
       .where(eq(demandas.id, demandId));
 
     res.json({ success: true });
@@ -67,12 +69,13 @@ router.post('/send-direct', async (req, res) => {
     }
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
-
-    if (!tenant || !tenant.whatsappInstanceId || !tenant.evolutionApiUrl || !tenant.evolutionGlobalToken) {
+    const config = getEvoConfig(tenant);
+    
+    if (!tenant?.whatsappInstanceId) {
       return res.status(400).json({ error: 'WhatsApp not configured for this tenant' });
     }
 
-    const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+    const evo = new EvolutionService(config.url, config.token);
     await evo.sendMessage(tenant.whatsappInstanceId, phone, message);
 
     res.json({ success: true });
@@ -89,9 +92,8 @@ router.post('/setup', async (req, res) => {
 
     let { evolutionApiUrl, evolutionGlobalToken, whatsappNotificationNumber } = req.body;
     
-    // Auto-fix URL if protocol is missing
     if (evolutionApiUrl && !evolutionApiUrl.startsWith('http')) {
-      evolutionApiUrl = `http://${evolutionApiUrl}`;
+      evolutionApiUrl = `https://${evolutionApiUrl}`;
     }
 
     await db.update(tenants)
@@ -108,18 +110,22 @@ router.post('/setup', async (req, res) => {
 router.post('/instance/create', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    
-    // Fallback de tenant caso o ID não esteja no token
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
       : await db.select().from(tenants).limit(1);
 
-    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
+    if (!tenant) {
+        // Criação de emergência se não houver tenant
+        console.log("[WHATSAPP] Criando tenant de emergência...");
+        const [newTenant] = await db.insert(tenants).values({
+            name: 'Gabinete Digital',
+            slug: 'gabinete',
+        }).returning();
+        tenant = newTenant;
+    }
     
-    const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
-    const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123';
-
-    const evo = new EvolutionService(evolutionApiUrl, evolutionGlobalToken);
+    const config = getEvoConfig(tenant);
+    const evo = new EvolutionService(config.url, config.token);
     const result = await evo.createInstance(tenant.slug);
     
     const token = result.hash?.apikey || result.instance?.token || 'token_not_found';
@@ -152,9 +158,10 @@ router.get('/instance/qrcode', async (req, res) => {
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
       : await db.select().from(tenants).limit(1);
 
-    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
+    if (!tenant) return res.status(200).json({ error: 'tenant_not_found' });
 
-    const evo = new EvolutionService(tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123');
+    const config = getEvoConfig(tenant);
+    const evo = new EvolutionService(config.url, config.token);
     try {
       const result = await evo.getQrCode(tenant.whatsappInstanceId!);
       res.json(result);
@@ -176,7 +183,8 @@ router.get('/instance/status', async (req, res) => {
 
     if (!tenant) return res.status(200).json({ state: 'not_created' });
 
-    const evo = new EvolutionService(tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123');
+    const config = getEvoConfig(tenant);
+    const evo = new EvolutionService(config.url, config.token);
     try {
       const result = await evo.getStatus(tenant.whatsappInstanceId!);
       res.json(result);
@@ -199,8 +207,10 @@ router.post('/instance/logout', async (req, res) => {
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
       : await db.select().from(tenants).limit(1);
 
+    const config = getEvoConfig(tenant);
+
     if (tenant?.whatsappInstanceId) {
-      const evo = new EvolutionService(tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123');
+      const evo = new EvolutionService(config.url, config.token);
       try {
         await evo.deleteInstance(tenant.whatsappInstanceId);
       } catch (e) {
