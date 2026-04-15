@@ -10,52 +10,60 @@ router.use(authenticate);
 
 // Utilitário centralizado para configurações da Evolution
 const getEvoConfig = (tenant: any) => {
-  let url = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
+  // PRIORIDADE: Usar o nome do serviço Docker se estivermos em produção
+  // O nome do serviço no docker-compose é 'evolution_api' na porta 8080
+  const internalUrl = 'http://evolution_api:8080';
+  const publicUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
   
-  // Se for https e tiver a porta 8080, limpamos para usar a porta padrão 443 do SSL
-  if (url.startsWith('https') && url.includes(':8080')) {
-    url = url.replace(':8080', '');
-  }
-  
-  // Usa a chave que está no seu .env
+  // Se o .env estiver configurado, usamos ele, mas vamos garantir que o token seja o WA_API_KEY
   const token = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
   
-  return { url, token };
+  // LOG PARA VOCÊ VER NO DOCKER LOGS
+  console.log(`[WHATSAPP CONFIG] Usando URL: ${internalUrl} (Interna) | Token: ${token.substring(0, 5)}...`);
+  
+  return { url: internalUrl, token };
 };
 
 router.post('/instance/create', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId;
     
-    // Busca o tenant do usuário ou o primeiro disponível
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
       : await db.select().from(tenants).limit(1);
 
-    if (!tenant) {
-      return res.status(404).json({ error: 'Gabinete não encontrado.' });
-    }
+    if (!tenant) return res.status(404).json({ error: 'Gabinete não encontrado.' });
     
     const { url, token } = getEvoConfig(tenant);
     const evo = new EvolutionService(url, token);
     
-    const result = await evo.createInstance(tenant.slug);
-    const instanceToken = result?.hash?.apikey || result?.instance?.token || 'token_not_found';
+    // Tenta criar a instância
+    try {
+        const result = await evo.createInstance(tenant.slug);
+        const instanceToken = result?.hash?.apikey || result?.instance?.token || 'token_not_found';
 
-    await db.update(tenants).set({ 
-      whatsappInstanceId: tenant.slug,
-      whatsappToken: instanceToken
-    }).where(eq(tenants.id, tenant.id));
+        await db.update(tenants).set({ 
+          whatsappInstanceId: tenant.slug,
+          whatsappToken: instanceToken
+        }).where(eq(tenants.id, tenant.id));
 
-    const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
-    const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenant.id}`;
-    
-    await evo.setWebhook(tenant.slug, webhookUrl).catch(e => console.error('Erro Webhook:', e.message));
+        // Configura o Webhook usando a URL PÚBLICA do backend (porque a Evolution precisa disso)
+        const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
+        const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenant.id}`;
+        
+        await evo.setWebhook(tenant.slug, webhookUrl).catch(e => console.error('Erro Webhook:', e.message));
 
-    res.json(result);
+        return res.json(result);
+    } catch (apiErr: any) {
+        console.error('[EVOLUTION API ERROR]', apiErr.response?.data || apiErr.message);
+        return res.status(500).json({ 
+            error: 'A Evolution API não respondeu corretamente.',
+            details: apiErr.response?.data || apiErr.message
+        });
+    }
   } catch (error: any) {
-    console.error('Erro na criação de instância:', error.message);
-    res.status(500).json({ error: 'Falha ao conectar com a Evolution API. Verifique a URL e a API Key.' });
+    console.error('Erro fatal no create:', error.message);
+    res.status(500).json({ error: 'Falha interna ao processar WhatsApp.' });
   }
 });
 
