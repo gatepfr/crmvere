@@ -39,6 +39,8 @@ interface DashboardData {
     municipesTotal: number;
     birthdaysToday: number;
     uniqueBairros: number;
+    dailyTokenLimit: number;
+    tokenUsageTotal: number;
   };
   categoryStats: { name: string; value: number }[];
   dailyStats: { date: string; count: number }[];
@@ -85,7 +87,8 @@ export default function DashboardHome() {
   );
 
   const summary = data.summary || {
-    total: 0, pending: 0, needsAttention: 0, municipesTotal: 0, birthdaysToday: 0, uniqueBairros: 0
+    total: 0, pending: 0, needsAttention: 0, municipesTotal: 0, birthdaysToday: 0, uniqueBairros: 0,
+    dailyTokenLimit: 0, tokenUsageTotal: 0
   };
 
   const dailyStats = data.dailyStats || [];
@@ -104,9 +107,20 @@ export default function DashboardHome() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>
           <p className="text-slate-500 mt-1 font-medium italic">Seu gabinete digital em tempo real.</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Sincronizado</span>
+        <div className="flex items-center gap-3">
+          <div className="bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100 shadow-sm flex items-center gap-3">
+            <Zap size={14} className="text-amber-500 fill-amber-500" />
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">Uso de Tokens (Hoje)</span>
+              <span className="text-xs font-black text-slate-700">
+                {(summary.tokenUsageTotal / 1000).toFixed(1)}k <span className="text-slate-400">/ {(summary.dailyTokenLimit / 1000).toFixed(0)}k</span>
+              </span>
+            </div>
+          </div>
+          <div className="bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Sincronizado</span>
+          </div>
         </div>
       </header>
 

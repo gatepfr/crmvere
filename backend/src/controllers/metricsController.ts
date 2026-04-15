@@ -1,16 +1,23 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes } from '../db/schema';
+import { demandas, municipes, tenants } from '../db/schema';
 import { eq, sql, desc, and } from 'drizzle-orm';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  
+
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
-  
+
   try {
-    // 1. Summary of Demands
-    const [summary] = await db.select({
+    // 0. Tenant Info (Tokens)
+    const [tenant] = await db.select({
+      dailyTokenLimit: tenants.dailyTokenLimit,
+      tokenUsageTotal: tenants.tokenUsageTotal
+    })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId));
+
+    // 1. Summary of Demands    const [summary] = await db.select({
       total: sql<number>`count(*)::int`,
       pending: sql<number>`count(*) filter (where ${demandas.status} = 'nova')::int`,
       needsAttention: sql<number>`count(*) filter (where ${demandas.precisaRetorno} = true)::int`
@@ -59,7 +66,9 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         needsAttention: summary?.needsAttention || 0,
         municipesTotal: municipeSummary?.total || 0,
         birthdaysToday: municipeSummary?.birthdaysToday || 0,
-        uniqueBairros: municipeSummary?.uniqueBairros || 0
+        uniqueBairros: municipeSummary?.uniqueBairros || 0,
+        dailyTokenLimit: tenant?.dailyTokenLimit || 0,
+        tokenUsageTotal: tenant?.tokenUsageTotal || 0
       },
       categoryStats: categoryStats.map(c => ({ ...c, value: Number(c.value) })),
       dailyStats: last7Days.map(d => ({ date: d.date, count: Number(d.count) }))
