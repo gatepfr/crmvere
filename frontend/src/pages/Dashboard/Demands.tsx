@@ -330,6 +330,20 @@ export default function Demands() {
             <option value="baixa">Baixa</option>
           </select>
         </div>
+
+        <div className="relative">
+          <select
+            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-sm font-bold text-slate-900"
+            value={pagination.limit}
+            onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
+          >
+            <option value="10">10 por página</option>
+            <option value="25">25 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+            <option value="all">Ver Todos</option>
+          </select>
+        </div>
       </div>
       
       <div className="bg-white shadow-sm rounded-3xl overflow-hidden border border-slate-100">

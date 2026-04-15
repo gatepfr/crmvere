@@ -84,7 +84,7 @@ export default function Municipes() {
   useEffect(() => {
     loadMunicipes();
     loadAllBairros();
-  }, [pagination.page]);
+  }, [pagination.page, pagination.limit]);
 
   const loadAllBairros = async () => {
     try {
@@ -440,6 +440,18 @@ export default function Municipes() {
           >
             {selectedMunicipes.length === filteredMunicipes.length ? 'Limpar' : 'Tudo'}
           </button>
+
+          <select
+            className="px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm appearance-none"
+            value={pagination.limit}
+            onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
+          >
+            <option value="10">10 / pág</option>
+            <option value="25">25 / pág</option>
+            <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
+            <option value="all">Todos</option>
+          </select>
         </div>
       </div>
 
