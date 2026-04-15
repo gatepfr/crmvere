@@ -172,7 +172,7 @@ export const listDemands = async (req: Request, res: Response) => {
     // Build filter conditions
     const conditions = [eq(demandas.tenantId, tenantId)];
     if (category) conditions.push(eq(demandas.categoria, category));
-    if (status) conditions.push(eq(demandas.status, status));
+    if (status) conditions.push(eq(demandas.status, status as any));
     if (priority) conditions.push(eq(demandas.prioridade, priority));
     if (attention) conditions.push(eq(demandas.precisaRetorno, true));
     
