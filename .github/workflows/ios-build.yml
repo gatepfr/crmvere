@@ -1,0 +1,19 @@
+name: iOS Build
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: cd frontend && npm install
+      - name: Build Web
+        run: cd frontend && npm run build
+      - name: Capacitor Sync
+        run: cd frontend && npx cap sync ios
+      - name: Build iOS IPA
+        run: |
+          cd frontend/ios/App
+          xcodebuild -scheme App -archivePath App.xcarchive archive
