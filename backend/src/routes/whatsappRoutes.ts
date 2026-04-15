@@ -108,7 +108,10 @@ router.post('/setup', async (req, res) => {
 router.post('/instance/create', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!tenantId) {
+      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
+      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
+    }
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     
@@ -162,7 +165,10 @@ router.post('/instance/create', async (req, res) => {
 router.get('/instance/qrcode', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!tenantId) {
+      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
+      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
+    }
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
@@ -187,7 +193,10 @@ router.get('/instance/qrcode', async (req, res) => {
 router.get('/instance/status', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!tenantId) {
+      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
+      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
+    }
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
 
@@ -215,7 +224,10 @@ router.get('/instance/status', async (req, res) => {
 router.post('/instance/logout', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!tenantId) {
+      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
+      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
+    }
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     
