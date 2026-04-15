@@ -1,260 +1,245 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import { 
-  LineChart, 
-  Line, 
+  Users, 
+  MessageSquare, 
+  Clock, 
+  CheckCircle2, 
+  BarChart3, 
+  PieChart as PieChartIcon,
+  TrendingUp,
+  AlertCircle,
+  CalendarDays,
+  MapPin,
+  Loader2,
+  ChevronRight,
+  ArrowUpRight
+} from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
-  AreaChart,
-  Area
+  LineChart,
+  Line
 } from 'recharts';
-import { FileText, Clock, TrendingUp, BarChart2, Zap, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface MetricsData {
+interface DashboardData {
   summary: {
     total: number;
     pending: number;
+    needsAttention: number;
+    municipesTotal: number;
+    birthdaysToday: number;
+    uniqueBairros: number;
   };
-  categoryStats: {
-    name: string | null;
-    value: number;
-  }[];
-  dailyStats: {
-    date: string;
-    count: number;
-  }[];
+  categoryStats: { name: string; value: number }[];
+  dailyStats: { date: string; count: number }[];
 }
 
-interface AIQuota {
-  usage: number;
-  limit: number;
-  isBlocked: boolean;
-}
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
 export default function DashboardHome() {
-  const [metrics, setMetrics] = useState<MetricsData | null>(null);
-  const [quota, setAIQuota] = useState<AIQuota | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([
-      api.get('/metrics'),
-      api.get('/config/me')
-    ])
-    .then(([metricsRes, configRes]) => {
-      setMetrics(metricsRes.data);
-      setAIQuota(configRes.data.aiQuota);
-    })
-    .catch(err => console.error('Erro ao buscar dados do dashboard:', err))
-    .finally(() => setLoading(false));
+    api.get('/metrics/dashboard')
+      .then(res => setData(res.data))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-slate-600">Carregando métricas...</span>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <Loader2 className="animate-spin text-blue-600" size={40} />
+      <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Carregando inteligência...</p>
+    </div>
+  );
 
-  if (!metrics) return <div className="p-8">Falha ao carregar métricas.</div>;
-
-  const usagePercent = quota ? (quota.usage / quota.limit) * 100 : 0;
-  const isNearLimit = usagePercent >= 80;
-
-  const COLORS = ['#2563eb', '#4f46e5', '#7c3aed', '#c026d3', '#db2777'];
+  if (!data) return null;
 
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* Header com Saudação */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard de Gestão</h1>
-          <p className="text-slate-500">Métricas reais extraídas do banco de dados.</p>
-        </div>
-
-        {quota && (
-          <div className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${
-            quota.isBlocked ? 'bg-red-50 border-red-100' : 
-            isNearLimit ? 'bg-amber-50 border-amber-100' : 'bg-white border-slate-200'
-          }`}>
-            <div className={`p-2 rounded-lg ${
-              quota.isBlocked ? 'bg-red-100 text-red-600' :
-              isNearLimit ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-blue-600'
-            }`}>
-              {quota.isBlocked ? <ShieldAlert size={20} /> : <Zap size={20} />}
-            </div>
-            <div className="min-w-[150px]">
-              <div className="flex justify-between text-xs font-black uppercase tracking-wider mb-1">
-                <span className="text-slate-500">Consumo IA Diário</span>
-                <span className={quota.isBlocked ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-blue-600'}>
-                  {quota.isBlocked ? 'BLOQUEADO' : `${Math.round(usagePercent)}%`}
-                </span>
-              </div>
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-1000 ${
-                    quota.isBlocked ? 'bg-red-500' :
-                    isNearLimit ? 'bg-amber-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${Math.min(usagePercent, 100)}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1 font-bold">
-                {quota.usage.toLocaleString()} / {quota.limit.toLocaleString()} TOKENS
-              </p>
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+              Visão Geral
+            </span>
           </div>
-        )}
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>
+          <p className="text-slate-500 mt-1 font-medium italic">Seu gabinete digital em tempo real.</p>
+        </div>
+        <div className="bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Sincronizado</span>
+        </div>
       </header>
 
-      {quota?.isBlocked && (
-        <div className="bg-red-600 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg shadow-red-200 animate-pulse">
-          <ShieldAlert size={24} />
-          <div>
-            <p className="font-black text-sm uppercase tracking-tight">IA Temporariamente Bloqueada</p>
-            <p className="text-xs opacity-90 font-medium">Seu acesso à inteligência artificial foi suspenso pela administração central.</p>
+      {/* Grid de Cards Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Card: Munícipes Totais */}
+        <div 
+          onClick={() => navigate('/dashboard/municipes')}
+          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all group cursor-pointer relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Users size={80} />
           </div>
-        </div>
-      )}
-
-      {isNearLimit && !quota?.isBlocked && (
-        <div className="bg-amber-500 text-white p-4 rounded-2xl flex items-center gap-3 shadow-lg shadow-amber-200">
-          <AlertTriangle size={24} />
-          <div>
-            <p className="font-black text-sm uppercase tracking-tight">Limite de Tokens Próximo</p>
-            <p className="text-xs opacity-90 font-medium">Você atingiu {Math.round(usagePercent)}% da sua quota diária. Após 100%, a IA será pausada até amanhã.</p>
+          <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+            <Users size={24} />
           </div>
-        </div>
-      )}
-      
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><FileText size={24} /></div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Total de Demandas</p>
-            <p className="text-2xl font-bold text-slate-900">{metrics.summary.total}</p>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Clock size={24} /></div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Demandas Novas</p>
-            <p className="text-2xl font-bold text-slate-900">{metrics.summary.pending}</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total de Munícipes</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-3xl font-black text-slate-900">{data.summary.municipesTotal}</h3>
+            <span className="text-[10px] font-bold text-blue-500 flex items-center gap-0.5">
+              Base Geral <ArrowUpRight size={10} />
+            </span>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4 transition-all hover:shadow-md">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><TrendingUp size={24} /></div>
-          <div>
-            <p className="text-sm text-slate-500 font-medium">Últimos 7 Dias</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {metrics.dailyStats.reduce((acc, curr) => acc + curr.count, 0)}
-            </p>
+        {/* Card: Aniversariantes */}
+        <div 
+          onClick={() => navigate('/dashboard/municipes')}
+          className={`bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden ${data.summary.birthdaysToday > 0 ? 'border-pink-100 ring-4 ring-pink-50/50' : ''}`}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-pink-600">
+            <CalendarDays size={80} />
+          </div>
+          <div className={`${data.summary.birthdaysToday > 0 ? 'bg-pink-100 text-pink-600 animate-bounce' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
+            <CalendarDays size={24} />
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aniversariantes Hoje</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className={`text-3xl font-black ${data.summary.birthdaysToday > 0 ? 'text-pink-600' : 'text-slate-900'}`}>{data.summary.birthdaysToday}</h3>
+            {data.summary.birthdaysToday > 0 && (
+              <span className="text-[10px] font-black text-pink-500 uppercase">Mandar Parabéns!</span>
+            )}
+          </div>
+        </div>
+
+        {/* Card: Demandas Urgentes */}
+        <div 
+          onClick={() => navigate('/dashboard/demands')}
+          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-red-200 transition-all group cursor-pointer relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-red-600">
+            <AlertCircle size={80} />
+          </div>
+          <div className={`${data.summary.needsAttention > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
+            <AlertCircle size={24} />
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Atenção da Equipe</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-3xl font-black text-slate-900">{data.summary.needsAttention}</h3>
+            <span className="text-[10px] font-bold text-red-500 uppercase">Aguardando</span>
+          </div>
+        </div>
+
+        {/* Card: Bairros */}
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-5 text-indigo-600">
+            <MapPin size={80} />
+          </div>
+          <div className="bg-indigo-50 w-12 h-12 rounded-2xl flex items-center justify-center text-indigo-600 mb-4">
+            <MapPin size={24} />
+          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bairros Atendidos</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-3xl font-black text-slate-900">{data.summary.uniqueBairros}</h3>
+            <span className="text-[10px] font-bold text-indigo-500 uppercase">Diferentes</span>
           </div>
         </div>
       </div>
 
+      {/* Gráficos e Listas */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Daily Activity Line Chart */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800">Atividade Diária</h3>
-            <div className="p-2 bg-slate-50 rounded-lg text-slate-400"><BarChart2 size={18} /></div>
+        {/* Atividade Recente (Gráfico de Linha) */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <TrendingUp className="text-blue-600" size={20} />
+                Volume de Demandas
+              </h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Últimos 7 dias</p>
+            </div>
           </div>
-          <div className="h-80">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={metrics.dailyStats}>
-                <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
+              <LineChart data={data.dailyStats}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="date" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#64748b', fontSize: 12}} 
+                  tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} 
                   dy={10}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fill: '#64748b', fontSize: 12}} 
+                  tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} 
                 />
                 <Tooltip 
-                  contentStyle={{ 
-                    borderRadius: '12px', 
-                    border: 'none', 
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    padding: '12px'
-                  }}
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '12px' }}
+                  itemStyle={{ fontWeight: 'black', fontSize: '12px' }}
                 />
-                <Area 
+                <Line 
                   type="monotone" 
                   dataKey="count" 
-                  stroke="#2563eb" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorCount)" 
-                  animationDuration={1500}
+                  stroke="#3b82f6" 
+                  strokeWidth={4} 
+                  dot={{ r: 6, fill: '#3b82f6', strokeWidth: 3, stroke: '#fff' }} 
+                  activeDot={{ r: 8, strokeWidth: 0 }}
                 />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Category Pie Chart */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold mb-6 text-slate-800">Principais Categorias</h3>
-          <div className="h-64">
+        {/* Categorias (Gráfico de Pizza) */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
+          <div>
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <PieChartIcon className="text-blue-600" size={20} />
+              Segmentação
+            </h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Por Categoria</p>
+          </div>
+          <div className="flex-1 h-[250px] mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie 
-                  data={metrics.categoryStats} 
-                  dataKey="value" 
-                  nameKey="name" 
-                  cx="50%" 
-                  cy="50%" 
-                  outerRadius={80} 
+                <Pie
+                  data={data.categoryStats}
                   innerRadius={60}
-                  stroke="none"
-                  paddingAngle={5}
+                  outerRadius={80}
+                  paddingAngle={8}
+                  dataKey="value"
                 >
-                  {metrics.categoryStats.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {data.categoryStats.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={8} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    borderRadius: '12px', 
-                    border: 'none', 
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' 
-                  }}
-                />
+                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-8 space-y-3">
-            {metrics.categoryStats.slice(0, 5).map((c, index) => (
-              <div key={c.name || 'unnamed'} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  <span className="text-xs font-medium text-slate-600 truncate max-w-[120px]">
-                    {c.name || 'Sem Categoria'}
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-slate-900">{c.value}</span>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            {data.categoryStats.slice(0, 4).map((item, index) => (
+              <div key={item.name} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                <span className="text-[10px] font-black text-slate-500 uppercase truncate">{item.name}</span>
               </div>
             ))}
           </div>
@@ -263,4 +248,3 @@ export default function DashboardHome() {
     </div>
   );
 }
-

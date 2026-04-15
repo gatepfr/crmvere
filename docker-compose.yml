@@ -60,6 +60,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      - TZ=America/Sao_Paulo
       - PORT=3001
       - DATABASE_URL=postgres://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-vereador_crm}
       - REDIS_URL=redis://redis:6379
