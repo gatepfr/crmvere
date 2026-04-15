@@ -1,3 +1,5 @@
+import { normalizePhone } from '../utils/phoneUtils';
+
 export interface IncomingMessage {
   event: string;
   from: string;
@@ -29,17 +31,11 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
   
   let from = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '') || '';
   
-  // Clean phone number: remove non-digits
-  from = from.replace(/\D/g, '');
-  
-  // Intelligent Brazilian correction (9th digit) - Only for personal chats
-  if (!isGroup && from.startsWith('55')) {
-    const rawNumber = from.slice(2);
-    if (rawNumber.length === 10) {
-      const ddd = rawNumber.slice(0, 2);
-      const phone = rawNumber.slice(2);
-      from = `55${ddd}9${phone}`;
-    }
+  // Normalize phone number
+  if (!isGroup) {
+    from = normalizePhone(from);
+  } else {
+    from = from.replace(/\D/g, '');
   }
 
   const name = payload.data?.pushName || '';

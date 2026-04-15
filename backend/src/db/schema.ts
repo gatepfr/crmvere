@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, pgEnum, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, pgEnum, boolean, integer, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const subscriptionStatusEnum = pgEnum("subscription_status", ["trial", "active", "past_due", "unpaid", "lifetime"]);
@@ -66,7 +66,7 @@ export const municipes = pgTable("municipes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
-    uniqueMunicipe: sql`unique(${table.tenantId}, ${table.phone})`
+    uniqueMunicipe: unique().on(table.tenantId, table.phone)
   };
 });
 

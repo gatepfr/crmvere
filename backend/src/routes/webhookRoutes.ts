@@ -6,6 +6,7 @@ import { db } from '../db';
 import { tenants, municipes, demandas, documents, systemConfigs } from '../db/schema';
 import { processDemand } from '../services/aiService';
 import { EvolutionService } from '../services/evolutionService';
+import { normalizePhone } from '../utils/phoneUtils';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 const router = Router();
@@ -77,7 +78,7 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
     }
 
     // 1. Get/Create Citizen (Munícipe Único)
-    const cleanPhone = normalized.from.replace(/\D/g, ''); // Ensure search is only numbers
+    const cleanPhone = normalizePhone(normalized.from); // Ensure search is normalized
     let [municipe] = await db.select().from(municipes).where(
       and(
         eq(municipes.phone, cleanPhone), 

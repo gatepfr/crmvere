@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { db } from '../db';
 import { demandas, municipes, systemConfigs, tenants } from '../db/schema';
 import { eq, desc, and, sql, count, ilike, or } from 'drizzle-orm';
+import { normalizePhone } from '../utils/phoneUtils';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import iconv from 'iconv-lite';
@@ -18,7 +19,7 @@ export const createMunicipe = async (req: Request, res: Response) => {
       .values({
         tenantId,
         name,
-        phone: phone.replace(/\D/g, ''),
+        phone: normalizePhone(phone),
         bairro,
         birthDate: birthDate ? new Date(birthDate) : null
       })
@@ -68,8 +69,7 @@ export const importMunicipes = async (req: Request, res: Response) => {
       const name = record[parsedMapping.name];
       let phone = record[parsedMapping.phone];
       if (name && phone) {
-        phone = phone.toString().replace(/\D/g, '');
-        if (!phone.startsWith('55') && phone.length >= 10) phone = '55' + phone;
+        phone = normalizePhone(phone.toString());
         
         let birthDate = null;
         if (parsedMapping.birthDate && record[parsedMapping.birthDate]) {
@@ -114,19 +114,20 @@ export const createDemand = async (req: Request, res: Response) => {
   const { municipeName, municipePhone, municipeBairro, categoria, prioridade, resumoIa, precisaRetorno } = req.body;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  const normalizedPhone = normalizePhone(municipePhone);
 
   try {
     const result = await db.transaction(async (tx) => {
       let [municipe] = await tx.select()
         .from(municipes)
-        .where(and(eq(municipes.phone, municipePhone), eq(municipes.tenantId, tenantId)));
+        .where(and(eq(municipes.phone, normalizedPhone), eq(municipes.tenantId, tenantId)));
 
       if (!municipe) {
         const [newMunicipe] = await tx.insert(municipes)
           .values({
             tenantId,
             name: municipeName,
-            phone: municipePhone,
+            phone: normalizedPhone,
             bairro: municipeBairro
           })
           .returning();
@@ -275,7 +276,7 @@ export const updateMunicipe = async (req: Request, res: Response) => {
     const [updated] = await db.update(municipes)
       .set({ 
         name, 
-        phone: phone.replace(/\D/g, ''), 
+        phone: normalizePhone(phone), 
         bairro, 
         birthDate: birthDate ? new Date(birthDate) : null 
       })
