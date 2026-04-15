@@ -4,7 +4,6 @@ import DemandModal from '../../components/DemandModal';
 import NewDemandModal from '../../components/NewDemandModal';
 import { 
   FileDown, 
-  Download, 
   Loader2, 
   ClipboardList, 
   ArrowUpDown, 
@@ -17,9 +16,9 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Phone,
-  User
+  Filter,
+  MoreVertical
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -120,16 +119,16 @@ export default function Demands() {
     return phone;
   };
 
-  const sortedDemands = useMemo(() => {
+  const filteredAndSortedDemands = useMemo(() => {
     return demands
       .filter(d => {
-        const matchesSearch = d.municipes.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             d.municipes.phone.includes(searchTerm);
+        const nameMatch = d.municipes.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const phoneMatch = d.municipes.phone.includes(searchTerm);
         const matchesCategory = !filterCategory || d.demandas.categoria === filterCategory;
         const matchesStatus = !filterStatus || d.demandas.status === filterStatus;
         const matchesPriority = !filterPriority || d.demandas.prioridade === filterPriority;
         const matchesAttention = !filterByAttention || d.demandas.precisaRetorno;
-        return matchesSearch && matchesCategory && matchesStatus && matchesPriority && matchesAttention;
+        return (nameMatch || phoneMatch) && matchesCategory && matchesStatus && matchesPriority && matchesAttention;
       })
       .sort((a, b) => {
         let valA: any, valB: any;
@@ -175,7 +174,7 @@ export default function Demands() {
     doc.text('Relatório de Demandas - CRM do Verê', 14, 20);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
     
-    const tableData = sortedDemands.map(d => [
+    const tableData = filteredAndSortedDemands.map(d => [
       d.municipes.name,
       d.demandas.categoria,
       d.demandas.status,
@@ -219,7 +218,7 @@ export default function Demands() {
             className="flex-1 lg:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
           >
             <Plus size={18} />
-            NOVA DEMANDA
+            ADICIONAR
           </button>
 
           <button 
@@ -238,7 +237,7 @@ export default function Demands() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
           <input 
             type="text"
-            placeholder="Buscar munícipe ou telefone..."
+            placeholder="Buscar por munícipe ou telefone..."
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-blue-200 transition-all font-bold text-sm"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -269,7 +268,7 @@ export default function Demands() {
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
             >
-              <option value="">Todos Status</option>
+              <option value="">Status</option>
               <option value="nova">Nova</option>
               <option value="em_andamento">Em Andamento</option>
               <option value="concluida">Concluída</option>
@@ -302,11 +301,11 @@ export default function Demands() {
         </div>
       </div>
 
-      {/* Main Table / Mobile Cards */}
+      {/* Main Container */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Mobile Layout */}
-        <div className="block lg:hidden divide-y divide-slate-50">
-          {sortedDemands.map((demand: Demand) => (
+        {/* Mobile View */}
+        <div className="lg:hidden divide-y divide-slate-50">
+          {filteredAndSortedDemands.map((demand: Demand) => (
             <div 
               key={demand.demandas.id} 
               className={`p-4 transition-all active:bg-slate-50 ${demand.demandas.precisaRetorno ? 'bg-red-50/40' : ''}`}
@@ -334,7 +333,7 @@ export default function Demands() {
           ))}
         </div>
 
-        {/* Desktop Layout */}
+        {/* Desktop View */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -368,7 +367,7 @@ export default function Demands() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {sortedDemands.map((demand: Demand) => (
+              {filteredAndSortedDemands.map((demand: Demand) => (
                 <tr 
                   key={demand.demandas.id} 
                   className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${demand.demandas.precisaRetorno ? 'bg-red-50/30' : ''}`}
@@ -384,7 +383,7 @@ export default function Demands() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
-                      <Phone size={12} className="text-blue-400" />
+                      <Phone size={12} className="text-slate-300" />
                       {formatPhone(demand.municipes.phone)}
                     </div>
                   </td>
@@ -435,7 +434,7 @@ export default function Demands() {
           </div>
         </div>
 
-        {sortedDemands.length === 0 && !loading && (
+        {filteredAndSortedDemands.length === 0 && !loading && (
           <div className="p-20 text-center">
             <ClipboardList size={40} className="text-slate-200 mx-auto mb-3" />
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma demanda encontrada</h3>

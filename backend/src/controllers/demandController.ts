@@ -44,10 +44,18 @@ export const importMunicipes = async (req: Request, res: Response) => {
   const parsedMapping = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
 
   const records: any[] = [];
+  
+  // Read first line to detect delimiter
+  const firstLine = fs.readFileSync(file.path, 'utf8').split(/\r?\n/)[0];
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const delimiter = semicolonCount > commaCount ? ';' : ',';
+
   const parser = fs.createReadStream(file.path).pipe(parse({
     columns: true,
     skip_empty_lines: true,
-    trim: true
+    trim: true,
+    delimiter: delimiter
   }));
 
   try {
