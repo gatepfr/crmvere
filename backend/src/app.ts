@@ -26,14 +26,6 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 
-// LOG DE TRÁFEGO (Debug)
-app.use((req, res, next) => {
-  if (req.url.includes('webhook')) {
-    console.log(`[TRAFFIC] ${req.method} ${req.url}`);
-  }
-  next();
-});
-
 // Webhook routes (MUST be before express.json() for Stripe signature verification)
 app.use('/api/webhook', webhookRoutes);
 
