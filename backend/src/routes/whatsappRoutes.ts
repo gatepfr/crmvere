@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { db } from '../db';
 import { tenants, demandas, municipes } from '../db/schema';
@@ -109,35 +109,17 @@ router.post('/instance/create', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     
-    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
+    // Fallback de tenant caso o ID não esteja no token
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
-      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
+      : await db.select().from(tenants).limit(1);
 
     if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
     
-    // Se entramos pelo fallback, garantimos que o tenantId seja usado
-    const effectiveTenantId = tenant.id;
-    
-    // Fallback to environment variables if tenant doesn't have specific credentials
     const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
     const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123';
 
-    if (!evolutionApiUrl || !evolutionGlobalToken) {
-      return res.status(400).json({ error: 'Evolution API credentials not configured' });
-    }
-
-    // Save credentials to tenant if they were missing, so frontend/webhooks can use them
-    if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken) {
-      await db.update(tenants).set({ 
-        evolutionApiUrl, 
-        evolutionGlobalToken 
-      }).where(eq(tenants.id, tenantId));
-    }
-
     const evo = new EvolutionService(evolutionApiUrl, evolutionGlobalToken);
-    
-    // Create new instance without prior deletion to simplify
     const result = await evo.createInstance(tenant.slug);
     
     const token = result.hash?.apikey || result.instance?.token || 'token_not_found';
@@ -145,18 +127,15 @@ router.post('/instance/create', async (req, res) => {
     await db.update(tenants).set({ 
       whatsappInstanceId: tenant.slug,
       whatsappToken: token
-    }).where(eq(tenants.id, tenantId));
+    }).where(eq(tenants.id, tenant.id));
 
-    // Webhook setup
     const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
-    const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenantId}`;
-    console.log(`[WHATSAPP] Configurando Webhook para instância ${tenant.slug} -> URL: ${webhookUrl}`);
+    const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenant.id}`;
     
     try {
       await evo.setWebhook(tenant.slug, webhookUrl);
-      console.log(`[WHATSAPP] Webhook configurado com sucesso!`);
     } catch (e: any) {
-      console.error(`[WHATSAPP ERROR] Falha ao configurar Webhook:`, e.response?.data || e.message);
+      console.error(`[WHATSAPP ERROR] Falha ao configurar Webhook:`, e.message);
     }
 
     res.json(result);
@@ -169,27 +148,17 @@ router.post('/instance/create', async (req, res) => {
 router.get('/instance/qrcode', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    
-    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
-      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
+      : await db.select().from(tenants).limit(1);
 
     if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
-    
-    // Se entramos pelo fallback, garantimos que o tenantId seja usado
-    const effectiveTenantId = tenant.id;
 
-    if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
-      return res.status(200).json({ error: 'not_configured' });
-    }
-
-    const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+    const evo = new EvolutionService(tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123');
     try {
-      const result = await evo.getQrCode(tenant.whatsappInstanceId);
+      const result = await evo.getQrCode(tenant.whatsappInstanceId!);
       res.json(result);
     } catch (apiError: any) {
-      // Return 200 with error info so frontend doesn't crash
       res.status(200).json({ error: 'api_unavailable', message: apiError.message });
     }
   } catch (error: any) {
@@ -201,27 +170,17 @@ router.get('/instance/qrcode', async (req, res) => {
 router.get('/instance/status', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    
-    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
-      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
+      : await db.select().from(tenants).limit(1);
 
-    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
-    
-    // Se entramos pelo fallback, garantimos que o tenantId seja usado
-    const effectiveTenantId = tenant.id;
+    if (!tenant) return res.status(200).json({ state: 'not_created' });
 
-    if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
-      return res.status(200).json({ state: 'not_created' });
-    }
-
-    const evo = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+    const evo = new EvolutionService(tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123');
     try {
-      const result = await evo.getStatus(tenant.whatsappInstanceId);
+      const result = await evo.getStatus(tenant.whatsappInstanceId!);
       res.json(result);
     } catch (apiError: any) {
-      // If instance doesn't exist in Evolution API, return not_created instead of 500
       if (apiError.response?.status === 404) {
         return res.status(200).json({ state: 'not_created' });
       }
@@ -236,22 +195,12 @@ router.get('/instance/status', async (req, res) => {
 router.post('/instance/logout', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    
-    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
-      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
+      : await db.select().from(tenants).limit(1);
 
-    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
-    
-    // Se entramos pelo fallback, garantimos que o tenantId seja usado
-    const effectiveTenantId = tenant.id;
-    
     if (tenant?.whatsappInstanceId) {
-      const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
-      const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
-      const evo = new EvolutionService(evolutionApiUrl, evolutionGlobalToken);
-      
+      const evo = new EvolutionService(tenant.evolutionApiUrl || 'https://wa.crmvere.com.br', tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123');
       try {
         await evo.deleteInstance(tenant.whatsappInstanceId);
       } catch (e) {
@@ -259,10 +208,12 @@ router.post('/instance/logout', async (req, res) => {
       }
     }
 
-    await db.update(tenants).set({ 
-      whatsappInstanceId: null,
-      whatsappToken: null
-    }).where(eq(tenants.id, tenantId));
+    if (tenant) {
+      await db.update(tenants).set({ 
+        whatsappInstanceId: null,
+        whatsappToken: null
+      }).where(eq(tenants.id, tenant.id));
+    }
 
     res.json({ success: true });
   } catch (error: any) {
