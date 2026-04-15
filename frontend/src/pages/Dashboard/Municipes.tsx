@@ -213,7 +213,6 @@ export default function Municipes() {
       alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
       return;
     }
-    
     setSaving(true);
     const formData = new FormData();
     formData.append('file', csvFile);
@@ -650,7 +649,7 @@ export default function Municipes() {
           </div>
         </div>
 
-        {filteredMunicipes.length === 0 && !loading && (
+        {sortedMunicipes.length === 0 && !loading && (
           <div className="p-20 text-center">
             <Users size={40} className="text-slate-200 mx-auto mb-3" />
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum registro encontrado</h3>
