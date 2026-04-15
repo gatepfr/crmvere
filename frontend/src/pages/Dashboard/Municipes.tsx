@@ -94,6 +94,16 @@ export default function Municipes() {
     loadAllBairros();
   }, []);
 
+  const loadAllBairros = async () => {
+    try {
+      const res = await api.get('/demands/municipes/list?limit=1000');
+      const uniqueBairros = Array.from(new Set(res.data.data.map((m: any) => m.bairro).filter(Boolean))) as string[];
+      setAllBairros(uniqueBairros);
+    } catch (err) {
+      console.error('Erro ao carregar bairros');
+    }
+  };
+
   const loadMunicipes = async () => {
     setLoading(true);
     try {
@@ -115,7 +125,21 @@ export default function Municipes() {
     }
   };
 
-  // Simplified filteredMunicipes as filtering is now done on backend
+  const isTodayBirthday = (dateStr: string | null) => {
+    if (!dateStr) return false;
+    const birthDate = new Date(dateStr);
+    const today = new Date();
+    return birthDate.getUTCDate() === today.getDate() && birthDate.getUTCMonth() === today.getMonth();
+  };
+
+  const handleSort = (key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const sortedMunicipes = [...municipes].sort((a, b) => {
     const valA = (a[sortConfig.key] || '').toString().toLowerCase();
     const valB = (b[sortConfig.key] || '').toString().toLowerCase();
@@ -132,10 +156,10 @@ export default function Municipes() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedMunicipes.length === filteredMunicipes.length) {
+    if (selectedMunicipes.length === sortedMunicipes.length) {
       setSelectedSelectedMunicipes([]);
     } else {
-      setSelectedSelectedMunicipes(filteredMunicipes.map(m => m.id));
+      setSelectedSelectedMunicipes(sortedMunicipes.map(m => m.id));
     }
   };
 
@@ -182,29 +206,21 @@ export default function Municipes() {
       alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
       return;
     }
-    
-    console.log('Iniciando importação no frontend...');
-    console.log('Arquivo:', csvFile.name);
-    console.log('Mapeamento:', mapping);
-
     setSaving(true);
     const formData = new FormData();
     formData.append('file', csvFile);
-    // Important: backend expects a string if it parses JSON.parse
     formData.append('mapping', JSON.stringify(mapping));
 
     try {
       const res = await api.post('/demands/municipes/import', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      console.log('Resposta do servidor:', res.data);
       setIsImportModalOpen(false);
       setCsvFile(null);
       setCsvHeaders([]);
       loadMunicipes();
       alert(`Importação concluída! ${res.data.imported} contatos processados.`);
     } catch (err: any) {
-      console.error('Falha na importação:', err.response?.data || err.message);
       alert('Falha ao importar CSV: ' + (err.response?.data?.error || 'Erro desconhecido'));
     } finally {
       setSaving(false);
@@ -322,7 +338,7 @@ export default function Municipes() {
     doc.text('Relatório de Munícipes - CRM do Verê', 14, 20);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
     
-    const tableData = filteredMunicipes.map(m => [
+    const tableData = sortedMunicipes.map(m => [
       m.name,
       formatPhone(m.phone),
       m.bairro || 'Não informado',
@@ -473,7 +489,7 @@ export default function Municipes() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {/* Mobile View */}
         <div className="lg:hidden divide-y divide-slate-50">
-          {filteredMunicipes.map(m => (
+          {sortedMunicipes.map(m => (
             <div 
               key={m.id} 
               className={`p-4 transition-all ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/50' : ''}`}
@@ -516,12 +532,12 @@ export default function Municipes() {
                   <div 
                     onClick={toggleSelectAll}
                     className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${
-                      selectedMunicipes.length === filteredMunicipes.length && filteredMunicipes.length > 0
+                      selectedMunicipes.length === sortedMunicipes.length && sortedMunicipes.length > 0
                         ? 'bg-blue-600 border-blue-600 text-white' 
                         : 'bg-white border-slate-300'
                     }`}
                   >
-                    {selectedMunicipes.length === filteredMunicipes.length && filteredMunicipes.length > 0 && <Check size={12} strokeWidth={4} />}
+                    {selectedMunicipes.length === sortedMunicipes.length && sortedMunicipes.length > 0 && <Check size={12} strokeWidth={4} />}
                   </div>
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('name')}>
@@ -547,7 +563,7 @@ export default function Municipes() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredMunicipes.map(m => (
+              {sortedMunicipes.map(m => (
                 <tr 
                   key={m.id} 
                   className={`group transition-all cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/50'}`}
@@ -626,7 +642,7 @@ export default function Municipes() {
           </div>
         </div>
 
-        {filteredMunicipes.length === 0 && !loading && (
+        {sortedMunicipes.length === 0 && !loading && (
           <div className="p-20 text-center">
             <Users size={40} className="text-slate-200 mx-auto mb-3" />
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum registro encontrado</h3>
