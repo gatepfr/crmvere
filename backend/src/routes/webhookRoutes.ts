@@ -217,17 +217,27 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
       // Delay to ensure Evolution API is ready after receiving the message
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const evolution = new EvolutionService(
-        tenant.evolutionApiUrl || 'http://localhost:8080',
-        tenant.evolutionGlobalToken || 'mestre123'
-      );
+      const evoUrl = tenant.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+      const evoToken = tenant.evolutionGlobalToken || process.env.EVOLUTION_GLOBAL_TOKEN || 'mestre123';
+
+      console.log(`[WEBHOOK] Config Evolution - URL: ${evoUrl}, Token: ${evoToken ? 'Presente' : 'AUSENTE'}`);
+
+      const evolution = new EvolutionService(evoUrl, evoToken);
       
-      console.log(`[WEBHOOK] Enviando via Evolution para: ${normalized.jid}`);
+      // Ensure JID is correct (normalized.jid usually contains @s.whatsapp.net)
+      const targetJid = normalized.jid;
+      console.log(`[WEBHOOK] Enviando via Evolution para: ${targetJid} (Instância: ${tenant.whatsappInstanceId})`);
       
-      // Send main response to citizen
-      await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario)
-        .then(() => console.log(`[WEBHOOK] ✅ MENSAGEM ENVIADA com sucesso para ${normalized.jid}`))
-        .catch(e => console.error(`[WEBHOOK] ❌ ERRO NO ENVIO para ${normalized.jid}:`, e.message));
+      try {
+        // Send main response to citizen
+        const sendResult = await evolution.sendMessage(tenant.whatsappInstanceId, targetJid, aiResult.resposta_usuario);
+        console.log(`[WEBHOOK] ✅ MENSAGEM ENVIADA com sucesso. Resposta da API:`, JSON.stringify(sendResult).substring(0, 100));
+      } catch (e: any) {
+        console.error(`[WEBHOOK] ❌ ERRO NO ENVIO para ${targetJid}:`, e.message);
+        if (e.response?.data) {
+          console.error(`[WEBHOOK] ❌ Detalhes do erro da Evolution:`, JSON.stringify(e.response.data));
+        }
+      }
 
       // 7. ALERT HUMAN if needed
       if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {
