@@ -114,7 +114,7 @@ router.post('/instance/create', async (req, res) => {
     
     // Fallback to environment variables if tenant doesn't have specific credentials
     const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
-    const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
+    const evolutionGlobalToken = tenant?.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123';
 
     if (!evolutionApiUrl || !evolutionGlobalToken) {
       return res.status(400).json({ error: 'Evolution API credentials not configured' });
@@ -143,10 +143,14 @@ router.post('/instance/create', async (req, res) => {
     // Webhook setup
     const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
     const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenantId}`;
-    console.log(`[WHATSAPP] Setting webhook for ${tenant.slug} to ${webhookUrl}`);
+    console.log(`[WHATSAPP] Configurando Webhook para instância ${tenant.slug} -> URL: ${webhookUrl}`);
     
-    evo.setWebhook(tenant.slug, webhookUrl)
-      .catch(e => console.error('Silent Webhook Error:', e.message));
+    try {
+      await evo.setWebhook(tenant.slug, webhookUrl);
+      console.log(`[WHATSAPP] Webhook configurado com sucesso!`);
+    } catch (e: any) {
+      console.error(`[WHATSAPP ERROR] Falha ao configurar Webhook:`, e.response?.data || e.message);
+    }
 
     res.json(result);
   } catch (error: any) {

@@ -220,9 +220,9 @@ router.post('/evolution/:tenantId', express.json(), async (req: Request, res: Re
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const evoUrl = tenant.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-      const evoToken = tenant.evolutionGlobalToken || process.env.EVOLUTION_GLOBAL_TOKEN || 'mestre123';
+      const evoToken = tenant.evolutionGlobalToken || process.env.EVOLUTION_API_TOKEN || 'mestre123';
 
-      console.log(`[WEBHOOK] Config Evolution - URL: ${evoUrl}, Token: ${evoToken ? 'Presente' : 'AUSENTE'}`);
+      console.log(`[WEBHOOK] Envio - URL: ${evoUrl}, Token: ${evoToken ? 'OK' : 'AUSENTE'}, Instância: ${tenant.whatsappInstanceId}`);
 
       const evolution = new EvolutionService(evoUrl, evoToken);
       
