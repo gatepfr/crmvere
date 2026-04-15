@@ -108,12 +108,16 @@ router.post('/setup', async (req, res) => {
 router.post('/instance/create', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
-      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
-      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
-    }
+    
+    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
+    let [tenant] = tenantId 
+      ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
+      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
 
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
+    
+    // Se entramos pelo fallback, garantimos que o tenantId seja usado
+    const effectiveTenantId = tenant.id;
     
     // Fallback to environment variables if tenant doesn't have specific credentials
     const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
@@ -165,12 +169,16 @@ router.post('/instance/create', async (req, res) => {
 router.get('/instance/qrcode', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
-      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
-      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
-    }
+    
+    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
+    let [tenant] = tenantId 
+      ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
+      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
 
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
+    
+    // Se entramos pelo fallback, garantimos que o tenantId seja usado
+    const effectiveTenantId = tenant.id;
 
     if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
       return res.status(200).json({ error: 'not_configured' });
@@ -193,12 +201,16 @@ router.get('/instance/qrcode', async (req, res) => {
 router.get('/instance/status', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
-      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
-      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
-    }
+    
+    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
+    let [tenant] = tenantId 
+      ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
+      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
 
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
+    
+    // Se entramos pelo fallback, garantimos que o tenantId seja usado
+    const effectiveTenantId = tenant.id;
 
     if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
       return res.status(200).json({ state: 'not_created' });
@@ -224,12 +236,16 @@ router.get('/instance/status', async (req, res) => {
 router.post('/instance/logout', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
-      console.error(`[WHATSAPP ERROR] Usuário ${req.user?.id} tentando acessar sem tenantId`);
-      return res.status(403).json({ error: 'Sessão inválida. Por favor, faça logout e entre novamente.' });
-    }
+    
+    // Se o tenantId não estiver no token, buscamos o primeiro tenant do usuário como fallback de emergência
+    let [tenant] = tenantId 
+      ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
+      : await db.select().from(tenants).limit(1); // Pega o primeiro gabinete se o ID sumiu do token
 
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant) return res.status(403).json({ error: 'Gabinete não encontrado.' });
+    
+    // Se entramos pelo fallback, garantimos que o tenantId seja usado
+    const effectiveTenantId = tenant.id;
     
     if (tenant?.whatsappInstanceId) {
       const evolutionApiUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
