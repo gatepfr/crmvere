@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { demandas, municipes, systemConfigs, tenants } from '../db/schema';
-import { eq, desc, and, sql, count } from 'drizzle-orm';
+import { eq, desc, and, sql, count, ilike, or } from 'drizzle-orm';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import iconv from 'iconv-lite';
@@ -39,35 +39,22 @@ export const importMunicipes = async (req: Request, res: Response) => {
   const file = req.file;
   const { mapping } = req.body;
 
-  console.log('--- Início da Importação CSV (Modo Robusto) ---');
-
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   if (!file) return res.status(400).json({ error: 'CSV file is required' });
   
   const parsedMapping = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
 
   try {
-    // 1. Read file as buffer to handle encoding
     const fileBuffer = fs.readFileSync(file.path);
-    
-    // 2. Try to detect encoding or default to common ones
     let content = iconv.decode(fileBuffer, 'utf-8');
-    if (content.includes('')) { // Detection of encoding error
+    if (content.includes('')) {
       content = iconv.decode(fileBuffer, 'iso-8859-1');
     }
-
-    // 3. Clean content (remove BOM, normalize line endings)
     content = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
 
-    // 4. Detect delimiter
     const firstLine = content.split('\n')[0];
-    const commaCount = (firstLine.match(/,/g) || []).length;
-    const semicolonCount = (firstLine.match(/;/g) || []).length;
-    const delimiter = semicolonCount > commaCount ? ';' : ',';
+    const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
     
-    console.log(`Delimitador: "${delimiter}", Encoding: Detectado, Linhas: ${content.split('\n').length}`);
-
-    // 5. Parse CSV
     const records = parse(content, {
       columns: true,
       skip_empty_lines: true,
@@ -77,20 +64,14 @@ export const importMunicipes = async (req: Request, res: Response) => {
     });
 
     const toInsert: any[] = [];
-    let skipped = 0;
-
     for (const record of records) {
       const name = record[parsedMapping.name];
       let phone = record[parsedMapping.phone];
-      const bairro = record[parsedMapping.bairro];
-      let birthDate = null;
-
       if (name && phone) {
-        // Clean phone
         phone = phone.toString().replace(/\D/g, '');
         if (!phone.startsWith('55') && phone.length >= 10) phone = '55' + phone;
-
-        // Process Date
+        
+        let birthDate = null;
         if (parsedMapping.birthDate && record[parsedMapping.birthDate]) {
           try {
             const rawDate = record[parsedMapping.birthDate].toString();
@@ -100,41 +81,31 @@ export const importMunicipes = async (req: Request, res: Response) => {
             } else {
               birthDate = new Date(rawDate);
             }
-            if (isNaN(birthDate.getTime())) birthDate = null;
-          } catch (e) { birthDate = null; }
+          } catch (e) {}
         }
 
         toInsert.push({
           tenantId,
           name: name.toString().substring(0, 255),
           phone: phone.substring(0, 50),
-          bairro: bairro ? bairro.toString().substring(0, 255) : null,
-          birthDate
+          bairro: record[parsedMapping.bairro]?.toString().substring(0, 255) || null,
+          birthDate: birthDate && !isNaN(birthDate.getTime()) ? birthDate : null
         });
-      } else {
-        skipped++;
       }
     }
 
-    console.log(`Válidos: ${toInsert.length}, Pulados: ${skipped}`);
-
-    // 6. Batch Insert (100 at a time)
     if (toInsert.length > 0) {
       const chunkSize = 100;
       for (let i = 0; i < toInsert.length; i += chunkSize) {
-        const chunk = toInsert.slice(i, i + chunkSize);
-        await db.insert(municipes).values(chunk).onConflictDoNothing();
+        await db.insert(municipes).values(toInsert.slice(i, i + chunkSize)).onConflictDoNothing();
       }
     }
 
-    // Cleanup
     if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-    
-    res.json({ success: true, imported: toInsert.length, skipped });
+    res.json({ success: true, imported: toInsert.length });
   } catch (error: any) {
-    console.error('ERRO CRÍTICO NA IMPORTAÇÃO:', error);
     if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-    res.status(500).json({ error: 'Erro no processamento do arquivo: ' + error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -187,15 +158,37 @@ export const createDemand = async (req: Request, res: Response) => {
 export const listDemands = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const limit = parseInt(req.query.limit as string) || 25;
+  const search = req.query.search as string;
+  const category = req.query.category as string;
+  const status = req.query.status as string;
+  const priority = req.query.priority as string;
+  const attention = req.query.attention === 'true';
   const offset = (page - 1) * limit;
   
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
+    // Build filter conditions
+    const conditions = [eq(demandas.tenantId, tenantId)];
+    if (category) conditions.push(eq(demandas.categoria, category));
+    if (status) conditions.push(eq(demandas.status, status));
+    if (priority) conditions.push(eq(demandas.prioridade, priority));
+    if (attention) conditions.push(eq(demandas.precisaRetorno, true));
+    
+    if (search) {
+      conditions.push(or(
+        ilike(municipes.name, `%${search}%`),
+        ilike(municipes.phone, `%${search}%`)
+      ) as any);
+    }
+
+    const whereClause = and(...conditions);
+
     const [totalCount] = await db.select({ count: count() })
       .from(demandas)
-      .where(eq(demandas.tenantId, tenantId));
+      .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
+      .where(whereClause);
 
     const results = await db
       .select({
@@ -204,7 +197,7 @@ export const listDemands = async (req: Request, res: Response) => {
       })
       .from(demandas)
       .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
-      .where(eq(demandas.tenantId, tenantId))
+      .where(whereClause)
       .orderBy(desc(demandas.updatedAt))
       .limit(limit)
       .offset(offset);
@@ -310,17 +303,36 @@ export const deleteMunicipe = async (req: Request, res: Response) => {
 export const listMunicipes = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const limit = parseInt(req.query.limit as string) || 25;
+  const search = req.query.search as string;
+  const bairro = req.query.bairro as string;
+  const engaged = req.query.engaged === 'true';
+  const birthday = req.query.birthday === 'true';
   const offset = (page - 1) * limit;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
+    const conditions = [eq(municipes.tenantId, tenantId)];
+    if (bairro) conditions.push(eq(municipes.bairro, bairro));
+    if (search) {
+      conditions.push(or(
+        ilike(municipes.name, `%${search}%`),
+        ilike(municipes.phone, `%${search}%`)
+      ) as any);
+    }
+    if (birthday) {
+      conditions.push(sql`EXTRACT(DAY FROM ${municipes.birthDate}) = EXTRACT(DAY FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
+      conditions.push(sql`EXTRACT(MONTH FROM ${municipes.birthDate}) = EXTRACT(MONTH FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
+    }
+
+    const whereClause = and(...conditions);
+
     const [totalCount] = await db.select({ count: count() })
       .from(municipes)
-      .where(eq(municipes.tenantId, tenantId));
+      .where(whereClause);
 
-    const results = await db.select({
+    let query = db.select({
       id: municipes.id,
       name: municipes.name,
       phone: municipes.phone,
@@ -331,11 +343,16 @@ export const listMunicipes = async (req: Request, res: Response) => {
     })
     .from(municipes)
     .leftJoin(demandas, eq(municipes.id, demandas.municipeId))
-    .where(eq(municipes.tenantId, tenantId))
+    .where(whereClause)
     .groupBy(municipes.id)
-    .orderBy(desc(municipes.createdAt))
-    .limit(limit)
-    .offset(offset);
+    .orderBy(desc(municipes.createdAt));
+
+    if (engaged) {
+      // Filtering group by counts requires having or a subquery, here we use having for simplicity
+      query = query.having(sql`count(${demandas.id}) >= 5`) as any;
+    }
+
+    const results = await query.limit(limit).offset(offset);
 
     res.json({
       data: results,

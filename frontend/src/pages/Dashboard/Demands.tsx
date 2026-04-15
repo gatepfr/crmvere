@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import api from '../../api/client';
 import DemandModal from '../../components/DemandModal';
 import NewDemandModal from '../../components/NewDemandModal';
@@ -53,7 +53,6 @@ export default function Demands() {
   const [loading, setLoading] = useState(true);
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
-  const [filterByAttention, setFilterByAttention] = useState(false);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   
   // Filters
@@ -61,25 +60,41 @@ export default function Demands() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
+  const [filterByAttention, setFilterByAttention] = useState(false);
 
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  const fetchDemands = () => {
+  const fetchDemands = useCallback(() => {
     setLoading(true);
-    api.get(`/demands?page=${pagination.page}&limit=${pagination.limit}`)
+    const params = new URLSearchParams({
+      page: pagination.page.toString(),
+      limit: pagination.limit.toString(),
+      search: searchTerm,
+      category: filterCategory,
+      status: filterStatus,
+      priority: filterPriority,
+      attention: filterByAttention.toString()
+    });
+
+    api.get(`/demands?${params.toString()}`)
       .then(res => {
         setDemands(res.data.data || []);
-        setPagination(res.data.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 });
+        setPagination(res.data.pagination || { page: 1, limit: 25, total: 0, totalPages: 0 });
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
-  };
+  }, [pagination.page, pagination.limit, searchTerm, filterCategory, filterStatus, filterPriority, filterByAttention]);
 
   useEffect(() => {
     fetchDemands();
-  }, [pagination.page, pagination.limit]);
+  }, [fetchDemands]);
+
+  // Reset to page 1 when any filter changes
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchTerm, filterCategory, filterStatus, filterPriority, filterByAttention]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -119,49 +134,40 @@ export default function Demands() {
     return phone;
   };
 
-  const filteredAndSortedDemands = useMemo(() => {
-    return demands
-      .filter(d => {
-        const nameMatch = d.municipes.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const phoneMatch = d.municipes.phone.includes(searchTerm);
-        const matchesCategory = !filterCategory || d.demandas.categoria === filterCategory;
-        const matchesStatus = !filterStatus || d.demandas.status === filterStatus;
-        const matchesPriority = !filterPriority || d.demandas.prioridade === filterPriority;
-        const matchesAttention = !filterByAttention || d.demandas.precisaRetorno;
-        return (nameMatch || phoneMatch) && matchesCategory && matchesStatus && matchesPriority && matchesAttention;
-      })
-      .sort((a, b) => {
-        let valA: any, valB: any;
-        
-        switch (sortField) {
-          case 'name':
-            valA = a.municipes.name.toLowerCase();
-            valB = b.municipes.name.toLowerCase();
-            break;
-          case 'phone':
-            valA = a.municipes.phone;
-            valB = b.municipes.phone;
-            break;
-          case 'category':
-            valA = a.demandas.categoria.toLowerCase();
-            valB = b.demandas.categoria.toLowerCase();
-            break;
-          case 'priority':
-            const pOrder = { urgente: 4, alta: 3, media: 2, baixa: 1 };
-            valA = pOrder[a.demandas.prioridade as keyof typeof pOrder] || 0;
-            valB = pOrder[b.demandas.prioridade as keyof typeof pOrder] || 0;
-            break;
-          case 'date':
-          default:
-            valA = new Date(a.demandas.createdAt).getTime();
-            valB = new Date(b.demandas.createdAt).getTime();
-        }
+  // Only sorting is left on client-side for immediate feedback, but filtering is server-side
+  const sortedDemands = useMemo(() => {
+    return [...demands].sort((a, b) => {
+      let valA: any, valB: any;
+      
+      switch (sortField) {
+        case 'name':
+          valA = a.municipes.name.toLowerCase();
+          valB = b.municipes.name.toLowerCase();
+          break;
+        case 'phone':
+          valA = a.municipes.phone;
+          valB = b.municipes.phone;
+          break;
+        case 'category':
+          valA = a.demandas.categoria.toLowerCase();
+          valB = b.demandas.categoria.toLowerCase();
+          break;
+        case 'priority':
+          const pOrder = { urgente: 4, alta: 3, media: 2, baixa: 1 };
+          valA = pOrder[a.demandas.prioridade as keyof typeof pOrder] || 0;
+          valB = pOrder[b.demandas.prioridade as keyof typeof pOrder] || 0;
+          break;
+        case 'date':
+        default:
+          valA = new Date(a.demandas.createdAt).getTime();
+          valB = new Date(b.demandas.createdAt).getTime();
+      }
 
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-  }, [demands, searchTerm, filterCategory, filterStatus, filterPriority, filterByAttention, sortField, sortOrder]);
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [demands, sortField, sortOrder]);
 
   const handleOpenDemand = (id: string) => {
     const demand = demands.find(d => d.demandas.id === id);
@@ -174,7 +180,7 @@ export default function Demands() {
     doc.text('Relatório de Demandas - CRM do Verê', 14, 20);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
     
-    const tableData = filteredAndSortedDemands.map(d => [
+    const tableData = sortedDemands.map(d => [
       d.municipes.name,
       d.demandas.categoria,
       d.demandas.status,
@@ -295,7 +301,6 @@ export default function Demands() {
           >
             <option value="25">25 / pág</option>
             <option value="50">50 / pág</option>
-            <option value="100">100 / pág</option>
             <option value="all">Ver Todos</option>
           </select>
         </div>
@@ -305,7 +310,7 @@ export default function Demands() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         {/* Mobile View */}
         <div className="lg:hidden divide-y divide-slate-50">
-          {filteredAndSortedDemands.map((demand: Demand) => (
+          {sortedDemands.map((demand: Demand) => (
             <div 
               key={demand.demandas.id} 
               className={`p-4 transition-all active:bg-slate-50 ${demand.demandas.precisaRetorno ? 'bg-red-50/40' : ''}`}
@@ -367,7 +372,7 @@ export default function Demands() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredAndSortedDemands.map((demand: Demand) => (
+              {sortedDemands.map((demand: Demand) => (
                 <tr 
                   key={demand.demandas.id} 
                   className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${demand.demandas.precisaRetorno ? 'bg-red-50/30' : ''}`}
@@ -383,7 +388,7 @@ export default function Demands() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
-                      <Phone size={12} className="text-slate-300" />
+                      <Phone size={12} className="text-blue-400" />
                       {formatPhone(demand.municipes.phone)}
                     </div>
                   </td>
@@ -434,7 +439,7 @@ export default function Demands() {
           </div>
         </div>
 
-        {filteredAndSortedDemands.length === 0 && !loading && (
+        {sortedDemands.length === 0 && !loading && (
           <div className="p-20 text-center">
             <ClipboardList size={40} className="text-slate-200 mx-auto mb-3" />
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma demanda encontrada</h3>

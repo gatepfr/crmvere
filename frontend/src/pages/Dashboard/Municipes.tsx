@@ -88,23 +88,24 @@ export default function Municipes() {
 
   useEffect(() => {
     loadMunicipes();
-    loadAllBairros();
-  }, [pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyBirthdays]);
 
-  const loadAllBairros = async () => {
-    try {
-      const res = await api.get('/demands/municipes/list?limit=1000');
-      const uniqueBairros = Array.from(new Set(res.data.data.map((m: any) => m.bairro).filter(Boolean))) as string[];
-      setAllBairros(uniqueBairros);
-    } catch (err) {
-      console.error('Erro ao carregar bairros');
-    }
-  };
+  useEffect(() => {
+    loadAllBairros();
+  }, []);
 
   const loadMunicipes = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/demands/municipes/list?page=${pagination.page}&limit=${pagination.limit}`);
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        search: searchTerm,
+        bairro: selectedBairro,
+        engaged: onlyEngaged.toString(),
+        birthday: onlyBirthdays.toString()
+      });
+      const res = await api.get(`/demands/municipes/list?${params.toString()}`);
       setMunicipes(res.data.data || []);
       setPagination(res.data.pagination || { page: 1, limit: 25, total: 0, totalPages: 0 });
     } catch (err) {
@@ -114,38 +115,15 @@ export default function Municipes() {
     }
   };
 
-  const isTodayBirthday = (dateStr: string | null) => {
-    if (!dateStr) return false;
-    const birthDate = new Date(dateStr);
-    const today = new Date();
-    return birthDate.getUTCDate() === today.getDate() && birthDate.getUTCMonth() === today.getMonth();
-  };
-
-  const handleSort = (key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount') => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const filteredMunicipes = (municipes || [])
-    .filter(m => {
-      const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           m.phone.includes(searchTerm);
-      const matchesBairro = !selectedBairro || m.bairro === selectedBairro;
-      const matchesEngaged = !onlyEngaged || m.demandCount >= 5;
-      const matchesBirthday = !onlyBirthdays || isTodayBirthday(m.birthDate);
-      return matchesSearch && matchesBairro && matchesEngaged && matchesBirthday;
-    })
-    .sort((a, b) => {
-      const valA = (a[sortConfig.key] || '').toString().toLowerCase();
-      const valB = (b[sortConfig.key] || '').toString().toLowerCase();
-      
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
+  // Simplified filteredMunicipes as filtering is now done on backend
+  const sortedMunicipes = [...municipes].sort((a, b) => {
+    const valA = (a[sortConfig.key] || '').toString().toLowerCase();
+    const valB = (b[sortConfig.key] || '').toString().toLowerCase();
+    
+    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const toggleSelect = (id: string) => {
     setSelectedSelectedMunicipes(prev => 
