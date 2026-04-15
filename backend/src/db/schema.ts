@@ -61,6 +61,7 @@ export const municipes = pgTable("municipes", {
     .references(() => tenants.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 50 }).notNull(),
+  cep: varchar("cep", { length: 20 }),
   bairro: varchar("bairro", { length: 255 }),
   birthDate: timestamp("birth_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

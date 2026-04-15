@@ -37,6 +37,7 @@ interface Municipe {
   id: string;
   name: string;
   phone: string;
+  cep?: string | null;
   bairro: string | null;
   birthDate: string | null;
   createdAt: string;
@@ -71,7 +72,7 @@ export default function Municipes() {
 
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
+  const [createForm, setCreateForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '' });
   const [displayCreatePhone, setDisplayCreatePhone] = useState('');
 
   // Import Modal State
@@ -82,7 +83,7 @@ export default function Municipes() {
 
   // Edit Modal State
   const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '' });
   const [displayEditPhone, setDisplayEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -311,11 +312,37 @@ export default function Municipes() {
     }
   };
 
+  const handleCepChange = async (value: string, type: 'create' | 'edit') => {
+    const cep = value.replace(/\D/g, '').substring(0, 8);
+    if (type === 'create') {
+      setCreateForm(prev => ({ ...prev, cep }));
+    } else {
+      setEditForm(prev => ({ ...prev, cep }));
+    }
+
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        if (!data.erro && data.bairro) {
+          if (type === 'create') {
+            setCreateForm(prev => ({ ...prev, bairro: data.bairro }));
+          } else {
+            setEditForm(prev => ({ ...prev, bairro: data.bairro }));
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao buscar CEP:', err);
+      }
+    }
+  };
+
   const handleEdit = (m: Municipe) => {
     setEditingMunicipe(m);
     setEditForm({ 
       name: m.name, 
       phone: m.phone, 
+      cep: m.cep || '',
       bairro: m.bairro || '', 
       birthDate: m.birthDate ? m.birthDate.split('T')[0] : '' 
     });
@@ -742,9 +769,15 @@ export default function Municipes() {
                   <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" value={createForm.birthDate} onChange={e => setCreateForm({...createForm, birthDate: e.target.value})} />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
-                <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="Ex: Centro" value={createForm.bairro} onChange={e => setCreateForm({...createForm, bairro: e.target.value})} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">CEP (Opcional)</label>
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="00000-000" value={createForm.cep} onChange={e => handleCepChange(e.target.value, 'create')} />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm" placeholder="Ex: Centro" value={createForm.bairro} onChange={e => setCreateForm({...createForm, bairro: e.target.value})} />
+                </div>
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-2xl transition-all">Cancelar</button>
@@ -799,14 +832,20 @@ export default function Municipes() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
-                <input 
-                  type="text"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
-                  value={editForm.bairro}
-                  onChange={e => setEditForm({...editForm, bairro: e.target.value})}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">CEP (Opcional)</label>
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm" value={editForm.cep} onChange={e => handleCepChange(e.target.value, 'edit')} placeholder="00000-000" />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                  <input 
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-sm"
+                    value={editForm.bairro}
+                    onChange={e => setEditForm({...editForm, bairro: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
 

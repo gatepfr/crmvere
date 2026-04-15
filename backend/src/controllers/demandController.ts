@@ -9,7 +9,7 @@ import iconv from 'iconv-lite';
 
 export const createMunicipe = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  const { name, phone, bairro, birthDate } = req.body;
+  const { name, phone, cep, bairro, birthDate } = req.body;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   if (!name || !phone) return res.status(400).json({ error: 'Name and phone are required' });
@@ -20,6 +20,7 @@ export const createMunicipe = async (req: Request, res: Response) => {
         tenantId,
         name,
         phone: normalizePhone(phone),
+        cep,
         bairro,
         birthDate: birthDate ? new Date(birthDate) : null
       })
@@ -111,7 +112,7 @@ export const importMunicipes = async (req: Request, res: Response) => {
 
 export const createDemand = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  const { municipeName, municipePhone, municipeBairro, categoria, prioridade, resumoIa, precisaRetorno } = req.body;
+  const { municipeName, municipePhone, municipeCep, municipeBairro, categoria, prioridade, resumoIa, precisaRetorno } = req.body;
 
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   const normalizedPhone = normalizePhone(municipePhone);
@@ -128,6 +129,7 @@ export const createDemand = async (req: Request, res: Response) => {
             tenantId,
             name: municipeName,
             phone: normalizedPhone,
+            cep: municipeCep,
             bairro: municipeBairro
           })
           .returning();
@@ -269,7 +271,7 @@ export const updateDemand = async (req: Request, res: Response) => {
 
 export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, phone, bairro, birthDate } = req.body;
+  const { name, phone, cep, bairro, birthDate } = req.body;
   const tenantId = req.user?.tenantId;
 
   try {
@@ -277,6 +279,7 @@ export const updateMunicipe = async (req: Request, res: Response) => {
       .set({ 
         name, 
         phone: normalizePhone(phone), 
+        cep,
         bairro, 
         birthDate: birthDate ? new Date(birthDate) : null 
       })
@@ -346,6 +349,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
       id: municipes.id,
       name: municipes.name,
       phone: municipes.phone,
+      cep: municipes.cep,
       bairro: municipes.bairro,
       birthDate: municipes.birthDate,
       createdAt: municipes.createdAt,

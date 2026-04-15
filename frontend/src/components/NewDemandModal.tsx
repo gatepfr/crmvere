@@ -13,11 +13,29 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
   const [formData, setFormData] = useState({
     municipeName: '',
     municipePhone: '',
+    municipeCep: '',
     municipeBairro: '',
     categoria: 'outro',
     prioridade: 'media',
     resumoIa: ''
   });
+
+  const handleCepChange = async (value: string) => {
+    const cep = value.replace(/\D/g, '').substring(0, 8);
+    setFormData(prev => ({ ...prev, municipeCep: cep }));
+
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        if (!data.erro && data.bairro) {
+          setFormData(prev => ({ ...prev, municipeBairro: data.bairro }));
+        }
+      } catch (err) {
+        console.error('Erro ao buscar CEP:', err);
+      }
+    }
+  };
 
   const handlePhoneChange = (value: string) => {
     // Remove tudo que não é número
@@ -109,17 +127,29 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
                 </div>
               </div>
             </div>
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
-              <div className="relative">
-                <MapPin size={16} className="absolute left-4 top-3.5 text-slate-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">CEP (Opcional)</label>
                 <input
                   type="text"
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                  placeholder="Bairro do atendimento"
-                  value={formData.municipeBairro}
-                  onChange={e => setFormData({...formData, municipeBairro: e.target.value})}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                  placeholder="00000-000"
+                  value={formData.municipeCep}
+                  onChange={e => handleCepChange(e.target.value)}
                 />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                <div className="relative">
+                  <MapPin size={16} className="absolute left-4 top-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                    placeholder="Bairro do atendimento"
+                    value={formData.municipeBairro}
+                    onChange={e => setFormData({...formData, municipeBairro: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
           </div>
