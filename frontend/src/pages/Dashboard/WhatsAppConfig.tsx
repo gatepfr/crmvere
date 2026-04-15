@@ -147,13 +147,10 @@ export default function WhatsAppConfig() {
         if (attempts > 5) clearInterval(interval);
       }, 2000);
       
-    } catch (err: unknown) {
-      let errorMessage = 'Falha ao criar instância.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as { response: { data: { error?: string } } };
-        errorMessage = axiosError.response?.data?.error || errorMessage;
-      }
-      setError(errorMessage);
+    } catch (err: any) {
+      console.error('ERRO CRÍTICO NO WHATSAPP:', err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Falha ao criar instância.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
