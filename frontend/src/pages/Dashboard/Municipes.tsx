@@ -273,9 +273,10 @@ export default function Municipes() {
       
       if (municipe) {
         try {
+          const personalizedMessage = broadcastMessage.replace(/{{nome}}/g, municipe.name);
           await api.post('/whatsapp/send-direct', {
             phone: municipe.phone,
-            message: broadcastMessage
+            message: personalizedMessage
           });
         } catch (err) {
           console.error(`Erro ao enviar para ${municipe.name}:`, err);
@@ -884,11 +885,16 @@ export default function Municipes() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-slate-700">Mensagem</label>
+                <div className="flex justify-between items-end">
+                  <label className="block text-sm font-bold text-slate-700">Mensagem</label>
+                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                    Dica: Use {"{{nome}}"} para personalizar
+                  </span>
+                </div>
                 <textarea 
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   rows={5}
-                  placeholder="Olá! Gostaria de informar sobre as obras na nossa região..."
+                  placeholder="Olá {{nome}}! Gostaria de informar sobre as obras na nossa região..."
                   value={broadcastMessage}
                   onChange={e => setBroadcastMessage(e.target.value)}
                   disabled={sending}
