@@ -3,12 +3,18 @@ import nodemailer from 'nodemailer';
 export const sendResetPasswordEmail = async (email: string, token: string) => {
   // Create a transporter using your email service settings
   // This uses Ethereal for testing or real SMTP if configured in .env
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
+
+  console.log(`[EMAIL] Iniciando transporte SMTP: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT} (User: ${user})`);
+
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.ethereal.email',
     port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_PORT === '465', // true for 465, false for others
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: user,
+      pass: pass,
     },
   });
 
