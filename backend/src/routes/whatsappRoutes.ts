@@ -8,26 +8,15 @@ import { EvolutionService } from '../services/evolutionService';
 const router = Router();
 router.use(authenticate);
 
-// Utilitário centralizado para configurações da Evolution
 const getEvoConfig = (tenant: any) => {
-  // PRIORIDADE: Usar o nome do serviço Docker se estivermos em produção
-  // O nome do serviço no docker-compose é 'evolution_api' na porta 8080
   const internalUrl = 'http://evolution_api:8080';
-  const publicUrl = tenant?.evolutionApiUrl || process.env.EVOLUTION_API_URL || 'https://wa.crmvere.com.br';
-  
-  // Se o .env estiver configurado, usamos ele, mas vamos garantir que o token seja o WA_API_KEY
   const token = tenant?.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
-  
-  // LOG PARA VOCÊ VER NO DOCKER LOGS
-  console.log(`[WHATSAPP CONFIG] Usando URL: ${internalUrl} (Interna) | Token: ${token.substring(0, 5)}...`);
-  
   return { url: internalUrl, token };
 };
 
 router.post('/instance/create', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user?.tenantId;
-    
     let [tenant] = tenantId 
       ? await db.select().from(tenants).where(eq(tenants.id, tenantId))
       : await db.select().from(tenants).limit(1);
@@ -37,8 +26,14 @@ router.post('/instance/create', async (req: Request, res: Response) => {
     const { url, token } = getEvoConfig(tenant);
     const evo = new EvolutionService(url, token);
     
-    // Tenta criar a instância
+    // SOLUÇÃO: Deleta a instância se ela já existir para evitar o erro "already in use"
+    console.log(`[WHATSAPP] Limpando instância antiga "${tenant.slug}" se existir...`);
+    await evo.deleteInstance(tenant.slug).catch(() => {
+        // Ignora erro se a instância não existir
+    });
+
     try {
+        console.log(`[WHATSAPP] Criando nova instância "${tenant.slug}"...`);
         const result = await evo.createInstance(tenant.slug);
         const instanceToken = result?.hash?.apikey || result?.instance?.token || 'token_not_found';
 
@@ -47,7 +42,6 @@ router.post('/instance/create', async (req: Request, res: Response) => {
           whatsappToken: instanceToken
         }).where(eq(tenants.id, tenant.id));
 
-        // Configura o Webhook usando a URL PÚBLICA do backend (porque a Evolution precisa disso)
         const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
         const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenant.id}`;
         
@@ -57,13 +51,13 @@ router.post('/instance/create', async (req: Request, res: Response) => {
     } catch (apiErr: any) {
         console.error('[EVOLUTION API ERROR]', apiErr.response?.data || apiErr.message);
         return res.status(500).json({ 
-            error: 'A Evolution API não respondeu corretamente.',
+            error: 'Erro na Evolution API',
             details: apiErr.response?.data || apiErr.message
         });
     }
   } catch (error: any) {
-    console.error('Erro fatal no create:', error.message);
-    res.status(500).json({ error: 'Falha interna ao processar WhatsApp.' });
+    console.error('Erro fatal:', error.message);
+    res.status(500).json({ error: 'Falha interna.' });
   }
 });
 
