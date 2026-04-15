@@ -96,9 +96,6 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
         const aiResult = result.data;
         const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
-        // Salvar com bairro em MAIÚSCULO se a IA identificar o bairro
-        const updatedBairro = aiResult?.bairro ? aiResult.bairro.toUpperCase() : existingDemanda?.bairro;
-
         if (existingDemanda) {
           await db.update(demandas).set({
             resumoIa: updatedHistory,
