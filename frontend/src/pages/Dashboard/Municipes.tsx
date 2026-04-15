@@ -403,7 +403,7 @@ export default function Municipes() {
         },
         margin: { top: 45 },
         didDrawPage: (data) => {
-          const str = "Página " + doc.internal.getNumberOfPages();
+          const str = "Página " + doc.getNumberOfPages();
           doc.setFontSize(8);
           doc.setTextColor(148, 163, 184);
           doc.text(str, 14, doc.internal.pageSize.height - 10);
@@ -709,7 +709,7 @@ export default function Municipes() {
           </div>
         </div>
 
-        {sortedMunicipes.length === 0 && !loading && (
+        {municipes.length === 0 && !loading && (
           <div className="p-20 text-center">
             <Users size={40} className="text-slate-200 mx-auto mb-3" />
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum registro encontrado</h3>
