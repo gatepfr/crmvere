@@ -58,7 +58,7 @@ services:
     ports:
       - "3001:3001"
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       - TZ=America/Sao_Paulo
       - PORT=3001
@@ -70,6 +70,12 @@ services:
       - BACKEND_URL=https://api.crmvere.com.br
       - NODE_ENV=production
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - FRONTEND_URL=${FRONTEND_URL}
     depends_on:
       - db
       - redis
