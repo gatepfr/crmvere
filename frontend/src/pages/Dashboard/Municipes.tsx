@@ -256,8 +256,9 @@ export default function Municipes() {
         message: msg
       });
       alert('Mensagem de aniversário enviada!');
-    } catch (err) {
-      alert('Falha ao enviar mensagem. Verifique a conexão com o WhatsApp.');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Verifique a conexão com o WhatsApp';
+      alert(`Falha ao enviar mensagem: ${errorMsg}`);
     }
   };
 
@@ -376,8 +377,6 @@ export default function Municipes() {
 
     doc.save(`municipes-${new Date().getTime()}.pdf`);
   };
-
-  if (loading && pagination.page === 1) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
@@ -507,7 +506,12 @@ export default function Municipes() {
       )}
 
       {/* Table / Cards Container */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[200px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+          </div>
+        )}
         {/* Mobile View */}
         <div className="lg:hidden divide-y divide-slate-50">
           {sortedMunicipes.map(m => (

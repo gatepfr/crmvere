@@ -203,8 +203,6 @@ export default function Demands() {
     return sortOrder === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
   };
 
-  if (loading && pagination.page === 1) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       {/* Header */}
@@ -305,7 +303,12 @@ export default function Demands() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[200px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+          </div>
+        )}
         {/* Mobile Layout */}
         <div className="block lg:hidden divide-y divide-slate-50">
           {sortedDemands.map((demand: Demand) => (

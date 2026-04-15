@@ -72,13 +72,22 @@ export class EvolutionService {
   }
 
   async sendMessage(instanceName: string, remoteJid: string, text: string) {
-    const jid = remoteJid.includes('@') ? remoteJid : `${remoteJid}@s.whatsapp.net`;
-    const response = await this.client.post(`/message/sendText/${instanceName}`, {
-      number: jid,
-      text: text,
-      delay: 1200,
-      linkPreview: false
-    });
-    return response.data;
+    try {
+      // Ensure number is clean (only digits)
+      const number = remoteJid.replace(/\D/g, '');
+      
+      const payload = {
+        number: number,
+        text: text,
+        delay: 1200,
+        linkPreview: false
+      };
+
+      const response = await this.client.post(`/message/sendText/${instanceName}`, payload);
+      return response.data;
+    } catch (error: any) {
+      console.error(`[WHATSAPP ERROR] Failed to send message to ${remoteJid}:`, error.response?.data || error.message);
+      throw error;
+    }
   }
 }
