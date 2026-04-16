@@ -393,10 +393,11 @@ export default function Municipes() {
       phone: m.phone, 
       cep: m.cep || '',
       bairro: m.bairro || '', 
-      birthDate: m.birthDate ? m.birthDate.split('T')[0] : '' 
+      birthDate: m.birthDate ? formatDateDisplay(m.birthDate) : '' 
     });
     setDisplayEditPhone(formatPhone(m.phone));
   };
+
 
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja realmente excluir este munícipe? Esta ação não pode ser desfeita.')) return;
@@ -684,7 +685,7 @@ export default function Municipes() {
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="pl-6 py-4 w-12">
                   <div 
-                    onClick={toggleSelectAll}
+                    onClick={(e) => { e.stopPropagation(); toggleSelectAll(); }}
                     className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${
                       selectedMunicipes.length === municipes.length && municipes.length > 0
                         ? 'bg-blue-600 border-blue-600 text-white' 
@@ -715,10 +716,12 @@ export default function Municipes() {
                 <tr 
                   key={m.id} 
                   className={`group transition-all cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/50'}`}
-                  onClick={() => toggleSelect(m.id)}
+                  onClick={() => handleEdit(m)}
                 >
                   <td className="pl-6 py-4">
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                    <div 
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(m.id); }}
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                       selectedMunicipes.includes(m.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 group-hover:border-slate-300'
                     }`}>
                       {selectedMunicipes.includes(m.id) && <Check size={12} strokeWidth={4} />}
@@ -748,6 +751,24 @@ export default function Municipes() {
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{m.bairro || '---'}</span>
                   </td>
                   <td className="px-4 py-4 text-center">
+                    <span className="text-xs font-bold text-slate-400">
+                      {formatDateDisplay(m.birthDate)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end items-center gap-1">
+                      {isTodayBirthday(m.birthDate) && (
+                        <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-500 hover:bg-pink-50 rounded-lg transition-all" title="Mandar Parabéns"><MessageSquare size={16} /></button>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={16} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
                     <span className="text-xs font-bold text-slate-400">
                       {formatDateDisplay(m.birthDate)}
                     </span>

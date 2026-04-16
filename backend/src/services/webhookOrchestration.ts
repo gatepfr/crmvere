@@ -70,6 +70,12 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       existingDemanda = undefined;
     }
 
+    // 5. Verifica se a demanda já está aguardando retorno humano
+    if (existingDemanda?.precisaRetorno) {
+      console.log(`[ORCHESTRATOR] Demanda de ${municipe.name} já aguarda retorno humano. Ignorando resposta da IA.`);
+      return { status: 'waiting_human' };
+    }
+
     const tenantDocs = await db.select().from(documents).where(eq(documents.tenantId, tenantId));
     let knowledgeBaseContent = tenantDocs
       .map(doc => `--- DOCUMENTO: ${doc.fileName} ---\n${doc.textContent}`)
