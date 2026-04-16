@@ -139,31 +139,31 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                 if file.lower().endswith('.csv') and any(x in file.lower() for x in ['rede_locais_votacao', 'local_votacao', 'eleitorado_local_votacao']):
                     df_loc = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
                     df_loc.columns = [c.upper() for c in df_loc.columns]
-                c_city = find_column(df_loc.columns, ['NM', 'MUN']) or find_column(df_loc.columns, ['NM', 'UE'])
-                c_code = find_column(df_loc.columns, ['CD', 'MUN']) or find_column(df_loc.columns, ['CD', 'UE'])
-                c_zona = find_column(df_loc.columns, ['NR', 'ZONA'])
-                c_local = find_column(df_loc.columns, ['NR', 'LOCAL', 'VOTACAO']) or find_column(df_loc.columns, ['NR', 'LOCAL'])
-                c_name_loc = find_column(df_loc.columns, ['NM', 'LOCAL', 'VOTACAO']) or find_column(df_loc.columns, ['NM', 'LOCAL'])
-                c_bairro = find_column(df_loc.columns, ['NM', 'BAIRRO'])
-                c_end = find_column(df_loc.columns, ['DS', 'ENDERECO'])
-                c_cep = find_column(df_loc.columns, ['NR', 'CEP'])
-                
-                df_loc['CITY_NORM'] = df_loc[c_city].apply(normalize_text)
-                locais = df_loc[df_loc['CITY_NORM'] == municipio_norm]
-                if not locais.empty:
-                    loc_data = []
-                    for _, r in locais.iterrows():
-                        loc_data.append((
-                            ano, 
-                            normalize_code(r[c_code]), 
-                            safe_int(r.get(c_zona, 0)), 
-                            safe_int(r.get(c_local, 0)), 
-                            r.get(c_name_loc, 'SEM NOME'), 
-                            r.get(c_end, ''), 
-                            r.get(c_bairro, 'NÃO INFORMADO'), 
-                            r.get(c_cep, '')
-                        ))
-                    execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro, nr_cep) VALUES %s ON CONFLICT DO NOTHING", loc_data)
+                    c_city = find_column(df_loc.columns, ['NM', 'MUN']) or find_column(df_loc.columns, ['NM', 'UE'])
+                    c_code = find_column(df_loc.columns, ['CD', 'MUN']) or find_column(df_loc.columns, ['CD', 'UE'])
+                    c_zona = find_column(df_loc.columns, ['NR', 'ZONA'])
+                    c_local = find_column(df_loc.columns, ['NR', 'LOCAL', 'VOTACAO']) or find_column(df_loc.columns, ['NR', 'LOCAL'])
+                    c_name_loc = find_column(df_loc.columns, ['NM', 'LOCAL', 'VOTACAO']) or find_column(df_loc.columns, ['NM', 'LOCAL'])
+                    c_bairro = find_column(df_loc.columns, ['NM', 'BAIRRO'])
+                    c_end = find_column(df_loc.columns, ['DS', 'ENDERECO'])
+                    c_cep = find_column(df_loc.columns, ['NR', 'CEP'])
+                    
+                    df_loc['CITY_NORM'] = df_loc[c_city].apply(normalize_text)
+                    locais = df_loc[df_loc['CITY_NORM'] == municipio_norm]
+                    if not locais.empty:
+                        loc_data = []
+                        for _, r in locais.iterrows():
+                            loc_data.append((
+                                ano, 
+                                normalize_code(r[c_code]), 
+                                safe_int(r.get(c_zona, 0)), 
+                                safe_int(r.get(c_local, 0)), 
+                                r.get(c_name_loc, 'SEM NOME'), 
+                                r.get(c_end, ''), 
+                                r.get(c_bairro, 'NÃO INFORMADO'), 
+                                r.get(c_cep, '')
+                            ))
+                        execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro, nr_cep) VALUES %s ON CONFLICT DO NOTHING", loc_data)
 
         # 3. Votos
         report_progress(tenant_id, "Contabilizando Votos...", 60)
