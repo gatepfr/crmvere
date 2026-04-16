@@ -769,24 +769,6 @@ export default function Municipes() {
             </tbody>
           </table>
         </div>
-                    <span className="text-xs font-bold text-slate-400">
-                      {formatDateDisplay(m.birthDate)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      {isTodayBirthday(m.birthDate) && (
-                        <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-500 hover:bg-pink-50 rounded-lg transition-all" title="Mandar Parabéns"><MessageSquare size={16} /></button>
-                      )}
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
         {/* Pagination */}
         <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
