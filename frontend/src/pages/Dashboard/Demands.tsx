@@ -35,10 +35,27 @@ interface Demand {
   municipes: {
     name: string;
     phone: string;
+    demandCount: number;
   };
 }
 
-interface Pagination {
+const formatName = (name: string) => {
+  if (!name) return '';
+  const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
+  return name
+    .toLowerCase()
+    .split(' ')
+    .filter(word => word.length > 0)
+    .map((word, index) => {
+      if (prepositions.includes(word) && index !== 0) {
+        return word;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+};
+
+export default function Demands() {
   page: number;
   limit: number;
   total: number;
@@ -293,7 +310,7 @@ export default function Demands() {
 
           <select
             className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
-            value={pagination.limit}
+            value={pagination.limit === 10000 ? 'all' : pagination.limit}
             onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
           >
             <option value="25">25 / pág</option>
@@ -320,7 +337,12 @@ export default function Demands() {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h4 className="font-bold text-slate-900 flex items-center gap-2">
-                    {demand.municipes.name}
+                    {formatName(demand.municipes.name)}
+                    {demand.municipes.demandCount > 0 && (
+                      <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-md">
+                        {demand.municipes.demandCount}
+                      </span>
+                    )}
                     {demand.demandas.precisaRetorno && (
                       <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">EQUIPE</span>
                     )}
@@ -381,7 +403,12 @@ export default function Demands() {
                 >
                   <td className="pl-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{demand.municipes.name}</span>
+                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{formatName(demand.municipes.name)}</span>
+                      {demand.municipes.demandCount > 0 && (
+                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-md">
+                          {demand.municipes.demandCount}
+                        </span>
+                      )}
                       {demand.demandas.precisaRetorno && (
                         <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">EQUIPE</span>
                       )}
