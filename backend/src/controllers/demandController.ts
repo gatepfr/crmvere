@@ -307,7 +307,7 @@ export const createCategory = async (req: Request, res: Response) => {
 };
 
 export const deleteCategory = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const tenantId = req.user?.tenantId;
 
   if (req.user?.role !== 'admin' && req.user?.role !== 'vereador') {
