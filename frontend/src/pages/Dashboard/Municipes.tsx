@@ -587,7 +587,7 @@ export default function Municipes() {
 
           <select
             className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
-            value={pagination.limit}
+            value={pagination.limit === 10000 ? 'all' : pagination.limit}
             onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
           >
             <option value="25">25 / pág</option>
