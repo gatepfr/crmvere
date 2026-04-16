@@ -9,10 +9,18 @@ import {
   RefreshCw,
   TrendingUp,
   School,
-  Map as MapIcon
+  Map as MapIcon,
+  PieChart as PieIcon,
+  Activity
 } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
+} from 'recharts';
+
+const COLORS = ['#2563eb', '#db2777', '#059669', '#d97706', '#7c3aed', '#4b5563'];
 
 // Componente para ajustar o zoom do mapa quando os dados carregarem
 function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
@@ -348,6 +356,79 @@ export default function Eleicoes() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Perfil Demográfico */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gênero e Escolaridade */}
+        <div className="space-y-6">
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2 mb-6">
+              <PieIcon size={16} className="text-pink-500" />
+              Distribuição por Gênero
+            </h3>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data?.perfil?.genero}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    nameKey="label"
+                    label
+                  >
+                    {data?.perfil?.genero?.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2 mb-6">
+              <Activity size={16} className="text-emerald-500" />
+              Nível de Escolaridade
+            </h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data?.perfil?.escolaridade?.slice(0, 6)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="label" type="category" width={150} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} />
+                  <Bar dataKey="value" fill="#059669" radius={[0, 4, 4, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Faixa Etária */}
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+          <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2 mb-6">
+            <TrendingUp size={16} className="text-blue-600" />
+            Perfil por Faixa Etária
+          </h3>
+          <div className="h-[600px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data?.perfil?.idade} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <XAxis type="number" hide />
+                <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} />
+                <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} barSize={15} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
