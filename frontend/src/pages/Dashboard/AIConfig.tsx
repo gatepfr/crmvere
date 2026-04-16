@@ -1,131 +1,187 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import { Bot, Cpu, Zap, Brain, CheckCircle2, Loader2 } from 'lucide-react';
+import { 
+  Bot, Brain, CheckCircle2, Loader2, Zap, 
+  FileText, Upload, Trash2, FileIcon, Shield,
+  Database
+} from 'lucide-react';
 
-const providers = [
-  { id: 'gemini', name: 'Google Gemini', icon: Bot, color: 'text-blue-600', models: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'] },
-  { id: 'openai', name: 'OpenAI (ChatGPT)', icon: Brain, color: 'text-green-600', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
-  { id: 'anthropic', name: 'Anthropic (Claude)', icon: Cpu, color: 'text-orange-600', models: ['claude-3-5-sonnet-20240620', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'] },
-  { id: 'groq', name: 'Groq (Ultra Rápido)', icon: Zap, color: 'text-purple-600', models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'] },
-  { 
-    id: 'openrouter', 
-    name: 'OpenRouter', 
-    icon: Zap, 
-    color: 'text-indigo-600', 
-    models: [
-      'openai/gpt-4o', 
-      'openai/gpt-4o-mini', 
-      'anthropic/claude-3.5-sonnet', 
-      'anthropic/claude-3-haiku',
-      'google/gemini-pro-1.5',
-      'google/gemini-flash-1.5',
-      'meta-llama/llama-3.1-405b-instruct',
-      'meta-llama/llama-3.1-70b-instruct',
-      'meta-llama/llama-3.1-8b-instruct',
-      'deepseek/deepseek-chat',
-      'mistralai/pixtral-12b-2409',
-      'qwen/qwen-2.5-72b-instruct'
-    ] 
-  },
-  { id: 'custom', name: 'Custom IA', icon: Cpu, color: 'text-slate-600', models: [] },
-];
+interface Document {
+  id: string;
+  fileName: string;
+  fileType: string;
+  createdAt: string;
+}
 
 export default function AIConfig() {
-  const [config, setConfig] = useState({ 
-    systemPrompt: '' 
-  });
+  const [activeTab, setActiveTab] = useState<'personality' | 'knowledge'>('personality');
+  const [config, setConfig] = useState({ systemPrompt: '' });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  useEffect(() => {
+  // Knowledge Base States
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchConfig = useCallback(() => {
+    setFetching(true);
     api.get('/config/me')
-      .then(res => {
-        setConfig({
-          systemPrompt: res.data.systemPrompt || '',
-        });
-      })
-      .catch(err => console.error('Erro ao carregar config:', err))
+      .then(res => setConfig({ systemPrompt: res.data.systemPrompt || '' }))
+      .catch(err => console.error(err))
       .finally(() => setFetching(false));
   }, []);
 
-  const handleSave = async () => {
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const response = await api.get('/knowledge');
+      setDocuments(response.data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  useEffect(() => {
+    fetchConfig();
+    fetchDocuments();
+  }, [fetchConfig, fetchDocuments]);
+
+  const handleSaveConfig = async () => {
     setLoading(true);
     try {
       await api.patch('/config/update', config);
-      alert('Personalidade da IA salva com sucesso!');
-    } catch (err) {
-      alert('Falha ao salvar configuração.');
-    } finally {
-      setLoading(false);
-    }
+      alert('Personalidade da IA salva!');
+    } catch (err) { alert('Falha ao salvar'); } finally { setLoading(false); }
   };
 
-  if (fetching) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      await api.post('/knowledge/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      fetchDocuments();
+    } catch (err: any) { setError(err.response?.data?.error || 'Falha no upload'); } finally { setUploading(false); }
+  };
+
+  const handleDeleteDoc = async (id: string) => {
+    if (!confirm('Excluir documento?')) return;
+    try {
+      await api.delete(`/knowledge/${id}`);
+      setDocuments(docs => docs.filter(d => d.id !== id));
+    } catch (err) { alert('Falha ao excluir'); }
+  };
+
+  if (fetching) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-700">
       <header>
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Personalidade da IA</h2>
-        <p className="text-slate-500 mt-2">Defina como a inteligência artificial deve se comportar ao atender os cidadãos do seu gabinete.</p>
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+          <Bot className="text-blue-600" size={32} />
+          Inteligência do Gabinete
+        </h1>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Treine sua IA para atender melhor os munícipes</p>
       </header>
-      
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="font-bold text-slate-800 flex items-center text-lg">
-            <Brain className="mr-2 text-blue-600" />
-            Prompt de Sistema (Instruções de Comportamento)
-          </h3>
-        </div>
-        
-        <div className="p-8 space-y-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-slate-700">Como a IA deve agir?</label>
-            <textarea 
-              rows={12}
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white font-medium text-slate-700"
-              value={config.systemPrompt}
-              onChange={e => setConfig({...config, systemPrompt: e.target.value})}
-              placeholder="Ex: Você é o assistente virtual do Vereador João Silva. Sua função é receber demandas de cidadãos, ser cordial e extrair a categoria da solicitação (Saúde, Infraestrutura, etc)."
-            />
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                <h4 className="text-xs font-black text-blue-700 uppercase mb-2 flex items-center">
-                  <CheckCircle2 size={14} className="mr-1" /> O que incluir:
-                </h4>
-                <ul className="text-xs text-blue-600 space-y-1 font-medium">
-                  <li>• Seu nome e cargo no gabinete</li>
-                  <li>• Tom de voz (Ex: Formal, Amigável, Direto)</li>
-                  <li>• Regras de encaminhamento de demandas</li>
-                </ul>
-              </div>
-              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                <h4 className="text-xs font-black text-amber-700 uppercase mb-2 flex items-center">
-                  <Zap size={14} className="mr-1" /> Dica de Ouro:
-                </h4>
-                <p className="text-xs text-amber-600 font-medium">
-                  Quanto mais detalhes você der sobre a sua atuação legislativa, melhor a IA responderá em seu nome.
-                </p>
+
+      {/* Tabs */}
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
+        <button onClick={() => setActiveTab('personality')} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'personality' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+          <Brain size={14} /> Personalidade
+        </button>
+        <button onClick={() => setActiveTab('knowledge')} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'knowledge' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+          <Database size={14} /> Base de Dados (Treinamento)
+        </button>
+      </div>
+
+      <div className="min-h-[500px]">
+        {/* PERSONALITY TAB */}
+        {activeTab === 'personality' && (
+          <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 animate-in slide-in-from-left-4 duration-300">
+            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2 mb-8">
+              <Shield size={20} className="text-blue-600" />
+              Instruções de Comportamento
+            </h3>
+            <div className="space-y-6 max-w-4xl">
+              <textarea 
+                rows={12}
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-3xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-slate-700"
+                value={config.systemPrompt}
+                onChange={e => setConfig({...config, systemPrompt: e.target.value})}
+                placeholder="Ex: Você é o assistente virtual do Vereador..."
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100">
+                  <h4 className="text-[10px] font-black text-blue-700 uppercase mb-3 flex items-center gap-2">
+                    <CheckCircle2 size={14} /> Sugestões de Escrita
+                  </h4>
+                  <ul className="text-xs text-blue-600 space-y-2 font-bold opacity-80 uppercase tracking-tighter">
+                    <li>• Identifique o Verêador e o Município</li>
+                    <li>• Defina se o tom é formal ou amigável</li>
+                    <li>• Liste as áreas de atuação principal</li>
+                  </ul>
+                </div>
+                <div className="flex items-end justify-end">
+                  <button onClick={handleSaveConfig} disabled={loading} className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">
+                    {loading ? 'Salvando...' : 'SALVAR ALTERAÇÕES'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          <div className="pt-6 border-t border-slate-100 flex justify-end">
-            <button 
-              onClick={handleSave}
-              disabled={loading}
-              className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 flex items-center shadow-lg shadow-blue-500/20 active:scale-95"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-                  Salvando...
-                </>
-              ) : 'Salvar Personalidade'}
-            </button>
+        {/* KNOWLEDGE TAB */}
+        {activeTab === 'knowledge' && (
+          <div className="space-y-8 animate-in slide-in-from-left-4 duration-300">
+            <div className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-slate-100 text-center">
+              <div className="max-w-xl mx-auto space-y-6">
+                <div className="relative group border-2 border-dashed border-slate-200 rounded-[2rem] p-12 hover:border-blue-500 transition-all cursor-pointer">
+                  <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.txt,.docx" />
+                  <div className="flex flex-col items-center">
+                    {uploading ? <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" /> : <Upload className="h-12 w-12 text-slate-300 group-hover:text-blue-600 mb-4 transition-all" />}
+                    <h3 className="text-lg font-black text-slate-700 uppercase tracking-tighter">{uploading ? 'Processando...' : 'Carregar Documentos'}</h3>
+                    <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">PDF, TXT ou DOCX (Leis e Decretos)</p>
+                  </div>
+                </div>
+                {error && <p className="text-red-500 text-[10px] font-black uppercase">{error}</p>}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+              <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest flex items-center gap-2">
+                  <FileText size={16} className="text-blue-600" /> Documentos de Referência
+                </h3>
+                <span className="px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-black text-slate-400">{documents.length} ARQUIVOS</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <tbody className="divide-y divide-slate-50">
+                    {documents.map((doc) => (
+                      <tr key={doc.id} className="hover:bg-slate-50 transition-colors group">
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600"><FileIcon size={18} /></div>
+                            <span className="font-bold text-slate-800 text-sm">{doc.fileName}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <button onClick={() => handleDeleteDoc(doc.id)} className="p-2 text-slate-300 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {documents.length === 0 && (
+                      <tr><td className="px-8 py-10 text-center text-slate-400 font-bold">Nenhum documento para treinamento ainda.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
-

@@ -212,10 +212,31 @@ export const updateAtendimento = async (req: Request, res: Response) => {
 
 export const listCategories = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
   try {
-    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId!));
+    let cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    
+    // Se não houver categorias, cria as padrões automaticamente
+    if (cats.length === 0) {
+      const defs = [
+        { name: 'SAÚDE', color: '#db2777', icon: 'Activity' },
+        { name: 'INFRAESTRUTURA', color: '#2563eb', icon: 'Hammer' },
+        { name: 'SEGURANÇA', color: '#dc2626', icon: 'Shield' },
+        { name: 'EDUCAÇÃO', color: '#7c3aed', icon: 'GraduationCap' },
+        { name: 'FUNC. PÚBLICO', color: '#ea580c', icon: 'Briefcase' },
+        { name: 'OUTRO', color: '#4b5563', icon: 'Tag' }
+      ];
+      for (const c of defs) {
+        await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
+      }
+      cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    }
+    
     res.json(cats);
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+  } catch (error) {
+    res.status(500).json({ error: 'Failed' });
+  }
 };
 
 export const createCategory = async (req: Request, res: Response) => {
