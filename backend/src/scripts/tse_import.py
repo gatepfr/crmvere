@@ -10,6 +10,8 @@ import io
 import shutil
 import unicodedata
 from datetime import datetime
+import time
+import urllib.parse
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -72,6 +74,27 @@ def clean_tse_value(text):
     }
     return mapping.get(text, text)
 
+def geocode_address(nome, endereco, bairro, cidade, uf):
+    query = f"{nome}, {endereco}, {bairro}, {cidade} - {uf}, Brasil"
+    url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query)}&format=json&limit=1"
+    try:
+        headers = {'User-Agent': 'CRM-Vereador-Geocode/1.0'}
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
+        if data:
+            return data[0]['lat'], data[0]['lon']
+        
+        # Tentativa simples
+        query_simple = f"{endereco}, {cidade} - {uf}, Brasil"
+        url_simple = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(query_simple)}&format=json&limit=1"
+        response = requests.get(url_simple, headers=headers, timeout=10)
+        data_simple = response.json()
+        if data_simple:
+            return data_simple[0]['lat'], data_simple[0]['lon']
+    except:
+        pass
+    return None, None
+
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
@@ -95,6 +118,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         files = [f for f in os.listdir(tmp_dir) if f.lower().endswith('.csv') and 'consulta_cand' in f.lower()]
         found_candidato = False
         cd_municipio_candidato = None
+        nm_municipio_real = ""
 
         for file in files:
             df = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str, on_bad_lines='skip', low_memory=False)
@@ -103,7 +127,6 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
             cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['SG', 'UE']) or find_column(df.columns, ['CD', 'UE'])
             
-            # Prioriza a situação final (Eleito/Suplente) se disponível, senão pega a de candidatura (Deferido)
             sit_col = find_column(df.columns, ['DS', 'SITUACAO', 'TOTALIZACAO']) or \
                       find_column(df.columns, ['DS', 'SIT', 'TOT']) or \
                       find_column(df.columns, ['DS', 'SITUACAO', 'CANDIDATURA']) or \
@@ -118,27 +141,25 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                 if not cand.empty:
                     c = cand.iloc[0]
                     cd_municipio_candidato = normalize_code(c[cd_mun_col])
-                    
-                    # Limpa siglas como #NE# e traduz para texto amigável
+                    nm_municipio_real = c[city_col]
                     status_limpo = clean_tse_value(c.get(sit_col, "NÃO INFORMADO"))
                     
                     cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
                     cur.execute("""
                         INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (tenant_id, ano, c[name_col], c[num_col], c[part_col], cd_municipio_candidato, c[city_col], status_limpo))
+                    """, (tenant_id, ano, c[name_col], c[num_col], c[part_col], cd_municipio_candidato, nm_municipio_real, status_limpo))
                     found_candidato = True
                     break
 
         if not found_candidato:
-            report_progress(tenant_id, "Candidato não encontrado no município informado.", 0)
+            report_progress(tenant_id, "Candidato não encontrado.", 0)
             return
 
         # 2. Locais (Bairros)
-        report_progress(tenant_id, "Minerando Bairros...", 30)
+        report_progress(tenant_id, "Minerando Bairros e Coordenadas...", 30)
         for f in os.listdir(tmp_dir): os.remove(os.path.join(tmp_dir, f))
         
-        # Tenta URL antiga (2020) e nova (2024)
         urls_locais = [
             f"https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip",
             f"https://cdn.tse.jus.br/estatistica/sead/odsele/rede_locais_votacao/rede_locais_votacao_{ano}.zip"
@@ -149,7 +170,6 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             if download_and_extract(url, tmp_dir, uf):
                 locais_baixados = True
                 break
-            # Tenta também a versão com UF no nome do ZIP caso a global falhe
             if download_and_extract(url.replace(".zip", f"_{uf}.zip"), tmp_dir):
                 locais_baixados = True
                 break
@@ -172,28 +192,29 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     locais = df_loc[df_loc['CITY_NORM'] == municipio_norm].copy()
 
                     if not locais.empty:
-                        # GARANTE QUE CADA LOCAL DE VOTAÇÃO SEJA ÚNICO (Remove duplicatas de seções)
                         locais = locais.drop_duplicates(subset=[c_code, c_zona, c_local])
+                        total_loc = len(locais)
+                        processed_loc = 0
 
-                        loc_data = []
                         for _, r in locais.iterrows():
+                            processed_loc += 1
+                            if processed_loc % 5 == 0:
+                                report_progress(tenant_id, f"Geocodificando Escolas ({processed_loc}/{total_loc})...", 30 + int((processed_loc/total_loc)*25))
+                            
+                            lat, lng = geocode_address(r.get(c_name_loc, ''), r.get(c_end, ''), r.get(c_bairro, ''), nm_municipio_real, uf)
+                            time.sleep(1) # Respeita limite Nominatim
 
-                            loc_data.append((
-                                ano, 
-                                normalize_code(r[c_code]), 
-                                safe_int(r.get(c_zona, 0)), 
-                                safe_int(r.get(c_local, 0)), 
-                                r.get(c_name_loc, 'SEM NOME'), 
-                                r.get(c_end, ''), 
-                                r.get(c_bairro, 'NÃO INFORMADO'), 
-                                r.get(c_cep, '')
-                            ))
-                        execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro, nr_cep) VALUES %s ON CONFLICT DO NOTHING", loc_data)
+                            cur.execute("""
+                                INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro, nr_cep, latitude, longitude)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ON CONFLICT DO NOTHING
+                            """, (ano, normalize_code(r[c_code]), safe_int(r.get(c_zona, 0)), safe_int(r.get(c_local, 0)), 
+                                  r.get(c_name_loc, 'SEM NOME'), r.get(c_end, ''), r.get(c_bairro, 'NÃO INFORMADO'), r.get(c_cep, ''), lat, lng))
+                            conn.commit()
 
         # 3. Votos
         report_progress(tenant_id, "Contabilizando Votos...", 60)
         for f in os.listdir(tmp_dir): os.remove(os.path.join(tmp_dir, f))
-        
         url_votos = f"https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_{ano}_{uf}.zip"
         if download_and_extract(url_votos, tmp_dir):
             cur.execute("DELETE FROM tse_votos_secao WHERE ano_eleicao = %s AND nr_candidato = %s AND cd_municipio = %s", (ano, nr_cand_str, cd_municipio_candidato))
@@ -211,27 +232,17 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                         c_qt_v = find_column(chunk.columns, ['QT', 'VOTOS'])
                         
                         if not c_city_v or not c_cand_v: continue
-
                         chunk['CITY_NORM'] = chunk[c_city_v].apply(normalize_text)
                         filtered = chunk[(chunk['CITY_NORM'] == municipio_norm) & (chunk[c_cand_v] == nr_cand_str)]
                         if not filtered.empty:
-                            votos_data = []
-                            for _, r in filtered.iterrows():
-                                votos_data.append((
-                                    ano, 
-                                    normalize_code(r[c_code_v]), 
-                                    safe_int(r.get(c_zona_v, 0)), 
-                                    safe_int(r.get(c_secao_v, 0)), 
-                                    safe_int(r.get(c_local_v, 0)), 
-                                    r[c_cand_v], 
-                                    safe_int(r.get(c_qt_v, 0))
-                                ))
+                            votos_data = [(ano, normalize_code(r[c_code_v]), safe_int(r.get(c_zona_v, 0)), safe_int(r.get(c_secao_v, 0)), 
+                                           safe_int(r.get(c_local_v, 0)), r[c_cand_v], safe_int(r.get(c_qt_v, 0))) for _, r in filtered.iterrows()]
                             execute_values(cur, "INSERT INTO tse_votos_secao (ano_eleicao, cd_municipio, nr_zona, nr_secao, nr_local_votacao, nr_candidato, qt_votos) VALUES %s", votos_data)
+            conn.commit()
 
         # 4. Perfil Eleitorado
         report_progress(tenant_id, "Analisando Perfil Eleitoral...", 85)
         for f in os.listdir(tmp_dir): os.remove(os.path.join(tmp_dir, f))
-        
         url_perfil = f"https://cdn.tse.jus.br/estatistica/sead/odsele/perfil_eleitorado/perfil_eleitorado_{ano}.zip"
         if download_and_extract(url_perfil, tmp_dir):
             for file in os.listdir(tmp_dir):
@@ -248,31 +259,17 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                         c_qt_p = find_column(chunk.columns, ['QT', 'ELEITORES', 'PERFIL']) or find_column(chunk.columns, ['QT', 'ELEITORES'])
                         
                         if not c_city_p: continue
-
                         chunk['CITY_NORM'] = chunk[c_city_p].apply(normalize_text)
                         perfil_city = chunk[chunk['CITY_NORM'] == municipio_norm]
                         if not perfil_city.empty:
-                            perf_data = []
-                            for _, r in perfil_city.iterrows():
-                                perf_data.append((
-                                    ano, 
-                                    normalize_code(r[c_code_p]), 
-                                    r.get(c_bairro_p, 'NÃO INFORMADO'), 
-                                    r.get(c_gen, 'NÃO INFORMADO'), 
-                                    r.get(c_idade, 'NÃO INFORMADO'), 
-                                    r.get(c_esc, 'NÃO INFORMADO'), 
-                                    safe_int(r.get(c_qt_p, 0))
-                                ))
-                            execute_values(cur, """
-                                INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) 
-                                VALUES %s
-                            """, perf_data)
+                            perf_data = [(ano, normalize_code(r[c_code_p]), r.get(c_bairro_p, 'NÃO INFORMADO'), r.get(c_gen, 'NÃO INFORMADO'), 
+                                          r.get(c_idade, 'NÃO INFORMADO'), r.get(c_esc, 'NÃO INFORMADO'), safe_int(r.get(c_qt_p, 0))) for _, r in perfil_city.iterrows()]
+                            execute_values(cur, "INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) VALUES %s", perf_data)
+            conn.commit()
 
-        conn.commit()
         report_progress(tenant_id, "Concluído!", 100)
     except Exception as e:
         if conn: conn.rollback()
-        print(f"ERRO: {e}")
         import traceback
         traceback.print_exc()
         report_progress(tenant_id, f"Falha nos dados: {str(e)}", 0)
@@ -281,7 +278,4 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 6:
-        print("Uso: python tse_import.py <ano> <uf> <municipio> <nr_candidato> <tenant_id>")
-        sys.exit(1)
     process_import(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
