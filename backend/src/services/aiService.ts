@@ -210,22 +210,24 @@ export async function processDemand(
 
     console.log(`[AI SERVICE] Response received (Tokens used: ${usage.total_tokens})`);
 
-    // Try to extract JSON from |||JSON||| delimiters first
+    // Extração robusta de JSON
     let cleanJson = "";
-    const delimiterMatch = responseText.match(/\|\|\|JSON\|\|\|([\s\S]*?)\|\|\|JSON\|\|\|/);
     
+    // 1. Tentar delimitadores customizados |||JSON|||
+    const delimiterMatch = responseText.match(/\|\|\|JSON\|\|\|([\s\S]*?)\|\|\|JSON\|\|\|/);
     if (delimiterMatch && delimiterMatch[1]) {
       cleanJson = delimiterMatch[1].trim();
     } else {
-      // Fallback: Try to find JSON block in markdown format
+      // 2. Tentar blocos de markdown ```json ou ```
       const markdownMatch = responseText.match(/```json([\s\S]*?)```/) || responseText.match(/```([\s\S]*?)```/);
       if (markdownMatch && markdownMatch[1]) {
         cleanJson = markdownMatch[1].trim();
       } else {
-        // Last resort: Try to find anything that looks like a JSON object
-        const objectMatch = responseText.match(/\{[\s\S]*\}/);
-        if (objectMatch) {
-          cleanJson = objectMatch[0].trim();
+        // 3. Pegar tudo entre a primeira { e a última }
+        const firstBrace = responseText.indexOf('{');
+        const lastBrace = responseText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          cleanJson = responseText.substring(firstBrace, lastBrace + 1).trim();
         }
       }
     }
@@ -235,15 +237,39 @@ export async function processDemand(
       throw new Error("Falha ao extrair JSON da resposta da IA");
     }
 
+    // LIMPEZA ADICIONAL: Remove quebras de linha literais que quebram o JSON.parse
+    // Mas mantém os \n que são strings de escape.
+    const sanitizeJson = (str: string) => {
+      return str
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove caracteres de controle invisíveis
+        .replace(/\n/g, " ") // Troca quebras de linha reais por espaços
+        .replace(/\r/g, " ")
+        .replace(/\t/g, " ");
+    };
+
     try {
+      // Tentativa 1: Parse direto (mais rápido)
       const parsedData = JSON.parse(cleanJson);
-      return {
-        data: parsedData,
-        usage: usage
-      };
+      return { data: parsedData, usage };
     } catch (parseError) {
-      console.error("[AI SERVICE] Parse Error on JSON:", cleanJson);
-      throw new Error("Falha ao processar JSON da IA: Formato inválido");
+      try {
+        // Tentativa 2: Parse higienizado (para Llama/Groq)
+        console.log("[AI SERVICE] Tentando parse higienizado...");
+        // Regex complexa para limpar apenas o que está FORA das aspas é difícil, 
+        // então vamos tentar uma abordagem de "limpeza de escape"
+        const extremeClean = cleanJson
+          .replace(/\n/g, "\\n") // Transforma quebras reais em \n de escape
+          .replace(/\r/g, "")
+          .replace(/\t/g, " ");
+          
+        // Mas a IA costuma mandar quebras reais dentro das strings. 
+        // Vamos tentar o parse mais tolerante:
+        const parsedData = JSON.parse(cleanJson.replace(/\n/g, "\\n").replace(/\r/g, ""));
+        return { data: parsedData, usage };
+      } catch (secondError) {
+        console.error("[AI SERVICE] Erro persistente no JSON:", cleanJson);
+        throw new Error("Falha ao processar JSON da IA: Formato inválido");
+      }
     }
 
   } catch (error) {
