@@ -57,7 +57,7 @@ router.get('/status', async (req, res) => {
 });
 
 /**
- * Retorna os dados para o Dashboard (Versão Robusta)
+ * Retorna os dados para o Dashboard (Versão de Alta Tolerância)
  */
 router.get('/resumo', async (req, res) => {
   const tenantId = req.user?.tenantId;
@@ -67,29 +67,43 @@ router.get('/resumo', async (req, res) => {
     const [candidato] = await db.select().from(tseCandidatos).where(eq(tseCandidatos.tenantId, tenantId)).limit(1);
     if (!candidato) return res.json({ setup_required: true });
 
-    // Consulta direta nas tabelas em vez de depender da View (mais seguro para v1.0)
+    // Consulta robusta: Tenta somar votos mesmo que o local/bairro não esteja mapeado
     const stats = await db.execute(sql`
       SELECT 
-          l.nm_bairro,
+          COALESCE(l.nm_bairro, 'NÃO MAPEADO') as nm_bairro,
           SUM(v.qt_votos) as total_votos
       FROM tse_votos_secao v
-      JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+      LEFT JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
         AND v.cd_municipio = l.cd_municipio 
         AND v.ano_eleicao = l.ano_eleicao
       WHERE v.nr_candidato = ${candidato.nrCandidato}
-      GROUP BY l.nm_bairro
+      GROUP BY 1
       ORDER BY total_votos DESC
-      LIMIT 50
+      LIMIT 100
     `);
 
+    // Busca o total real de votos direto na tabela de votos (sem joins) para o card de resumo
+    const totalVotosResult = await db.execute(sql`
+      SELECT SUM(qt_votos) as total FROM tse_votos_secao WHERE nr_candidato = ${candidato.nrCandidato}
+    `);
+
+    const totalVotos = totalVotosResult.rows[0]?.total || 0;
+
+    // Se achou o candidato mas não achou votos, pode ser erro de importação
+    if (totalVotos == 0 && candidato) {
+        console.warn(`[ELEICOES] Candidato ${candidato.nmCandidato} sem votos no banco.`);
+    }
+
     res.json({
-      candidato,
+      candidato: {
+          ...candidato,
+          qtVotosTotal: totalVotos
+      },
       bairros: stats.rows || []
     });
   } catch (error: any) {
     console.error('[ELEICOES ERROR]', error.message);
-    // Retorna vazio em vez de erro 500 para evitar logout
-    res.json({ candidato: null, bairros: [], error: 'Dados ainda não processados.' });
+    res.json({ candidato: null, bairros: [], error: 'Erro ao processar dados.' });
   }
 });
 
