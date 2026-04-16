@@ -322,6 +322,31 @@ export const deleteCategory = async (req: Request, res: Response) => {
   }
 };
 
+export const seedCategories = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
+
+  const defaultCategories = [
+    { name: 'SAÚDE', color: '#db2777', icon: 'Activity' },
+    { name: 'INFRAESTRUTURA', color: '#2563eb', icon: 'Hammer' },
+    { name: 'SEGURANÇA', color: '#dc2626', icon: 'Shield' },
+    { name: 'EDUCAÇÃO', color: '#7c3aed', icon: 'GraduationCap' },
+    { name: 'FUNC. PÚBLICO', color: '#ea580c', icon: 'Briefcase' },
+    { name: 'OUTRO', color: '#4b5563', icon: 'Tag' }
+  ];
+
+  try {
+    for (const cat of defaultCategories) {
+      await db.insert(demandCategories)
+        .values({ ...cat, tenantId })
+        .onConflictDoNothing();
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to seed categories' });
+  }
+};
+
 export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const { name, phone, cep, bairro, birthDate } = req.body;

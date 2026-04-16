@@ -13,7 +13,8 @@ import {
   importMunicipes,
   listCategories,
   createCategory,
-  deleteCategory
+  deleteCategory,
+  seedCategories
 } from '../controllers/demandController';
 import multer from 'multer';
 
@@ -26,6 +27,7 @@ router.use(checkTenant);
 router.get('/', listDemands);
 router.get('/categories', listCategories);
 router.post('/categories', createCategory);
+router.post('/categories/seed', seedCategories);
 router.delete('/categories/:id', deleteCategory);
 router.get('/municipes/list', listMunicipes);
 router.post('/municipes', createMunicipe);

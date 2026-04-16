@@ -420,9 +420,18 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
 
           {/* Manual Chat / Resposta Direta */}
           <div className="pt-6 border-t border-slate-100 space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold">
-              <Phone size={18} className="text-green-600" />
-              <h4>Responder pelo WhatsApp</h4>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-800 font-bold">
+                <Phone size={18} className="text-green-600" />
+                <h4>Responder pelo WhatsApp</h4>
+              </div>
+              <button 
+                onClick={handleUpdateLegislativo}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+              >
+                <ClipboardList size={14} />
+                Criar Demanda Oficial
+              </button>
             </div>
             <div className="flex flex-col gap-3">
               <textarea
