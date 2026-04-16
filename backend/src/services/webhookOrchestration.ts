@@ -6,9 +6,6 @@ import { processDemand } from './aiService';
 import { EvolutionService } from './evolutionService';
 import { normalizePhone } from '../utils/phoneUtils';
 
-/**
- * Serviço responsável por orquestrar o fluxo de mensagens vindas do WhatsApp
- */
 export async function orchestrateWebhook(payload: any, tenantId: string) {
   try {
     const normalized = normalizeEvolution(payload, tenantId);
@@ -78,7 +75,6 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const aiResult = resultIA.data;
     const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
-    // SALVAMENTO DA DEMANDA (Corrigido: removido o campo 'bairro' que não pertence a esta tabela)
     if (existingDemanda) {
       await db.update(demandas).set({
         resumoIa: updatedHistory,
