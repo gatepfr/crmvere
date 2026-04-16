@@ -199,7 +199,7 @@ export const updateDemand = async (req: Request, res: Response) => {
 };
 
 export const updateAtendimento = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const { precisaRetorno } = req.body;
   const tenantId = req.user?.tenantId;
   try {

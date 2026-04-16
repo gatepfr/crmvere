@@ -173,7 +173,7 @@ router.post('/send', async (req, res) => {
     await evo.sendMessage(tenant.whatsappInstanceId, demand.municipe.phone, message);
 
     await db.update(demandas).set({ 
-        resumoIa: `${demand.demand.resumoIa}\n\nGabinete: ${message}`,
+        descricao: `${demand.demand.descricao}\n\nGabinete: ${message}`,
         updatedAt: new Date() 
     }).where(eq(demandas.id, demandId));
 

@@ -53,7 +53,7 @@ async function seedTestData() {
         categoria: data.categoria,
         status: "nova",
         prioridade: Math.random() > 0.5 ? "alta" : "media",
-        resumoIa: data.resumo
+        descricao: data.resumo
       });
     }
 

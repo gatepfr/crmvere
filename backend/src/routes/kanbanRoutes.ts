@@ -27,7 +27,7 @@ router.get('/pending-demands', async (req, res) => {
 
     const list = await db.select({
       id: demandas.id,
-      resumoIa: demandas.resumoIa,
+      resumoIa: demandas.descricao,
       categoria: demandas.categoria,
       createdAt: demandas.createdAt,
       municipe: {
