@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import Tenants from './pages/SuperAdmin/Tenants';
 import Demands from './pages/Dashboard/Demands';
+import Legislativo from './pages/Dashboard/Legislativo';
+import Categories from './pages/Dashboard/Categories';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
 import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
@@ -87,6 +89,8 @@ function AppContent() {
             <Route path="eleicoes" element={<Eleicoes />} />
             <Route path="ai-lab" element={<IALab />} />
             <Route path="demands" element={<Demands />} />
+            <Route path="legislativo" element={<Legislativo />} />
+            <Route path="categories" element={<Categories />} />
             <Route path="map" element={<VoterMap />} />
             <Route path="cabinet" element={<CabinetConfig />} />
             <Route path="kanban" element={<KanbanLeads />} />

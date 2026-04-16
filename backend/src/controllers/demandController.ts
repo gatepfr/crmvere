@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes, systemConfigs, tenants } from '../db/schema';
+import { demandas, municipes, systemConfigs, tenants, demandCategories } from '../db/schema';
 import { eq, desc, and, sql, count, ilike, or } from 'drizzle-orm';
 import { normalizePhone } from '../utils/phoneUtils';
 import fs from 'fs';
@@ -243,7 +243,7 @@ export const getDemand = async (req: Request, res: Response) => {
 
 export const updateDemand = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { status, resumoIa, prioridade, categoria, precisaRetorno } = req.body;
+  const { status, resumoIa, prioridade, categoria, precisaRetorno, isLegislativo, numeroIndicacao, documentUrl } = req.body;
   const tenantId = req.user?.tenantId;
 
   try {
@@ -256,6 +256,12 @@ export const updateDemand = async (req: Request, res: Response) => {
     if (categoria) updateData.categoria = categoria;
     if (precisaRetorno !== undefined) updateData.precisaRetorno = precisaRetorno;
     if (resumoIa !== undefined) updateData.resumoIa = resumoIa;
+    
+    // Novos campos legislativos
+    if (isLegislativo !== undefined) updateData.isLegislativo = isLegislativo;
+    if (numeroIndicacao !== undefined) updateData.numeroIndicacao = numeroIndicacao;
+    if (documentUrl !== undefined) updateData.documentUrl = documentUrl;
+
     updateData.updatedAt = new Date();
 
     await db.update(demandas)
@@ -266,6 +272,53 @@ export const updateDemand = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error updating demand:', error);
     res.status(500).json({ error: 'Failed to update demand' });
+  }
+};
+
+// CATEGORIES CONTROLLERS
+export const listCategories = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  try {
+    const categories = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to list categories' });
+  }
+};
+
+export const createCategory = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const { name, color, icon } = req.body;
+
+  if (req.user?.role !== 'admin' && req.user?.role !== 'vereador') {
+    return res.status(403).json({ error: 'Apenas administradores podem criar categorias.' });
+  }
+
+  try {
+    const [newCategory] = await db.insert(demandCategories)
+      .values({ tenantId: tenantId!, name, color, icon })
+      .returning();
+    res.status(201).json(newCategory);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+};
+
+export const deleteCategory = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const tenantId = req.user?.tenantId;
+
+  if (req.user?.role !== 'admin' && req.user?.role !== 'vereador') {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  try {
+    await db.delete(demandCategories).where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId!)));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete category' });
   }
 };
 

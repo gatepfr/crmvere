@@ -10,7 +10,10 @@ import {
   createDemand, 
   listMunicipes,
   createMunicipe,
-  importMunicipes
+  importMunicipes,
+  listCategories,
+  createCategory,
+  deleteCategory
 } from '../controllers/demandController';
 import multer from 'multer';
 
@@ -21,6 +24,9 @@ router.use(authenticate);
 router.use(checkTenant);
 
 router.get('/', listDemands);
+router.get('/categories', listCategories);
+router.post('/categories', createCategory);
+router.delete('/categories/:id', deleteCategory);
 router.get('/municipes/list', listMunicipes);
 router.post('/municipes', createMunicipe);
 router.post('/municipes/import', upload.single('file'), importMunicipes);

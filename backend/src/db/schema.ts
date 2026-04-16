@@ -71,6 +71,16 @@ export const municipes = pgTable("municipes", {
   };
 });
 
+// Nova tabela para categorias personalizadas do gabinete
+export const demandCategories = pgTable("demand_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  color: varchar("color", { length: 20 }).default("#2563eb"),
+  icon: varchar("icon", { length: 50 }).default("Tag"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
 export const demandas = pgTable("demandas", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
@@ -84,6 +94,12 @@ export const demandas = pgTable("demandas", {
   prioridade: varchar("prioridade", { length: 255 }).notNull(),
   resumoIa: varchar("resumo_ia", { length: 10000 }).notNull(),
   precisaRetorno: boolean("precisa_retorno").default(false),
+  
+  // Novos campos para Indicação Legislativa
+  isLegislativo: boolean("is_legislative").default(false),
+  numeroIndicacao: varchar("numero_indicacao", { length: 50 }),
+  documentUrl: varchar("document_url", { length: 500 }),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

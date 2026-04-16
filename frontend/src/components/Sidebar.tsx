@@ -16,7 +16,9 @@ import {
   Layout as KanbanIcon,
   Calendar,
   Sparkles,
-  Zap
+  Zap,
+  ClipboardList,
+  Tags
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,9 +29,10 @@ export default function Sidebar() {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Inteligência Eleitoral', icon: Zap, path: '/dashboard/eleicoes' },
+    { name: 'Atendimento', icon: MessageSquare, path: '/dashboard/demands' },
+    { name: 'Demandas & Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
     { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda' },
     { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
-    { name: 'Demandas', icon: MessageSquare, path: '/dashboard/demands' },
     { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
     { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
     { name: 'Gabinete', icon: Building2, path: '/dashboard/cabinet' },
@@ -37,7 +40,10 @@ export default function Sidebar() {
     { name: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
     { name: 'Configuração IA', icon: Bot, path: '/dashboard/ai' },
     { name: 'Base de Dados', icon: Database, path: '/dashboard/knowledge' },
-    ...(user?.role !== 'assessor' ? [{ name: 'Equipe', icon: Users, path: '/dashboard/team' }] : []),
+    ...(user?.role !== 'assessor' ? [
+      { name: 'Categorias', icon: Tags, path: '/dashboard/categories' },
+      { name: 'Equipe', icon: Users, path: '/dashboard/team' }
+    ] : []),
     { name: 'Meu Perfil', icon: User, path: '/dashboard/profile' },
   ];
 
