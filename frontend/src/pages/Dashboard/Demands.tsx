@@ -10,15 +10,12 @@ import {
   ArrowUp, 
   ArrowDown, 
   Plus, 
-  AlertCircle, 
   Search, 
   Tag, 
   Clock,
   ChevronLeft,
   ChevronRight,
-  Phone,
-  Filter,
-  MoreVertical
+  Phone
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -30,6 +27,8 @@ interface Demand {
     status: string;
     prioridade: string;
     precisaRetorno: boolean;
+    isLegislativo: boolean;
+    numeroIndicacao: string | null;
     createdAt: string;
   };
   municipes: {
@@ -193,7 +192,7 @@ export default function Demands() {
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text('Relatório de Demandas - CRM do Verê', 14, 20);
+    doc.text('Relatório de Atendimentos - CRM do Verê', 14, 20);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
     
     const tableData = sortedDemands.map(d => [
@@ -212,7 +211,7 @@ export default function Demands() {
       headStyles: { fillColor: [30, 41, 59] }
     });
 
-    doc.save(`demandas-${new Date().getTime()}.pdf`);
+    doc.save(`atendimentos-${new Date().getTime()}.pdf`);
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -227,7 +226,7 @@ export default function Demands() {
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <ClipboardList className="text-blue-600" size={32} />
-            Demandas
+            Atendimento
           </h1>
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Gestão de atendimentos e solicitações</p>
         </div>
@@ -336,7 +335,7 @@ export default function Demands() {
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                  <h4 className="font-bold text-slate-900 flex items-center gap-2 flex-wrap">
                     {formatName(demand.municipes.name)}
                     {demand.municipes.demandCount > 0 && (
                       <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-md">
@@ -345,6 +344,9 @@ export default function Demands() {
                     )}
                     {demand.demandas.precisaRetorno && (
                       <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">EQUIPE</span>
+                    )}
+                    {demand.demandas.isLegislativo && (
+                      <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">INDICAÇÃO</span>
                     )}
                   </h4>
                   <p className="text-[10px] text-slate-400 font-bold uppercase">{formatPhone(demand.municipes.phone)}</p>
@@ -412,6 +414,9 @@ export default function Demands() {
                       {demand.demandas.precisaRetorno && (
                         <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">EQUIPE</span>
                       )}
+                      {demand.demandas.isLegislativo && (
+                        <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">INDICAÇÃO FEITA</span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4">
@@ -447,7 +452,7 @@ export default function Demands() {
         {/* Pagination */}
         <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {pagination.total} DEMANDAS • PÁGINA {pagination.page} DE {pagination.totalPages}
+            {pagination.total} REGISTROS • PÁGINA {pagination.page} DE {pagination.totalPages}
           </p>
           <div className="flex items-center gap-1">
             <button 
@@ -470,7 +475,7 @@ export default function Demands() {
         {sortedDemands.length === 0 && !loading && (
           <div className="p-20 text-center">
             <ClipboardList size={40} className="text-slate-200 mx-auto mb-3" />
-            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma demanda encontrada</h3>
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum registro encontrado</h3>
           </div>
         )}
       </div>

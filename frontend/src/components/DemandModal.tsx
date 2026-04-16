@@ -13,7 +13,9 @@ import {
   ChevronRight,
   Loader2,
   MapPin as MapIcon,
-  Trash2
+  Trash2,
+  ClipboardList,
+  ExternalLink
   } from 'lucide-react';
 
 interface DemandModalProps {
@@ -32,6 +34,19 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     bairro: demand.municipes.bairro || ''
   });
   const [displayPhone, setDisplayPhone] = useState('');
+  const [resumoIa, setResumoIa] = useState(demand.demandas.resumoIa);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingResumo, setIsEditingResumo] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [manualMessage, setManualMessage] = useState('');
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [moving, setMoving] = useState(false);
+
+  // Novos estados legislativos
+  const [isLegislativo, setIsLegislativo] = useState(demand.demandas.isLegislativo);
+  const [numeroIndicacao, setNumeroIndicacao] = useState(demand.demandas.numeroIndicacao || '');
+  const [documentUrl, setDocumentUrl] = useState(demand.demandas.documentUrl || '');
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
@@ -80,14 +95,22 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
     }
   };
 
-  const [resumoIa, setResumoIa] = useState(demand.demandas.resumoIa);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isEditingResumo, setIsEditingResumo] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [manualMessage, setManualMessage] = useState('');
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [moving, setMoving] = useState(false);
+  const handleUpdateLegislativo = async () => {
+    setLoading(true);
+    try {
+      await api.patch(`/demands/${demand.demandas.id}/status`, { 
+        isLegislativo, 
+        numeroIndicacao, 
+        documentUrl 
+      });
+      onUpdate();
+      alert('Status legislativo atualizado!');
+    } catch (err) {
+      alert('Falha ao atualizar dados legislativos.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Load campaigns to allow moving to kanban
@@ -162,29 +185,19 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
 
   const moveToKanban = async (campaignId: string) => {
     setMoving(true);
-    console.log(`[KANBAN] Attempting to move demand to campaign ${campaignId}`);
-    console.log(`[KANBAN] Municipe Data:`, demand.municipes);
-    
     try {
       if (!demand.municipes.id) {
         throw new Error('ID do munícipe não encontrado.');
       }
-
       const payload = {
         name: demand.municipes.name,
         phone: demand.municipes.phone,
         notes: `Demanda original: ${demand.demandas.resumoIa}`,
         municipeId: demand.municipes.id
       };
-
-      console.log(`[KANBAN] Sending payload:`, payload);
-
-      const response = await api.post(`/kanban/campaigns/${campaignId}/leads`, payload);
-      console.log(`[KANBAN] Success response:`, response.data);
-      
+      await api.post(`/kanban/campaigns/${campaignId}/leads`, payload);
       alert('Convertido em Lead com sucesso!');
     } catch (err: any) {
-      console.error('[KANBAN] Error moving to Kanban:', err);
       const errorMsg = err.response?.data?.error || err.message || 'Erro desconhecido';
       alert(`Falha ao mover para Kanban: ${errorMsg}`);
     } finally {
@@ -239,7 +252,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Detalhes da Demanda</h3>
+            <h3 className="text-xl font-bold text-slate-900">Detalhes do Atendimento</h3>
             <p className="text-xs text-slate-500 uppercase font-bold tracking-widest mt-1">
               PROTOCOLO: MUN-{new Date(demand.demandas.createdAt).getFullYear()}-{demand.demandas.id.slice(0, 5).toUpperCase()}
             </p>
@@ -351,6 +364,58 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Legislative Action */}
+          <div className="pt-6 border-t border-slate-100 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-800 font-bold">
+                <ClipboardList size={18} className="text-emerald-600" />
+                <h4>Indicação Legislativa</h4>
+              </div>
+              <button 
+                onClick={() => setIsLegislativo(!isLegislativo)}
+                className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                  isLegislativo ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {isLegislativo ? 'Indicação Feita' : 'Marcar como Indicação'}
+              </button>
+            </div>
+            
+            {isLegislativo && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase ml-1 mb-1">Nº da Indicação</label>
+                  <input 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold"
+                    placeholder="Ex: 123/2026"
+                    value={numeroIndicacao}
+                    onChange={e => setNumeroIndicacao(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase ml-1 mb-1">Link do Documento (PDF/Site)</label>
+                  <div className="relative">
+                    <ExternalLink size={14} className="absolute left-3 top-3 text-slate-400" />
+                    <input 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-bold"
+                      placeholder="https://..."
+                      value={documentUrl}
+                      onChange={e => setDocumentUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <button 
+                    onClick={handleUpdateLegislativo}
+                    className="px-6 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl text-xs font-black hover:bg-emerald-100 transition-all"
+                  >
+                    ATUALIZAR DADOS DA INDICAÇÃO
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Manual Chat / Resposta Direta */}
