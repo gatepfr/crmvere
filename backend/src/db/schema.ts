@@ -175,6 +175,8 @@ export const tseLocaisVotacao = pgTable("tse_locais_votacao", {
   nmBairro: varchar("nm_bairro", { length: 255 }),
   nrCep: varchar("nr_cep", { length: 20 }),
   qtEleitores: integer("qt_eleitores"),
+  latitude: varchar("latitude", { length: 50 }),
+  longitude: varchar("longitude", { length: 50 }),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 

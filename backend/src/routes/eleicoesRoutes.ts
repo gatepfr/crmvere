@@ -101,12 +101,32 @@ router.get('/resumo', async (req, res) => {
         console.warn(`[ELEICOES] Candidato ${candidato.nmCandidato} sem votos no banco.`);
     }
 
+    // Busca os pontos do mapa de calor (votos por local com coordenadas)
+    const mapaCalor = await db.execute(sql`
+      SELECT 
+          l.nm_local_votacao,
+          l.latitude,
+          l.longitude,
+          SUM(v.qt_votos) as total_votos
+      FROM tse_votos_secao v
+      JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+        AND v.nr_zona = l.nr_zona
+        AND v.cd_municipio = l.cd_municipio 
+        AND v.ano_eleicao = l.ano_eleicao
+      WHERE v.nr_candidato = ${candidato.nrCandidato}
+        AND v.cd_municipio = ${candidato.cdMunicipio}
+        AND v.ano_eleicao = ${candidato.anoEleicao}
+        AND l.latitude IS NOT NULL
+      GROUP BY 1, 2, 3
+    `);
+
     res.json({
       candidato: {
           ...candidato,
           qtVotosTotal: totalVotos
       },
-      bairros: stats.rows || []
+      bairros: stats.rows || [],
+      mapa: mapaCalor.rows || []
     });
   } catch (error: any) {
     console.error('[ELEICOES ERROR]', error.message);

@@ -2,20 +2,28 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import { 
   Zap, 
-  Search, 
   BarChart3, 
   MapPin, 
   Users, 
-  ChevronRight, 
   Loader2, 
-  AlertCircle, 
   RefreshCw,
   TrendingUp,
-  School
+  School,
+  Map as MapIcon
 } from 'lucide-react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Componente para ajustar o zoom do mapa quando os dados carregarem
+function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
+  const map = useMap();
+  map.setView(center, zoom);
+  return null;
+}
 
 interface ElectionConfig {
-  ano: string;
+...
+
   uf: string;
   municipio: string;
   nrCandidato: string;
@@ -234,6 +242,73 @@ export default function Eleicoes() {
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase">Situação TSE</p>
           <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">{data?.candidato?.dsSituacao || 'PENDENTE'}</h4>
+        </div>
+      </div>
+
+      {/* Mapa de Redutos */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+          <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">
+            <MapIcon size={16} className="text-blue-600" />
+            Mapa de Redutos (Calor)
+          </h3>
+          <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+            Intensidade por Votos
+          </span>
+        </div>
+        <div className="h-[400px] w-full relative">
+          {data?.mapa?.length > 0 ? (
+            <MapContainer 
+              center={[parseFloat(data.mapa[0].latitude), parseFloat(data.mapa[0].longitude)]} 
+              zoom={13} 
+              style={{ height: '100%', width: '100%' }}
+              scrollWheelZoom={false}
+            >
+              <ChangeView 
+                center={[parseFloat(data.mapa[0].latitude), parseFloat(data.mapa[0].longitude)]} 
+                zoom={13} 
+              />
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              {data.mapa.map((ponto: any, idx: number) => {
+                const lat = parseFloat(ponto.latitude);
+                const lng = parseFloat(ponto.longitude);
+                if (isNaN(lat) || isNaN(lng)) return null;
+
+                // Calcula o raio com base nos votos (mínimo 5, máximo 30)
+                const radius = Math.min(Math.max((ponto.total_votos / data.candidato.qtVotosTotal) * 300, 8), 40);
+
+                return (
+                  <CircleMarker
+                    key={idx}
+                    center={[lat, lng]}
+                    radius={radius}
+                    pathOptions={{
+                      fillColor: '#2563eb',
+                      color: '#1d4ed8',
+                      weight: 1,
+                      opacity: 0.8,
+                      fillOpacity: 0.4
+                    }}
+                  >
+                    <Popup>
+                      <div className="p-1">
+                        <p className="text-xs font-black text-slate-900 uppercase">{ponto.nm_local_votacao}</p>
+                        <p className="text-lg font-black text-blue-600">{ponto.total_votos} votos</p>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
+            </MapContainer>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 gap-3">
+              <MapPin size={32} className="text-slate-300" />
+              <p className="text-slate-400 font-bold text-sm">Aguardando coordenadas para gerar mapa...</p>
+            </div>
+          )}
         </div>
       </div>
 
