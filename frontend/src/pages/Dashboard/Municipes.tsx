@@ -413,7 +413,11 @@ export default function Municipes() {
     if (!editingMunicipe) return;
     setSaving(true);
     try {
-      await api.patch(`/demands/municipe/${editingMunicipe.id}`, editForm);
+      const payload = {
+        ...editForm,
+        birthDate: parseDateToISO(editForm.birthDate)
+      };
+      await api.patch(`/demands/municipe/${editingMunicipe.id}`, payload);
       loadMunicipes();
       setEditingMunicipe(null);
       alert('Dados atualizados com sucesso!');
@@ -651,7 +655,14 @@ export default function Municipes() {
                       {m.demandCount > 0 && <span className="text-xs font-black text-blue-600">({m.demandCount})</span>}
                       {isTodayBirthday(m.birthDate) && <span>🎂</span>}
                     </h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">{formatPhone(m.phone)}</p>
+                    <div className="flex flex-col mt-1 gap-0.5">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{formatPhone(m.phone)}</p>
+                      {m.birthDate && (
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1">
+                          Nasc: {formatDateDisplay(m.birthDate)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-1">
