@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
+import NewDemandModal from '../../components/NewDemandModal';
 import { 
   ClipboardList, 
   Search, 
@@ -12,7 +13,8 @@ import {
   ArrowUpDown,
   MapPin,
   Phone,
-  Tag
+  Tag,
+  Plus
 } from 'lucide-react';
 
 interface Demand {
@@ -35,13 +37,12 @@ export default function Legislativo() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [onlyLegislative, setOnlyLegislative] = useState(false);
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
   const loadDemands = useCallback(async () => {
     setLoading(true);
     try {
-      // Usamos a mesma rota de demandas, mas com filtros específicos se necessário
       const res = await api.get('/demands?limit=100');
-      // No frontend, filtramos ou mostramos todos conforme a nova lógica
       setDemands(res.data.data.map((d: any) => ({
         id: d.demandas.id,
         resumoIa: d.demandas.resumoIa,
@@ -116,12 +117,21 @@ export default function Legislativo() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
-      <header>
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-          <ClipboardList className="text-blue-600" size={32} />
-          Demandas & Indicações
-        </h1>
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Gestão Legislativa e Retorno ao Munícipe</p>
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <ClipboardList className="text-blue-600" size={32} />
+            Demandas & Indicações
+          </h1>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Gestão Legislativa e Retorno ao Munícipe</p>
+        </div>
+        <button 
+          onClick={() => setIsNewModalOpen(true)}
+          className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
+        >
+          <Plus size={20} />
+          ADICIONAR INDICAÇÃO
+        </button>
       </header>
 
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-3">
@@ -223,6 +233,12 @@ export default function Legislativo() {
           </table>
         </div>
       </div>
+      {isNewModalOpen && (
+        <NewDemandModal 
+          onClose={() => setIsNewModalOpen(false)} 
+          onUpdate={loadDemands} 
+        />
+      )}
     </div>
   );
 }

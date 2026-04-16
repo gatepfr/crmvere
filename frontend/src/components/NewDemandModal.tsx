@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api/client';
-import { X, Save, User, Phone, MapPin, Tag, AlertTriangle, AlignLeft } from 'lucide-react';
+import { X, Save, User, Phone, MapPin, Tag, AlertTriangle, Search, Loader2 } from 'lucide-react';
 
 interface NewDemandModalProps {
   onClose: () => void;
@@ -10,7 +10,12 @@ interface NewDemandModalProps {
 export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProps) {
   const [loading, setLoading] = useState(false);
   const [displayPhone, setDisplayPhone] = useState('');
+  const [searchMunicipe, setSearchMunicipe] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const [formData, setFormData] = useState({
+    municipeId: '',
     municipeName: '',
     municipePhone: '',
     municipeCep: '',
@@ -19,6 +24,45 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
     prioridade: 'media',
     resumoIa: ''
   });
+
+  const handleSearch = async (term: string) => {
+    setSearchMunicipe(term);
+    if (term.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const res = await api.get(`/demands/municipes/list?search=${term}&limit=5`);
+      setSearchResults(res.data.data || []);
+    } catch (err) {
+      console.error('Erro na busca');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const selectMunicipe = (m: any) => {
+    setFormData({
+      ...formData,
+      municipeId: m.id,
+      municipeName: m.name,
+      municipePhone: m.phone,
+      municipeBairro: m.bairro || '',
+      municipeCep: m.cep || ''
+    });
+    
+    // Formata o telefone para exibição
+    const raw = m.phone.replace(/\D/g, '');
+    const truncated = raw.startsWith('55') ? raw.slice(2) : raw;
+    let masked = truncated;
+    if (truncated.length > 2) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
+    if (truncated.length > 7) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
+    setDisplayPhone(masked);
+
+    setSearchResults([]);
+    setSearchMunicipe(m.name);
+  };
 
   const handleCepChange = async (value: string) => {
     const cep = value.replace(/\D/g, '').substring(0, 8);
@@ -38,20 +82,12 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
   };
 
   const handlePhoneChange = (value: string) => {
-    // Remove tudo que não é número
     const raw = value.replace(/\D/g, '');
-    
-    // Limita a 11 números (DDD + Número)
     const truncated = raw.slice(0, 11);
-    
-    // Aplica a máscara (XX) XXXXX-XXXX
     let masked = truncated;
     if (truncated.length > 2) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
     if (truncated.length > 7) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
-    
     setDisplayPhone(masked);
-    
-    // No estado real, salvamos com o prefixo 55
     if (truncated.length > 0) {
       setFormData({ ...formData, municipePhone: `55${truncated}` });
     } else {
@@ -83,11 +119,10 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        {/* Header */}
         <div className="bg-slate-900 p-6 flex justify-between items-center text-white">
           <div>
-            <h2 className="text-xl font-black">Nova Demanda Manual</h2>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Registro Interno do Gabinete</p>
+            <h2 className="text-xl font-black">Nova Demanda Oficial</h2>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Protocolo Manual do Gabinete</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl transition-colors">
             <X size={24} />
@@ -95,36 +130,55 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
-          {/* Dados do Munícipe */}
           <div className="space-y-4">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <User size={14} className="text-blue-500" />
               Informações do Munícipe
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                  placeholder="Nome do cidadão"
-                  value={formData.municipeName}
-                  onChange={e => setFormData({...formData, municipeName: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp (DDD + Número)</label>
+              <div className="relative">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Buscar ou Nome Completo</label>
                 <div className="relative">
                   <input
                     type="text"
                     required
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                    placeholder="(43) 99999-9999"
-                    value={displayPhone}
-                    onChange={e => handlePhoneChange(e.target.value)}
+                    placeholder="Pesquise por nome..."
+                    value={searchMunicipe}
+                    onChange={e => {
+                      handleSearch(e.target.value);
+                      setFormData({...formData, municipeName: e.target.value, municipeId: ''});
+                    }}
                   />
+                  {isSearching && <Loader2 className="absolute right-4 top-3.5 animate-spin text-blue-500" size={16} />}
+                  
+                  {searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 overflow-hidden">
+                      {searchResults.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => selectMunicipe(m)}
+                          className="w-full px-5 py-3 text-left hover:bg-blue-50 flex flex-col border-b border-slate-50 last:border-0"
+                        >
+                          <span className="font-bold text-slate-900 text-sm">{m.name}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{m.phone} - {m.bairro || 'Sem bairro'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp (DDD + Número)</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                  placeholder="(43) 99999-9999"
+                  value={displayPhone}
+                  onChange={e => handlePhoneChange(e.target.value)}
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -156,7 +210,6 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
 
           <hr className="border-slate-100" />
 
-          {/* Dados da Demanda */}
           <div className="space-y-4">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Tag size={14} className="text-purple-500" />
@@ -192,7 +245,7 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Resumo do Atendimento</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Assunto / Descrição</label>
               <textarea
                 required
                 rows={4}
@@ -204,7 +257,6 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
             </div>
           </div>
 
-          {/* Botões */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"

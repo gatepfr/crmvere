@@ -394,6 +394,7 @@ export default function Demands() {
                     Data <SortIcon field="date" />
                   </div>
                 </th>
+                <th className="px-4 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -401,9 +402,8 @@ export default function Demands() {
                 <tr 
                   key={demand.demandas.id} 
                   className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${demand.demandas.precisaRetorno ? 'bg-red-50/30' : ''}`}
-                  onClick={() => handleOpenDemand(demand.demandas.id)}
                 >
-                  <td className="pl-6 py-4">
+                  <td className="pl-6 py-4" onClick={() => handleOpenDemand(demand.demandas.id)}>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{formatName(demand.municipes.name)}</span>
                       {demand.municipes.demandCount > 0 && (
@@ -419,29 +419,38 @@ export default function Demands() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4" onClick={() => handleOpenDemand(demand.demandas.id)}>
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
                       <Phone size={12} className="text-blue-400" />
                       {formatPhone(demand.municipes.phone)}
                     </div>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4" onClick={() => handleOpenDemand(demand.demandas.id)}>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{demand.demandas.categoria.replace('_', ' ')}</span>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4" onClick={() => handleOpenDemand(demand.demandas.id)}>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border uppercase ${getStatusColor(demand.demandas.status)}`}>
                       {demand.demandas.status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4" onClick={() => handleOpenDemand(demand.demandas.id)}>
                     <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${getPriorityColor(demand.demandas.prioridade)}`}>
                       {demand.demandas.prioridade}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={() => handleOpenDemand(demand.demandas.id)}>
                     <span className="text-xs font-bold text-slate-400">
                       {new Date(demand.demandas.createdAt).toLocaleDateString('pt-BR')}
                     </span>
+                  </td>
+                  <td className="px-4 py-4 text-right">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleOpenDemand(demand.demandas.id); }}
+                      className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                      title="Transformar em Demanda Oficial"
+                    >
+                      <ClipboardList size={16} />
+                    </button>
                   </td>
                 </tr>
               ))}
