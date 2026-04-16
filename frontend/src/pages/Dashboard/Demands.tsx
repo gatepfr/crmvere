@@ -144,14 +144,28 @@ export default function Demands() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-        <button 
-          onClick={() => setFilterByAttention(!filterByAttention)}
-          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
-            filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500'
-          }`}
-        >
-          Atenção
-        </button>
+          <button 
+            onClick={() => setFilterByAttention(!filterByAttention)}
+            className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+              filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            Atenção
+          </button>
+
+          <div className="h-8 w-[1px] bg-slate-100 mx-1 hidden lg:block"></div>
+
+          <select
+            className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
+            value={pagination.limit === 10000 ? 'all' : pagination.limit}
+            onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
+          >
+            <option value="25">25 / pág</option>
+            <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
+            <option value="all">Ver Todos</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
