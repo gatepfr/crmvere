@@ -25,7 +25,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: '*', // Permite qualquer origem em desenvolvimento, mas o ideal é listar os domínios
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // 1. WEBHOOKS (Public)
 // Must be before express.json for Stripe
