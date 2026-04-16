@@ -93,8 +93,12 @@ export default function WhatsAppConfig() {
 
   useEffect(() => {
     fetchConfig().then(tenant => {
+      // SÓ busca status se houver uma instância configurada no banco
       if (tenant?.evolutionApiUrl && tenant?.whatsappInstanceId) {
         fetchStatus();
+      } else {
+        // Se não tem instância, paramos o carregamento inicial
+        setStatus(null);
       }
     });
   }, [fetchConfig, fetchStatus]);
@@ -102,7 +106,12 @@ export default function WhatsAppConfig() {
   // Polling for status and QR code if not connected
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (status && status.state !== 'open' && status.status !== 'CONNECTED') {
+    
+    // SÓ inicia o monitoramento se houver uma instância ativa para monitorar
+    const hasInstance = config.evolutionApiUrl && status;
+    const notConnected = status?.state !== 'open' && status?.status !== 'CONNECTED';
+
+    if (hasInstance && notConnected) {
       fetchQrCode();
       interval = setInterval(() => {
         fetchStatus();
