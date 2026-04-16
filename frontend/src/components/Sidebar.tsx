@@ -15,7 +15,8 @@ import {
   X,
   Layout as KanbanIcon,
   Calendar,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,6 +26,7 @@ export default function Sidebar() {
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Inteligência Eleitoral', icon: Zap, path: '/dashboard/eleicoes' },
     { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda' },
     { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
     { name: 'Demandas', icon: MessageSquare, path: '/dashboard/demands' },
