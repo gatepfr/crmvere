@@ -287,26 +287,7 @@ export default function WhatsAppConfig() {
         {/* Status/QR Code Side */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 min-h-[400px] flex flex-col items-center justify-center text-center">
-            {(!isConnected && !qrCode && (!status || status.state === 'not_created' || status.state === 'not_found' || !status.state)) ? (
-              <div className="space-y-6">
-                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
-                  <Smartphone className="w-10 h-10" />
-                </div>
-                <div>
-                  <h4 className="text-xl font-bold text-slate-900">Instância não criada</h4>
-                  <p className="text-slate-500 max-w-xs mx-auto mt-2">
-                    Crie uma instância para gerar seu QR Code e começar a receber mensagens.
-                  </p>
-                </div>
-                <button 
-                  onClick={handleCreateInstance}
-                  disabled={loading}
-                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50"
-                >
-                  {loading ? 'Criando...' : 'Criar Instância Agora'}
-                </button>
-              </div>
-            ) : isConnected ? (
+            {isConnected ? (
               <div className="space-y-6">
                 <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-600 animate-pulse">
                   <CheckCircle2 className="w-12 h-12" />
@@ -346,7 +327,7 @@ export default function WhatsAppConfig() {
                   ) : (
                     <div className="w-64 h-64 flex flex-col items-center justify-center gap-2">
                        <QrCodeIcon className="w-12 h-12 text-slate-300" />
-                       <p className="text-xs text-slate-400 px-8">Carregando QR Code base64...</p>
+                       <p className="text-xs text-slate-400 px-8">Carregando QR Code...</p>
                     </div>
                   )}
                 </div>
@@ -359,7 +340,7 @@ export default function WhatsAppConfig() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Atualizando status automaticamente...
+                    Atualizando status...
                   </div>
                   <button 
                     onClick={handleLogout}
@@ -373,11 +354,22 @@ export default function WhatsAppConfig() {
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
-                  <RefreshCw className="w-8 h-8 animate-spin" />
+                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
+                  <Smartphone className="w-10 h-10" />
                 </div>
-                <h4 className="text-lg font-bold text-slate-900">Iniciando...</h4>
-                <p className="text-slate-500 text-sm">Aguarde enquanto preparamos a conexão.</p>
+                <div>
+                  <h4 className="text-xl font-bold text-slate-900">Conectar WhatsApp</h4>
+                  <p className="text-slate-500 max-w-xs mx-auto mt-2">
+                    Clique no botão abaixo para gerar um QR Code e vincular seu número.
+                  </p>
+                </div>
+                <button 
+                  onClick={handleCreateInstance}
+                  disabled={loading}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50"
+                >
+                  {loading ? 'Preparando...' : 'Criar Instância Agora'}
+                </button>
               </div>
             )}
           </div>
