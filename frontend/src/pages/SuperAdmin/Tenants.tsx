@@ -30,10 +30,23 @@ interface Stats {
 
 const PROVIDER_MODELS: Record<string, string[]> = {
   gemini: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'],
-  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
-  anthropic: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'],
-  groq: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-  openrouter: ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.1-405b'],
+  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  anthropic: ['claude-3-5-sonnet-20240620', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+  groq: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
+  openrouter: [
+    'openai/gpt-4o', 
+    'openai/gpt-4o-mini', 
+    'anthropic/claude-3.5-sonnet', 
+    'anthropic/claude-3-haiku',
+    'google/gemini-pro-1.5',
+    'google/gemini-flash-1.5',
+    'meta-llama/llama-3.1-405b-instruct',
+    'meta-llama/llama-3.1-70b-instruct',
+    'meta-llama/llama-3.1-8b-instruct',
+    'deepseek/deepseek-chat',
+    'mistralai/pixtral-12b-2409',
+    'qwen/qwen-2.5-72b-instruct'
+  ],
 };
 
 const PROVIDER_URLS: Record<string, string> = {

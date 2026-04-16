@@ -3,26 +3,28 @@ import api from '../../api/client';
 import { Bot, Cpu, Zap, Brain, CheckCircle2, Loader2 } from 'lucide-react';
 
 const providers = [
-  { id: 'gemini', name: 'Google Gemini', icon: Bot, color: 'text-blue-600', models: ['gemini-1.5-flash', 'gemini-1.5-pro'] },
-  { id: 'openai', name: 'OpenAI (ChatGPT)', icon: Brain, color: 'text-green-600', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] },
-  { id: 'anthropic', name: 'Anthropic (Claude)', icon: Cpu, color: 'text-orange-600', models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229'] },
-  { id: 'groq', name: 'Groq (Llama 3)', icon: Zap, color: 'text-purple-600', models: ['llama3-70b-8192', 'mixtral-8x7b-32768'] },
+  { id: 'gemini', name: 'Google Gemini', icon: Bot, color: 'text-blue-600', models: ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'] },
+  { id: 'openai', name: 'OpenAI (ChatGPT)', icon: Brain, color: 'text-green-600', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+  { id: 'anthropic', name: 'Anthropic (Claude)', icon: Cpu, color: 'text-orange-600', models: ['claude-3-5-sonnet-20240620', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'] },
+  { id: 'groq', name: 'Groq (Ultra Rápido)', icon: Zap, color: 'text-purple-600', models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'] },
   { 
     id: 'openrouter', 
     name: 'OpenRouter', 
     icon: Zap, 
     color: 'text-indigo-600', 
     models: [
+      'openai/gpt-4o', 
+      'openai/gpt-4o-mini', 
+      'anthropic/claude-3.5-sonnet', 
+      'anthropic/claude-3-haiku',
+      'google/gemini-pro-1.5',
+      'google/gemini-flash-1.5',
       'meta-llama/llama-3.1-405b-instruct',
       'meta-llama/llama-3.1-70b-instruct',
       'meta-llama/llama-3.1-8b-instruct',
-      'google/gemini-pro-1.5',
-      'google/gemini-flash-1.5',
-      'anthropic/claude-3.5-sonnet',
-      'openai/gpt-4o',
-      'openai/gpt-4o-mini',
-      'mistralai/mistral-7b-instruct',
-      'qwen/qwen-2-72b-instruct'
+      'deepseek/deepseek-chat',
+      'mistralai/pixtral-12b-2409',
+      'qwen/qwen-2.5-72b-instruct'
     ] 
   },
   { id: 'custom', name: 'Custom IA', icon: Cpu, color: 'text-slate-600', models: [] },
