@@ -197,36 +197,37 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         if download_and_extract(url_perfil, tmp_dir):
             for file in os.listdir(tmp_dir):
                 if file.lower().endswith('.csv') and 'perfil_eleitorado' in file.lower():
-                    df_perf = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
-                    df_perf.columns = [c.upper() for c in df_perf.columns]
-                    c_city_p = find_column(df_perf.columns, ['NM', 'MUN']) or find_column(df_perf.columns, ['NM', 'UE'])
-                    c_code_p = find_column(df_perf.columns, ['CD', 'MUN']) or find_column(df_perf.columns, ['CD', 'UE'])
-                    c_bairro_p = find_column(df_perf.columns, ['NM', 'BAIRRO']) or find_column(df_perf.columns, ['NM', 'LOCALIDADE'])
-                    c_gen = find_column(df_perf.columns, ['DS', 'GENERO'])
-                    c_idade = find_column(df_perf.columns, ['DS', 'FAIXA', 'ETARIA'])
-                    c_esc = find_column(df_perf.columns, ['DS', 'GRAU', 'ESCOLARIDADE'])
-                    c_qt_p = find_column(df_perf.columns, ['QT', 'ELEITORES', 'PERFIL']) or find_column(df_perf.columns, ['QT', 'ELEITORES'])
-                    
-                    if not c_city_p: continue
+                    chunks_perf = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=100000, dtype=str)
+                    for chunk in chunks_perf:
+                        chunk.columns = [c.upper() for c in chunk.columns]
+                        c_city_p = find_column(chunk.columns, ['NM', 'MUN']) or find_column(chunk.columns, ['NM', 'UE'])
+                        c_code_p = find_column(chunk.columns, ['CD', 'MUN']) or find_column(chunk.columns, ['CD', 'UE'])
+                        c_bairro_p = find_column(chunk.columns, ['NM', 'BAIRRO']) or find_column(chunk.columns, ['NM', 'LOCALIDADE'])
+                        c_gen = find_column(chunk.columns, ['DS', 'GENERO'])
+                        c_idade = find_column(chunk.columns, ['DS', 'FAIXA', 'ETARIA'])
+                        c_esc = find_column(chunk.columns, ['DS', 'GRAU', 'ESCOLARIDADE'])
+                        c_qt_p = find_column(chunk.columns, ['QT', 'ELEITORES', 'PERFIL']) or find_column(chunk.columns, ['QT', 'ELEITORES'])
+                        
+                        if not c_city_p: continue
 
-                    df_perf['CITY_NORM'] = df_perf[c_city_p].apply(normalize_text)
-                    perfil_city = df_perf[df_perf['CITY_NORM'] == municipio_norm]
-                    if not perfil_city.empty:
-                        perf_data = []
-                        for _, r in perfil_city.iterrows():
-                            perf_data.append((
-                                ano, 
-                                normalize_code(r[c_code_p]), 
-                                r.get(c_bairro_p, 'NÃO INFORMADO'), 
-                                r.get(c_gen, 'NÃO INFORMADO'), 
-                                r.get(c_idade, 'NÃO INFORMADO'), 
-                                r.get(c_esc, 'NÃO INFORMADO'), 
-                                safe_int(r.get(c_qt_p, 0))
-                            ))
-                        execute_values(cur, """
-                            INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) 
-                            VALUES %s
-                        """, perf_data)
+                        chunk['CITY_NORM'] = chunk[c_city_p].apply(normalize_text)
+                        perfil_city = chunk[chunk['CITY_NORM'] == municipio_norm]
+                        if not perfil_city.empty:
+                            perf_data = []
+                            for _, r in perfil_city.iterrows():
+                                perf_data.append((
+                                    ano, 
+                                    normalize_code(r[c_code_p]), 
+                                    r.get(c_bairro_p, 'NÃO INFORMADO'), 
+                                    r.get(c_gen, 'NÃO INFORMADO'), 
+                                    r.get(c_idade, 'NÃO INFORMADO'), 
+                                    r.get(c_esc, 'NÃO INFORMADO'), 
+                                    safe_int(r.get(c_qt_p, 0))
+                                ))
+                            execute_values(cur, """
+                                INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) 
+                                VALUES %s
+                            """, perf_data)
 
         conn.commit()
         report_progress(tenant_id, "Concluído!", 100)
