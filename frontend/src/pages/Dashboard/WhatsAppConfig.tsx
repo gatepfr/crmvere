@@ -287,7 +287,7 @@ export default function WhatsAppConfig() {
         {/* Status/QR Code Side */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 min-h-[400px] flex flex-col items-center justify-center text-center">
-            {(!status && !isConnected && !qrCode) ? (
+            {(!isConnected && !qrCode && (!status || status.state === 'not_created' || status.state === 'not_found' || !status.state)) ? (
               <div className="space-y-6">
                 <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
                   <Smartphone className="w-10 h-10" />
