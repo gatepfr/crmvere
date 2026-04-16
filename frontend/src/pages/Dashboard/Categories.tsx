@@ -87,13 +87,26 @@ export default function Categories() {
           </h1>
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Personalize a classificação das suas demandas</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
-        >
-          <Plus size={20} />
-          NOVA CATEGORIA
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={async () => {
+              if (confirm('Deseja carregar as categorias padrão do gabinete?')) {
+                await api.post('/demands/categories/seed');
+                loadCategories();
+              }
+            }}
+            className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all flex items-center gap-2"
+          >
+            RESTAURAR PADRÃO
+          </button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
+          >
+            <Plus size={20} />
+            NOVA CATEGORIA
+          </button>
+        </div>
       </header>
 
       {loading ? (
