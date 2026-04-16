@@ -40,9 +40,6 @@ export default function Sidebar() {
     { name: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
     { name: 'Configuração IA', icon: Bot, path: '/dashboard/ai' },
     { name: 'Base de Dados', icon: Database, path: '/dashboard/knowledge' },
-    ...(user?.role !== 'assessor' ? [
-      { name: 'Equipe', icon: Users, path: '/dashboard/team' }
-    ] : []),
     { name: 'Configurações', icon: User, path: '/dashboard/profile' },
   ];
 
