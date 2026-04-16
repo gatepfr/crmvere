@@ -4,13 +4,12 @@ import { db } from '../db';
 import { tseCandidatos, tseLocaisVotacao, tseVotosSecao } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
-import redis from 'redis';
+import Redis from 'ioredis';
 
 const router = Router();
 router.use(authenticate);
 
-const redisClient = redis.createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
-redisClient.connect().catch(console.error);
+const redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 /**
  * Inicia o processo de importação do TSE via script Python
