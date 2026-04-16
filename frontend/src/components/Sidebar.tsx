@@ -41,10 +41,9 @@ export default function Sidebar() {
     { name: 'Configuração IA', icon: Bot, path: '/dashboard/ai' },
     { name: 'Base de Dados', icon: Database, path: '/dashboard/knowledge' },
     ...(user?.role !== 'assessor' ? [
-      { name: 'Categorias', icon: Tags, path: '/dashboard/categories' },
       { name: 'Equipe', icon: Users, path: '/dashboard/team' }
     ] : []),
-    { name: 'Meu Perfil', icon: User, path: '/dashboard/profile' },
+    { name: 'Configurações', icon: User, path: '/dashboard/profile' },
   ];
 
   const toggleSidebar = () => setIsOpen(!isOpen);
