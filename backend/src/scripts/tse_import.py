@@ -9,6 +9,7 @@ import zipfile
 import io
 import shutil
 import unicodedata
+import traceback
 from datetime import datetime
 
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -20,18 +21,20 @@ def report_progress(tenant_id, step, percent):
         r.set(f"tse:import:{tenant_id}:progress", percent)
         r.set(f"tse:import:{tenant_id}:step", step)
         print(f"[PROGRESS {percent}%] {step}")
-    except Exception as e: print(f"Erro Redis: {e}")
+    except Exception as e: 
+        print(f"Erro Redis: {e}")
 
 def normalize_text(text):
     if not text: return ""
     text = str(text).upper().strip()
     return "".join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
 
-def find_column(columns, keywords):
-    """Procura uma coluna que contenha todas as palavras-chave fornecidas."""
+def find_column(columns, keywords, mandatory=True):
     for c in columns:
         if all(k.upper() in c.upper() for k in keywords):
             return c
+    if mandatory:
+        raise ValueError(f"Coluna obrigatória não encontrada. Procurando por: {keywords}. Colunas disponíveis: {list(columns)[:10]}...")
     return None
 
 def download_and_extract(url, target_path, state_filter=None):
@@ -42,7 +45,6 @@ def download_and_extract(url, target_path, state_filter=None):
         if response.status_code == 200:
             with zipfile.ZipFile(io.BytesIO(response.content)) as z:
                 files = z.namelist()
-                print(f"Arquivos no ZIP: {files[:5]}...")
                 to_extract = [f for f in files if not state_filter or f"_{state_filter.upper()}.csv" in f.upper()]
                 if not to_extract: to_extract = files
                 for f in to_extract: z.extract(f, target_path)
@@ -62,11 +64,13 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
     
     conn = None
     try:
+        print(f"Conectando ao banco...")
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        report_progress(tenant_id, "Iniciando...", 5)
+        report_progress(tenant_id, "Iniciando processamento...", 5)
 
         # 1. Candidato
+        report_progress(tenant_id, "Buscando Candidato no TSE...", 10)
         url_cand = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip"
         if not download_and_extract(url_cand, tmp_dir, uf):
             download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip", tmp_dir)
@@ -74,14 +78,12 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         files = [f for f in os.listdir(tmp_dir) if f.lower().endswith('.csv') and 'consulta_cand' in f.lower()]
         found_candidato = False
         for file in files:
-            print(f"Analisando arquivo: {file}")
             df = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str, on_bad_lines='skip', low_memory=False)
             df.columns = [c.upper() for c in df.columns]
             
-            # Mapeamento Inteligente
-            city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
+            city_col = find_column(df.columns, ['NM', 'MUN'], False) or find_column(df.columns, ['NM', 'UE'], False)
             num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
-            cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['CD', 'UE'])
+            cd_mun_col = find_column(df.columns, ['CD', 'MUN'], False) or find_column(df.columns, ['CD', 'UE'], False)
 
             if city_col and num_col:
                 df['CITY_NORM'] = df[city_col].apply(normalize_text)
@@ -97,11 +99,11 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     break
 
         if not found_candidato:
-            report_progress(tenant_id, "Candidato não encontrado no TSE.", 0)
+            report_progress(tenant_id, f"Candidato {nr_cand_str} não encontrado em {municipio_nome}.", 0)
             return
 
         # 2. Locais
-        report_progress(tenant_id, "Mapeando Bairros...", 35)
+        report_progress(tenant_id, "Minerando Bairros...", 35)
         url_locais = f"https://cdn.tse.jus.br/estatistica/sead/odsele/rede_locais_votacao/rede_locais_votacao_{ano}.zip"
         if not download_and_extract(url_locais, tmp_dir, uf):
             download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/rede_locais_votacao/rede_locais_votacao_{ano}_{uf}.zip", tmp_dir)
@@ -129,7 +131,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     for chunk in chunks:
                         chunk.columns = [c.upper() for c in chunk.columns]
                         c_city_v = find_column(chunk.columns, ['NM', 'MUN'])
-                        c_code_v = find_column(chunk.columns, ['CD', 'MUN']) or find_column(chunk.columns, ['CD', 'UE'])
+                        c_code_v = find_column(chunk.columns, ['CD', 'MUN'], False) or find_column(chunk.columns, ['CD', 'UE'], False)
                         chunk['CITY_NORM'] = chunk[c_city_v].apply(normalize_text)
                         filtered = chunk[(chunk['CITY_NORM'] == municipio_norm) & (chunk['NR_VOTAVEL'] == nr_cand_str)]
                         if not filtered.empty:
@@ -137,14 +139,18 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                             execute_values(cur, "INSERT INTO tse_votos_secao (ano_eleicao, cd_municipio, nr_zona, nr_secao, nr_local_votacao, nr_candidato, qt_votos) VALUES %s", votos_data)
 
         conn.commit()
-        report_progress(tenant_id, "Concluído!", 100)
+        report_progress(tenant_id, "Importação Concluída com Sucesso!", 100)
     except Exception as e:
         if conn: conn.rollback()
-        print(f"ERRO: {e}")
-        report_progress(tenant_id, f"Erro: {str(e)}", 0)
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        print(f"ERRO FATAL: {error_msg}")
+        traceback.print_exc()
+        report_progress(tenant_id, f"Falha: {error_msg}", 0)
     finally:
         if conn: conn.close()
         if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
 
 if __name__ == "__main__":
+    if len(sys.argv) < 6:
+        sys.exit(1)
     process_import(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
