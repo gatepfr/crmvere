@@ -91,12 +91,12 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             df.columns = [c.upper() for c in df.columns]
             city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
             num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
-            cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['CD', 'UE'])
+            cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['SG', 'UE']) or find_column(df.columns, ['CD', 'UE'])
             sit_col = find_column(df.columns, ['DS', 'SITUACAO', 'CANDIDATURA']) or find_column(df.columns, ['DS', 'SIT'])
             name_col = find_column(df.columns, ['NM', 'CANDIDATO'])
             part_col = find_column(df.columns, ['SG', 'PARTIDO'])
 
-            if city_col and num_col:
+            if city_col and num_col and cd_mun_col:
                 df['CITY_NORM'] = df[city_col].apply(normalize_text)
                 cand = df[(df['CITY_NORM'] == municipio_norm) & (df[num_col] == nr_cand_str)]
                 if not cand.empty:
