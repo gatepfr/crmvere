@@ -149,10 +149,15 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     c_cep = find_column(df_loc.columns, ['NR', 'CEP'])
                     
                     df_loc['CITY_NORM'] = df_loc[c_city].apply(normalize_text)
-                    locais = df_loc[df_loc['CITY_NORM'] == municipio_norm]
+                    locais = df_loc[df_loc['CITY_NORM'] == municipio_norm].copy()
+
                     if not locais.empty:
+                        # GARANTE QUE CADA LOCAL DE VOTAÇÃO SEJA ÚNICO (Remove duplicatas de seções)
+                        locais = locais.drop_duplicates(subset=[c_code, c_zona, c_local])
+
                         loc_data = []
                         for _, r in locais.iterrows():
+
                             loc_data.append((
                                 ano, 
                                 normalize_code(r[c_code]), 
