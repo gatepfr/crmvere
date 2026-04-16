@@ -7,8 +7,18 @@ RUN npm run build
 
 FROM node:20-slim
 WORKDIR /app
-# Instala netcat para o script wait-for-db funcionar
-RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+# Instala Python e dependências do sistema
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copia dependências do Python e instala
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
 
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
