@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { tenants, municipes, demandas, documents, systemConfigs } from '../db/schema';
+import { tenants, municipes, demandas, documents, systemConfigs, atendimentos } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { normalizeEvolution } from './whatsappService';
 import { processDemand } from './aiService';
@@ -56,23 +56,22 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    let [existingDemanda] = await db.select()
-      .from(demandas)
+    let [existingAtendimento] = await db.select()
+      .from(atendimentos)
       .where(and(
-        eq(demandas.municipeId, municipe.id), 
-        eq(demandas.tenantId, tenantId), 
-        sql`${demandas.status} IN ('nova', 'em_andamento')`
+        eq(atendimentos.municipeId, municipe.id), 
+        eq(atendimentos.tenantId, tenantId)
       ))
-      .orderBy(desc(demandas.updatedAt))
+      .orderBy(desc(atendimentos.updatedAt))
       .limit(1);
 
-    if (existingDemanda && existingDemanda.createdAt < todayStart) {
-      existingDemanda = undefined;
+    if (existingAtendimento && existingAtendimento.createdAt < todayStart) {
+      existingAtendimento = undefined;
     }
 
-    // 5. Verifica se a demanda já está aguardando retorno humano
-    if (existingDemanda?.precisaRetorno) {
-      console.log(`[ORCHESTRATOR] Demanda de ${municipe.name} já aguarda retorno humano. Ignorando resposta da IA.`);
+    // 5. Verifica se o atendimento já está aguardando retorno humano
+    if (existingAtendimento?.precisaRetorno) {
+      console.log(`[ORCHESTRATOR] Atendimento de ${municipe.name} já aguarda retorno humano. Ignorando resposta da IA.`);
       return { status: 'waiting_human' };
     }
 
@@ -88,7 +87,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     if (!apiKey) return { status: 'no_ai_key' };
 
-    const history = existingDemanda?.resumoIa || '';
+    const history = existingAtendimento?.resumoIa || '';
     let promptContext = history ? `${history}\nCidadão: ${normalized.text}` : `Cidadão: ${normalized.text}`;
     
     const resultIA = await processDemand(promptContext, {
@@ -102,23 +101,18 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const aiResult = resultIA.data;
     const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
-    if (existingDemanda) {
-      await db.update(demandas).set({
+    if (existingAtendimento) {
+      await db.update(atendimentos).set({
         resumoIa: updatedHistory,
-        categoria: aiResult?.categoria || existingDemanda.categoria,
-        prioridade: aiResult?.prioridade || existingDemanda.prioridade,
-        precisaRetorno: aiResult?.precisa_retorno || existingDemanda.precisaRetorno,
+        precisaRetorno: aiResult?.precisa_retorno || existingAtendimento.precisaRetorno,
         updatedAt: new Date(),
-      }).where(eq(demandas.id, existingDemanda.id));
+      }).where(eq(atendimentos.id, existingAtendimento.id));
     } else {
-      await db.insert(demandas).values({
+      await db.insert(atendimentos).values({
         tenantId,
         municipeId: municipe.id,
-        categoria: aiResult?.categoria || 'outro',
-        prioridade: aiResult?.prioridade || 'media',
         resumoIa: updatedHistory,
-        status: 'nova',
-        precisaRetorno: aiResult?.precisa_retorno || false,
+        precisaRetorno: aiResult?.precisa_retorno || false
       });
     }
 

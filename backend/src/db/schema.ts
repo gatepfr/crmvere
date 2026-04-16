@@ -81,21 +81,27 @@ export const demandCategories = pgTable("demand_categories", {
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const demandas = pgTable("demandas", {
+export const atendimentos = pgTable("atendimentos", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id")
-    .references(() => tenants.id, { onDelete: "cascade" })
-    .notNull(),
-  municipeId: uuid("municipe_id")
-    .references(() => municipes.id, { onDelete: "cascade" })
-    .notNull(),
-  categoria: varchar("categoria", { length: 255 }).notNull(),
-  status: statusEnum("status").default("nova").notNull(),
-  prioridade: varchar("prioridade", { length: 255 }).notNull(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "cascade" }).notNull(),
   resumoIa: varchar("resumo_ia", { length: 10000 }).notNull(),
   precisaRetorno: boolean("precisa_retorno").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const demandas = pgTable("demandas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "cascade" }).notNull(),
+  atendimentoId: uuid("atendimento_id").references(() => atendimentos.id), // Vinculo opcional com a conversa
+  categoria: varchar("categoria", { length: 255 }).notNull(),
+  descricao: varchar("descricao", { length: 10000 }).notNull(),
+  status: varchar("status", { length: 20 }).default("nova").notNull(),
+  prioridade: varchar("prioridade", { length: 20 }).default("media").notNull(),
   
-  // Novos campos para Indicação Legislativa
+  // Campos Legislativos
   isLegislativo: boolean("is_legislative").default(false),
   numeroIndicacao: varchar("numero_indicacao", { length: 50 }),
   documentUrl: varchar("document_url", { length: 500 }),
