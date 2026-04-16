@@ -137,8 +137,8 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         if locais_baixados:
             for file in os.listdir(tmp_dir):
                 if file.lower().endswith('.csv') and any(x in file.lower() for x in ['rede_locais_votacao', 'local_votacao', 'eleitorado_local_votacao']):
-                df_loc = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
-                df_loc.columns = [c.upper() for c in df_loc.columns]
+                    df_loc = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
+                    df_loc.columns = [c.upper() for c in df_loc.columns]
                 c_city = find_column(df_loc.columns, ['NM', 'MUN']) or find_column(df_loc.columns, ['NM', 'UE'])
                 c_code = find_column(df_loc.columns, ['CD', 'MUN']) or find_column(df_loc.columns, ['CD', 'UE'])
                 c_zona = find_column(df_loc.columns, ['NR', 'ZONA'])
