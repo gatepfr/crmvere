@@ -253,8 +253,9 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                         c_city_p = find_column(chunk.columns, ['NM', 'MUN']) or find_column(chunk.columns, ['NM', 'UE'])
                         c_code_p = find_column(chunk.columns, ['CD', 'MUN']) or find_column(chunk.columns, ['CD', 'UE'])
                         c_bairro_p = find_column(chunk.columns, ['NM', 'BAIRRO']) or find_column(chunk.columns, ['NM', 'LOCALIDADE'])
-                        c_gen = find_column(chunk.columns, ['DS', 'GENERO'])
+                        c_gen = find_column(chunk.columns, ['DS', 'GENERO']) or find_column(chunk.columns, ['DS', 'SEXO'])
                         c_idade = find_column(chunk.columns, ['DS', 'FAIXA', 'ETARIA'])
+
                         c_esc = find_column(chunk.columns, ['DS', 'GRAU', 'ESCOLARIDADE'])
                         c_qt_p = find_column(chunk.columns, ['QT', 'ELEITORES', 'PERFIL']) or find_column(chunk.columns, ['QT', 'ELEITORES'])
                         
