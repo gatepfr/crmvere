@@ -8,35 +8,25 @@ import { normalizePhone } from '../utils/phoneUtils';
 
 /**
  * Serviço responsável por orquestrar o fluxo de mensagens vindas do WhatsApp
- * desde a recepção do webhook até a resposta final da IA.
  */
 export async function orchestrateWebhook(payload: any, tenantId: string) {
-  console.log(`[ORCHESTRATOR] Iniciando fluxo para tenant ${tenantId}`);
-
   try {
     const normalized = normalizeEvolution(payload, tenantId);
     
-    // Filtros de Ignorar (Nossa mensagem, grupos ou texto vazio)
     if (normalized.fromMe || normalized.isGroup) return { status: 'ignored' };
     if (!normalized.text || normalized.text.trim() === '') return { status: 'no_text' };
 
-    console.log(`[ORCHESTRATOR] Mensagem de ${normalized.from}: "${normalized.text.substring(0, 30)}..."`);
+    console.log(`[ORCHESTRATOR] Mensagem de ${normalized.from} para tenant ${tenantId}`);
 
-    // 1. Buscar configurações do Gabinete (Tenant)
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
-    if (!tenant) {
-      console.error(`[ORCHESTRATOR ERROR] Tenant ${tenantId} não encontrado.`);
-      return { status: 'tenant_not_found' };
-    }
+    if (!tenant) return { status: 'tenant_not_found' };
 
-    // 2. Identificar ou Criar o Munícipe
-    const cleanPhone = normalized.from.replace(/\D/g, '');
+    const cleanPhone = normalizePhone(normalized.from);
     let [municipe] = await db.select().from(municipes).where(
       and(eq(municipes.phone, cleanPhone), eq(municipes.tenantId, tenantId))
     );
 
     if (!municipe) {
-      console.log(`[ORCHESTRATOR] Novo munícipe detectado: ${normalized.name || 'Cidadão'}`);
       const [newMunicipe] = await db.insert(municipes).values({ 
         tenantId, 
         name: normalized.name || 'Cidadão', 
@@ -45,7 +35,6 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       municipe = newMunicipe;
     }
 
-    // 3. Buscar Demanda Ativa (Criada hoje e aberta)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -63,39 +52,21 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       existingDemanda = undefined;
     }
 
-    // 4. Verificar Intervenção Humana (Trava de 10 min)
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const history = existingDemanda?.resumoIa || '';
-    const lastGabineteIndex = history.lastIndexOf('Gabinete:');
-    const lastAIIndex = history.lastIndexOf('AI:');
-    const isHumanLastSpeaker = lastGabineteIndex > lastAIIndex;
-    const wasRecentlyUpdatedByHuman = existingDemanda && existingDemanda.updatedAt && existingDemanda.updatedAt > tenMinutesAgo;
-
-    if (isHumanLastSpeaker && wasRecentlyUpdatedByHuman) {
-      console.log(`[ORCHESTRATOR] IA Silenciada: Humano respondeu recentemente.`);
-      return { status: 'human_active' };
-    }
-
-    // 5. Preparar Base de Conhecimento
     const tenantDocs = await db.select().from(documents).where(eq(documents.tenantId, tenantId));
     let knowledgeBaseContent = tenantDocs
       .map(doc => `--- DOCUMENTO: ${doc.fileName} ---\n${doc.textContent}`)
       .join('\n\n');
 
-    // 6. Chamar a Inteligência Artificial
     const [globalConfig] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
     const provider = tenant?.aiProvider || globalConfig?.aiProvider || 'gemini';
     const apiKey = tenant?.aiApiKey || globalConfig?.aiApiKey || process.env.GEMINI_API_KEY;
     const model = tenant?.aiModel || globalConfig?.aiModel || (provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o');
 
-    if (!apiKey) {
-      console.error(`[ORCHESTRATOR ERROR] Sem chave de IA.`);
-      return { status: 'no_ai_key' };
-    }
+    if (!apiKey) return { status: 'no_ai_key' };
 
+    const history = existingDemanda?.resumoIa || '';
     let promptContext = history ? `${history}\nCidadão: ${normalized.text}` : `Cidadão: ${normalized.text}`;
     
-    console.log(`[ORCHESTRATOR] Solicitando resposta da IA...`);
     const resultIA = await processDemand(promptContext, {
       provider: provider as any,
       apiKey: apiKey,
@@ -107,7 +78,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const aiResult = resultIA.data;
     const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
-    // 7. Salvar ou Atualizar a Demanda no Banco
+    // SALVAMENTO DA DEMANDA (Corrigido: removido o campo 'bairro' que não pertence a esta tabela)
     if (existingDemanda) {
       await db.update(demandas).set({
         resumoIa: updatedHistory,
@@ -128,20 +99,16 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       });
     }
 
-    // 8. Enviar Resposta via WhatsApp (Evolution API)
     if (aiResult?.resposta_usuario && tenant.whatsappInstanceId) {
-      // Usamos o endereço interno do docker para enviar
       const evoUrl = 'http://evolution_api:8080';
       const evoToken = tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
-
       const evolution = new EvolutionService(evoUrl, evoToken);
       await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario);
-      console.log(`[ORCHESTRATOR] ✅ Resposta da IA enviada via WhatsApp para ${normalized.from}.`);
     }
 
     return { status: 'success' };
   } catch (error: any) {
-    console.error(`[ORCHESTRATOR FATAL ERROR]`, error.message);
+    console.error(`[ORCHESTRATOR ERROR]`, error.message);
     return { status: 'error', message: error.message };
   }
 }
