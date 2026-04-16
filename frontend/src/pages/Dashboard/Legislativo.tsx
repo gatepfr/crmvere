@@ -244,7 +244,7 @@ export default function Legislativo() {
         {/* Pagination */}
         <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {pagination.total} REGISTROS • PÁGINA {pagination.page} DE {pagination.totalPages}
+            {pagination.total} DEMANDAS • PÁGINA {pagination.page} DE {pagination.totalPages}
           </p>
           <div className="flex items-center gap-1">
             <button 

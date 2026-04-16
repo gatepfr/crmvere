@@ -195,13 +195,26 @@ export default function Demands() {
             </tbody>
           </table>
         </div>
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
+        {/* Pagination */}
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {pagination.total} REGISTROS • PÁGINA {pagination.page} DE {pagination.totalPages}
+            {pagination.total} ATENDIMENTOS • PÁGINA {pagination.page} DE {pagination.totalPages}
           </p>
-          <div className="flex gap-1">
-            <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({...p, page: p.page - 1}))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30"><ChevronLeft size={16} /></button>
-            <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({...p, page: p.page + 1}))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30"><ChevronRight size={16} /></button>
+          <div className="flex items-center gap-1">
+            <button 
+              disabled={pagination.page === 1 || loading}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button 
+              disabled={pagination.page === pagination.totalPages || loading}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
