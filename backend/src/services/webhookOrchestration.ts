@@ -6,6 +6,26 @@ import { processDemand } from './aiService';
 import { EvolutionService } from './evolutionService';
 import { normalizePhone } from '../utils/phoneUtils';
 
+/**
+ * Filtro para padronizar nomes brasileiros (João da Silva)
+ */
+const formatName = (name: string) => {
+  if (!name) return '';
+  const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
+  return name
+    .toLowerCase()
+    .split(' ')
+    .filter(word => word.length > 0)
+    .map((word, index) => {
+      if (prepositions.includes(word) && index !== 0) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+};
+
+/**
+ * Serviço responsável por orquestrar o fluxo de mensagens vindas do WhatsApp
+ */
 export async function orchestrateWebhook(payload: any, tenantId: string) {
   try {
     const normalized = normalizeEvolution(payload, tenantId);
@@ -24,9 +44,10 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     );
 
     if (!municipe) {
+      console.log(`[ORCHESTRATOR] Criando munícipe: ${normalized.name}`);
       const [newMunicipe] = await db.insert(municipes).values({ 
         tenantId, 
-        name: normalized.name || 'Cidadão', 
+        name: formatName(normalized.name || 'Cidadão'), 
         phone: cleanPhone 
       }).returning();
       municipe = newMunicipe;
@@ -95,11 +116,32 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       });
     }
 
-    if (aiResult?.resposta_usuario && tenant.whatsappInstanceId) {
+    // 8. Fluxo de Envio de WhatsApp
+    if (tenant.whatsappInstanceId) {
       const evoUrl = 'http://evolution_api:8080';
       const evoToken = tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
       const evolution = new EvolutionService(evoUrl, evoToken);
-      await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario);
+
+      // Resposta para o Munícipe
+      if (aiResult?.resposta_usuario) {
+        await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario);
+      }
+
+      // 9. ALERTA PARA A EQUIPE (Se a IA marcou precisa_retorno)
+      if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {
+        console.log(`[ORCHESTRATOR] 🚨 Alertando equipe no número ${tenant.whatsappNotificationNumber}`);
+        
+        const cleanSummary = aiResult.resumo_ia?.replace(/\*\*/g, '').replace(/\*/g, '') || 'Sem resumo disponível';
+        const alertMsg = `🚨 *ALERTA DE ATENDIMENTO HUMANO*\n\n` +
+                        `👤 *Munícipe:* ${municipe.name}\n` +
+                        `📱 *Telefone:* ${normalized.from}\n` +
+                        `📍 *Bairro:* ${municipe.bairro || 'Não informado'}\n\n` +
+                        `📝 *RESUMO:* ${cleanSummary}\n\n` +
+                        `⚠️ _A IA solicitou ajuda humana. Acesse o painel para assumir._`;
+        
+        await evolution.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, alertMsg)
+          .catch(e => console.error('[ORCHESTRATOR ALERT ERROR]:', e.message));
+      }
     }
 
     return { status: 'success' };
