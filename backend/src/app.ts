@@ -26,30 +26,27 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 
-// Webhook routes (MUST be before express.json() for Stripe signature verification)
+// 1. WEBHOOKS (Public)
+// Must be before express.json for Stripe
 app.use('/api/webhook', webhookRoutes);
 
 app.use(express.json());
 
-// Public routes
+// 2. AUTH (Public)
 app.use('/api/auth', authRoutes);
 
-// Protected routes (Require authentication)
+// 3. PROTECTED ROUTES (Require Login)
 app.use(authenticate);
 
-// WhatsApp routes - Moved up to allow connection even if tenant context is unstable
-app.use('/api/whatsapp', whatsappRoutes);
-
-// Billing routes should skip subscription check
-app.use('/api/billing', billingRoutes);
-
-// Other protected routes require subscription check
-app.use(checkSubscription);
-
-// Super admin routes do not require tenant context
+// Super Admin
 app.use('/api/superadmin', superAdminRoutes);
 
-// Tenant-specific routes (Require tenant context)
+// WhatsApp & Billing (Skip Subscription check for recovery)
+app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/billing', billingRoutes);
+
+// 4. TENANT SPECIFIC ROUTES
+app.use(checkSubscription);
 app.use(checkTenant);
 
 app.use('/api/demands', demandRoutes);
