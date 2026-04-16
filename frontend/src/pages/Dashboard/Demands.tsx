@@ -135,7 +135,7 @@ export default function Demands() {
 
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex gap-3">
         <div className="relative flex-1 group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
           <input 
             type="text"
             placeholder="Buscar por munícipe ou telefone..."
@@ -144,8 +144,11 @@ export default function Demands() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={() => setFilterByAttention(!filterByAttention)}
+
             className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
               filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
             }`}
