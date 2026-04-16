@@ -67,16 +67,19 @@ router.get('/resumo', async (req, res) => {
     const [candidato] = await db.select().from(tseCandidatos).where(eq(tseCandidatos.tenantId, tenantId)).limit(1);
     if (!candidato) return res.json({ setup_required: true });
 
-    // Consulta robusta: Tenta somar votos mesmo que o local/bairro não esteja mapeado
+    // Consulta robusta: Tenta somar votos filtrando por município e ano do candidato
     const stats = await db.execute(sql`
       SELECT 
-          COALESCE(l.nm_bairro, 'NÃO MAPEADO') as nm_bairro,
+          COALESCE(NULLIF(l.nm_bairro, ''), 'NÃO MAPEADO') as nm_bairro,
           SUM(v.qt_votos) as total_votos
       FROM tse_votos_secao v
       LEFT JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+        AND v.nr_zona = l.nr_zona
         AND v.cd_municipio = l.cd_municipio 
         AND v.ano_eleicao = l.ano_eleicao
       WHERE v.nr_candidato = ${candidato.nrCandidato}
+        AND v.cd_municipio = ${candidato.cdMunicipio}
+        AND v.ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1
       ORDER BY total_votos DESC
       LIMIT 100
@@ -84,10 +87,14 @@ router.get('/resumo', async (req, res) => {
 
     // Busca o total real de votos direto na tabela de votos (sem joins) para o card de resumo
     const totalVotosResult = await db.execute(sql`
-      SELECT SUM(qt_votos) as total FROM tse_votos_secao WHERE nr_candidato = ${candidato.nrCandidato}
+      SELECT SUM(qt_votos) as total 
+      FROM tse_votos_secao 
+      WHERE nr_candidato = ${candidato.nrCandidato}
+        AND cd_municipio = ${candidato.cdMunicipio}
+        AND ano_eleicao = ${candidato.anoEleicao}
     `);
 
-    const totalVotos = totalVotosResult.rows[0]?.total || 0;
+    const totalVotos = Number(totalVotosResult.rows[0]?.total || 0);
 
     // Se achou o candidato mas não achou votos, pode ser erro de importação
     if (totalVotos == 0 && candidato) {
