@@ -5,9 +5,10 @@ import { X, Save, User, Phone, MapPin, Tag, AlertTriangle, Search, Loader2 } fro
 interface NewDemandModalProps {
   onClose: () => void;
   onUpdate: () => void;
+  prefilledMunicipe?: any;
 }
 
-export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProps) {
+export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }: NewDemandModalProps) {
   const [loading, setLoading] = useState(false);
   const [displayPhone, setDisplayPhone] = useState('');
   const [searchMunicipe, setSearchMunicipe] = useState('');
@@ -24,6 +25,13 @@ export default function NewDemandModal({ onClose, onUpdate }: NewDemandModalProp
     prioridade: 'media',
     resumoIa: ''
   });
+
+  // Preenchimento automático se vier do atendimento
+  React.useEffect(() => {
+    if (prefilledMunicipe) {
+      selectMunicipe(prefilledMunicipe);
+    }
+  }, [prefilledMunicipe]);
 
   const handleSearch = async (term: string) => {
     setSearchMunicipe(term);

@@ -17,7 +17,7 @@ import {
   Phone,
   ClipboardList
 } from 'lucide-react';
-import jsPDF from 'jspdf';
+import jsPDF from 'jsPDF';
 import autoTable from 'jspdf-autotable';
 
 interface Atendimento {
@@ -66,6 +66,7 @@ export default function Demands() {
   const [loading, setLoading] = useState(true);
   const [selectedAtendimento, setSelectedAtendimento] = useState<any>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
+  const [prefilledMunicipe, setPrefilledMunicipe] = useState<any>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterByAttention, setFilterByAttention] = useState(false);
@@ -93,15 +94,6 @@ export default function Demands() {
   useEffect(() => {
     fetchAtendimentos();
   }, [fetchAtendimentos]);
-
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
@@ -203,6 +195,15 @@ export default function Demands() {
             </tbody>
           </table>
         </div>
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            {pagination.total} REGISTROS • PÁGINA {pagination.page} DE {pagination.totalPages}
+          </p>
+          <div className="flex gap-1">
+            <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({...p, page: p.page - 1}))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30"><ChevronLeft size={16} /></button>
+            <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({...p, page: p.page + 1}))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30"><ChevronRight size={16} /></button>
+          </div>
+        </div>
       </div>
 
       {selectedAtendimento && (
@@ -221,6 +222,22 @@ export default function Demands() {
           }}
           onClose={() => setSelectedAtendimento(null)}
           onUpdate={fetchAtendimentos}
+          onOpenCreateDemand={(municipe: any) => {
+            setPrefilledMunicipe(municipe);
+            setSelectedAtendimento(null);
+            setIsNewDemandModalOpen(true);
+          }}
+        />
+      )}
+
+      {isNewDemandModalOpen && (
+        <NewDemandModal 
+          onClose={() => {
+            setIsNewDemandModalOpen(false);
+            setPrefilledMunicipe(null);
+          }} 
+          onUpdate={fetchAtendimentos} 
+          prefilledMunicipe={prefilledMunicipe}
         />
       )}
     </div>
