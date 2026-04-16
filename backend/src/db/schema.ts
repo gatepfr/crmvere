@@ -147,3 +147,57 @@ export const systemConfigs = pgTable("system_configs", {
   aiBaseUrl: varchar("ai_base_url", { length: 500 }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// --- MÓDULO DE INTELIGÊNCIA ELEITORAL (TSE) ---
+
+export const tseCandidatos = pgTable("tse_candidatos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
+  anoEleicao: integer("ano_eleicao").notNull(),
+  nmCandidato: varchar("nm_candidato", { length: 255 }).notNull(),
+  nrCandidato: varchar("nr_candidato", { length: 20 }).notNull(),
+  sgPartido: varchar("sg_partido", { length: 20 }),
+  cdMunicipio: varchar("cd_municipio", { length: 20 }),
+  nmMunicipio: varchar("nm_municipio", { length: 255 }),
+  dsSituacao: varchar("ds_situacao", { length: 100 }),
+  qtVotosTotal: integer("qt_votos_total").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const tseLocaisVotacao = pgTable("tse_locais_votacao", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  anoEleicao: integer("ano_eleicao").notNull(),
+  cdMunicipio: varchar("cd_municipio", { length: 20 }),
+  nrZona: integer("nr_zona"),
+  nrLocalVotacao: integer("nr_local_votacao"),
+  nmLocalVotacao: varchar("nm_local_votacao", { length: 255 }),
+  dsEndereco: varchar("ds_endereco", { length: 500 }),
+  nmBairro: varchar("nm_bairro", { length: 255 }),
+  nrCep: varchar("nr_cep", { length: 20 }),
+  qtEleitores: integer("qt_eleitores"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const tseVotosSecao = pgTable("tse_votos_secao", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  anoEleicao: integer("ano_eleicao").notNull(),
+  cdMunicipio: varchar("cd_municipio", { length: 20 }),
+  nrZona: integer("nr_zona"),
+  nrSecao: integer("nr_secao"),
+  nrLocalVotacao: integer("nr_local_votacao"),
+  nrCandidato: varchar("nr_candidato", { length: 20 }),
+  qtVotos: integer("qt_votos"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+export const tsePerfilEleitorado = pgTable("tse_perfil_eleitorado", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  anoEleicao: integer("ano_eleicao").notNull(),
+  cdMunicipio: varchar("cd_municipio", { length: 20 }),
+  nmBairro: varchar("nm_bairro", { length: 255 }),
+  dsGenero: varchar("ds_genero", { length: 50 }),
+  dsFaixaEtaria: varchar("ds_faixa_etaria", { length: 50 }),
+  dsGrauEscolaridade: varchar("ds_grau_escolaridade", { length: 100 }),
+  qtEleitores: integer("qt_eleitores"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
