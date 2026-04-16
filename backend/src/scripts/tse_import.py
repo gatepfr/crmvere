@@ -62,6 +62,16 @@ def safe_int(val, default=0):
     except:
         return default
 
+def clean_tse_value(text):
+    if not text: return "NÃO INFORMADO"
+    text = str(text).replace("#", "").strip().upper()
+    mapping = {
+        "NE": "NÃO ELEITO",
+        "NULO": "NÃO INFORMADO",
+        "NI": "NÃO INFORMADO"
+    }
+    return mapping.get(text, text)
+
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
@@ -92,7 +102,13 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
             num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
             cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['SG', 'UE']) or find_column(df.columns, ['CD', 'UE'])
-            sit_col = find_column(df.columns, ['DS', 'SITUACAO', 'CANDIDATURA']) or find_column(df.columns, ['DS', 'SIT'])
+            
+            # Prioriza a situação final (Eleito/Suplente) se disponível, senão pega a de candidatura (Deferido)
+            sit_col = find_column(df.columns, ['DS', 'SITUACAO', 'TOTALIZACAO']) or \
+                      find_column(df.columns, ['DS', 'SIT', 'TOT']) or \
+                      find_column(df.columns, ['DS', 'SITUACAO', 'CANDIDATURA']) or \
+                      find_column(df.columns, ['DS', 'SIT'])
+            
             name_col = find_column(df.columns, ['NM', 'CANDIDATO'])
             part_col = find_column(df.columns, ['SG', 'PARTIDO'])
 
@@ -102,11 +118,15 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                 if not cand.empty:
                     c = cand.iloc[0]
                     cd_municipio_candidato = normalize_code(c[cd_mun_col])
+                    
+                    # Limpa siglas como #NE# e traduz para texto amigável
+                    status_limpo = clean_tse_value(c.get(sit_col, "NÃO INFORMADO"))
+                    
                     cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
                     cur.execute("""
                         INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (tenant_id, ano, c[name_col], c[num_col], c[part_col], cd_municipio_candidato, c[city_col], c[sit_col]))
+                    """, (tenant_id, ano, c[name_col], c[num_col], c[part_col], cd_municipio_candidato, c[city_col], status_limpo))
                     found_candidato = True
                     break
 
