@@ -70,7 +70,7 @@ export default function Categories() {
     if (!confirm('Deseja excluir esta categoria?')) return;
     try {
       await api.delete(`/demands/categories/${id}`);
-      setCategories(prev => prev.filter(c => i.id !== id));
+      setCategories(prev => prev.filter(c => c.id !== id));
       loadCategories();
     } catch (err) {
       alert('Erro ao excluir');
