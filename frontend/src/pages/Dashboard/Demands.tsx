@@ -39,6 +39,16 @@ interface Demand {
   };
 }
 
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+type SortField = 'name' | 'phone' | 'date' | 'priority' | 'category';
+type SortOrder = 'asc' | 'desc';
+
 const formatName = (name: string) => {
   if (!name) return '';
   const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
@@ -54,16 +64,6 @@ const formatName = (name: string) => {
     })
     .join(' ');
 };
-
-export default function Demands() {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-type SortField = 'name' | 'phone' | 'date' | 'priority' | 'category';
-type SortOrder = 'asc' | 'desc';
 
 export default function Demands() {
   const [demands, setDemands] = useState<Demand[]>([]);
