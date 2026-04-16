@@ -301,6 +301,22 @@ export default function Municipes() {
     return phone;
   };
 
+  const formatName = (name: string) => {
+    if (!name) return '';
+    const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
+    return name
+      .toLowerCase()
+      .split(' ')
+      .filter(word => word.length > 0)
+      .map((word, index) => {
+        if (prepositions.includes(word) && index !== 0) {
+          return word;
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
+  };
+
   const formatDateDisplay = (dateStr: string | null) => {
     if (!dateStr) return '---';
     try {
@@ -343,16 +359,19 @@ export default function Municipes() {
   };
 
   const handleCepChange = async (value: string, type: 'create' | 'edit') => {
-    const cep = value.replace(/\D/g, '').substring(0, 8);
+    const raw = value.replace(/\D/g, '').substring(0, 8);
+    let masked = raw;
+    if (raw.length > 5) masked = `${raw.slice(0, 5)}-${raw.slice(5)}`;
+    
     if (type === 'create') {
-      setCreateForm(prev => ({ ...prev, cep }));
+      setCreateForm(prev => ({ ...prev, cep: masked }));
     } else {
-      setEditForm(prev => ({ ...prev, cep }));
+      setEditForm(prev => ({ ...prev, cep: masked }));
     }
 
-    if (cep.length === 8) {
+    if (raw.length === 8) {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const response = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
         const data = await response.json();
         if (!data.erro && data.bairro) {
           if (type === 'create') {
@@ -666,14 +685,8 @@ export default function Municipes() {
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">
-                    Munícipe
+                    Munícipe / Contato
                     {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}
-                  </div>
-                </th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('phone')}>
-                  <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">
-                    Contato
-                    {sortConfig.key === 'phone' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}
                   </div>
                 </th>
                 <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('bairro')}>
