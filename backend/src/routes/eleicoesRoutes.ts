@@ -20,8 +20,10 @@ router.post('/importar', async (req, res) => {
 
   if (!tenantId) return res.status(403).json({ error: 'Tenant required' });
 
-  // Dispara o script Python
-  spawn('python3', [
+  console.log(`[ELEICOES] Disparando importação: ${ano} ${uf} ${municipio} - Candidato ${nrCandidato}`);
+
+  // Dispara o script Python permitindo que o log apareça no stdout/stderr do Docker
+  const pythonProcess = spawn('python3', [
     'src/scripts/tse_import.py',
     ano.toString(),
     uf.toUpperCase(),
@@ -29,10 +31,11 @@ router.post('/importar', async (req, res) => {
     nrCandidato.toString(),
     tenantId
   ], {
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
-    detached: true,
-    stdio: 'ignore'
-  }).unref();
+    env: { ...process.env, PYTHONUNBUFFERED: '1' }
+  });
+
+  pythonProcess.stdout.on('data', (data) => console.log(`[PYTHON STDOUT] ${data.toString()}`));
+  pythonProcess.stderr.on('data', (data) => console.error(`[PYTHON STDERR] ${data.toString()}`));
 
   res.json({ status: 'started' });
 });
