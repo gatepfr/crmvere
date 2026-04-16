@@ -5,7 +5,6 @@ import {
   MessageSquare, 
   MessageCircle, 
   Bot, 
-  Database, 
   LogOut, 
   Map, 
   Building2, 
@@ -18,7 +17,7 @@ import {
   Sparkles,
   Zap,
   ClipboardList,
-  Tags
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,19 +27,18 @@ export default function Sidebar() {
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { name: 'Inteligência Eleitoral', icon: Zap, path: '/dashboard/eleicoes' },
-    { name: 'Atendimento', icon: MessageSquare, path: '/dashboard/demands' },
-    { name: 'Demandas & Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
     { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda' },
+    { name: 'Inteligência Eleitoral', icon: Zap, path: '/dashboard/eleicoes' },
+    { name: 'Atendimento On Line', icon: MessageSquare, path: '/dashboard/demands' },
+    { name: 'Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
     { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
     { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
     { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
-    { name: 'Gabinete', icon: Building2, path: '/dashboard/cabinet' },
     { name: 'Lab IA', icon: Sparkles, path: '/dashboard/ai-lab' },
     { name: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
     { name: 'Configuração IA', icon: Bot, path: '/dashboard/ai' },
-    { name: 'Base de Dados', icon: Database, path: '/dashboard/knowledge' },
-    { name: 'Configurações', icon: User, path: '/dashboard/profile' },
+    { name: 'Gabinete', icon: Building2, path: '/dashboard/cabinet' },
+    { name: 'Configurações', icon: Settings, path: '/dashboard/profile' },
   ];
 
   const toggleSidebar = () => setIsOpen(!isOpen);
