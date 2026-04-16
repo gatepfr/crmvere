@@ -60,7 +60,6 @@ export default function Team() {
       setSuccess('Membro adicionado com sucesso!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const message = err instanceof Error ? (err as any).response?.data?.error || err.message : 'Erro ao adicionar membro.';
       setError(message);
     } finally {
@@ -77,9 +76,26 @@ export default function Team() {
       setSuccess('Membro removido com sucesso!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const message = err instanceof Error ? (err as any).response?.data?.error || err.message : 'Erro ao remover membro.';
       setError(message);
+    }
+  };
+
+  const handleToggleAdmin = async (id: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'assessor' : 'admin';
+    const confirmMsg = newRole === 'admin' 
+      ? 'Deseja dar controle total (Admin) a este usuário?' 
+      : 'Deseja remover os privilégios de Admin deste usuário?';
+      
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.patch(`/team/${id}/role`, { role: newRole });
+      setMembers(members.map(m => m.id === id ? { ...m, role: newRole as any } : m));
+      setSuccess('Cargo atualizado com sucesso!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError('Erro ao atualizar cargo.');
     }
   };
 
@@ -191,17 +207,32 @@ export default function Team() {
                   </td>
                   {isAdmin && (
                     <td className="px-6 py-4 text-right">
-                      {member.id !== user?.id ? (
-                        <button
-                          onClick={() => handleDeleteMember(member.id)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Remover membro"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic px-2">(Você)</span>
-                      )}
+                      <div className="flex justify-end items-center gap-2">
+                        {member.id !== user?.id ? (
+                          <>
+                            <button
+                              onClick={() => handleToggleAdmin(member.id, member.role)}
+                              className={`p-2 rounded-lg transition-all ${
+                                member.role === 'admin' 
+                                  ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' 
+                                  : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+                              }`}
+                              title={member.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
+                            >
+                              <Shield className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMember(member.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Remover membro"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic px-2">(Você)</span>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

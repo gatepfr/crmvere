@@ -65,4 +65,24 @@ router.delete('/:id', async (req: any, res: any) => {
   res.json({ success: true });
 });
 
+// PATCH /api/team/:id/role - Update member role (promote/demote)
+router.patch('/:id/role', async (req: any, res: any) => {
+  const tenantId = req.user?.tenantId;
+  const { id } = req.params;
+  const { role } = req.body;
+  
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  if (req.user?.role !== 'admin' && req.user?.role !== 'vereador') return res.status(403).json({ error: 'Only admins can change roles' });
+  if (id === req.user?.id) return res.status(400).json({ error: 'Cannot change your own role' });
+
+  try {
+    await db.update(users)
+      .set({ role })
+      .where(and(eq(users.id, id), eq(users.tenantId, tenantId)));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update role' });
+  }
+});
+
 export default router;
