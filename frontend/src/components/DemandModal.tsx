@@ -15,7 +15,8 @@ import {
   MapPin as MapIcon,
   Trash2,
   ClipboardList,
-  ExternalLink
+  ExternalLink,
+  Plus
   } from 'lucide-react';
 
 interface DemandModalProps {
