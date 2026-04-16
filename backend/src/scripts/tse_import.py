@@ -118,11 +118,25 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         report_progress(tenant_id, "Minerando Bairros...", 30)
         for f in os.listdir(tmp_dir): os.remove(os.path.join(tmp_dir, f))
         
-        url_locais = f"https://cdn.tse.jus.br/estatistica/sead/odsele/rede_locais_votacao/rede_locais_votacao_{ano}.zip"
-        download_and_extract(url_locais, tmp_dir, uf)
+        # Tenta URL antiga (2020) e nova (2024)
+        urls_locais = [
+            f"https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip",
+            f"https://cdn.tse.jus.br/estatistica/sead/odsele/rede_locais_votacao/rede_locais_votacao_{ano}.zip"
+        ]
         
-        for file in os.listdir(tmp_dir):
-            if file.lower().endswith('.csv') and ('rede_locais_votacao' in file.lower() or 'local_votacao' in file.lower()):
+        locais_baixados = False
+        for url in urls_locais:
+            if download_and_extract(url, tmp_dir, uf):
+                locais_baixados = True
+                break
+            # Tenta também a versão com UF no nome do ZIP caso a global falhe
+            if download_and_extract(url.replace(".zip", f"_{uf}.zip"), tmp_dir):
+                locais_baixados = True
+                break
+
+        if locais_baixados:
+            for file in os.listdir(tmp_dir):
+                if file.lower().endswith('.csv') and any(x in file.lower() for x in ['rede_locais_votacao', 'local_votacao', 'eleitorado_local_votacao']):
                 df_loc = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
                 df_loc.columns = [c.upper() for c in df_loc.columns]
                 c_city = find_column(df_loc.columns, ['NM', 'MUN']) or find_column(df_loc.columns, ['NM', 'UE'])
