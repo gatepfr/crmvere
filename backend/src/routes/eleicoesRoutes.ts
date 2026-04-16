@@ -120,13 +120,42 @@ router.get('/resumo', async (req, res) => {
       GROUP BY 1, 2, 3
     `);
 
+    // Busca Perfil: Gênero
+    const perfilGenero = await db.execute(sql`
+      SELECT ds_genero as label, SUM(qt_eleitores) as value
+      FROM tse_perfil_eleitorado
+      WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+      GROUP BY 1 ORDER BY value DESC
+    `);
+
+    // Busca Perfil: Faixa Etária
+    const perfilIdade = await db.execute(sql`
+      SELECT ds_faixa_etaria as label, SUM(qt_eleitores) as value
+      FROM tse_perfil_eleitorado
+      WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+      GROUP BY 1 ORDER BY label ASC
+    `);
+
+    // Busca Perfil: Escolaridade
+    const perfilEscolaridade = await db.execute(sql`
+      SELECT ds_grau_escolaridade as label, SUM(qt_eleitores) as value
+      FROM tse_perfil_eleitorado
+      WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+      GROUP BY 1 ORDER BY value DESC
+    `);
+
     res.json({
       candidato: {
           ...candidato,
           qtVotosTotal: totalVotos
       },
       bairros: stats.rows || [],
-      mapa: mapaCalor.rows || []
+      mapa: mapaCalor.rows || [],
+      perfil: {
+        genero: perfilGenero.rows || [],
+        idade: perfilIdade.rows || [],
+        escolaridade: perfilEscolaridade.rows || []
+      }
     });
   } catch (error: any) {
     console.error('[ELEICOES ERROR]', error.message);
