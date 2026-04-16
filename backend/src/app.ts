@@ -15,6 +15,7 @@ import profileRoutes from './routes/profileRoutes';
 import mapRoutes from './routes/mapRoutes';
 import aiRoutes from './routes/aiRoutes';
 import billingRoutes from './routes/billingRoutes';
+import eleicoesRoutes from './routes/eleicoesRoutes';
 import { authenticate } from './middleware/auth';
 import { checkTenant } from './middleware/tenant';
 import { checkSubscription } from './middleware/subscription';
@@ -58,6 +59,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/eleicoes', eleicoesRoutes);
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
