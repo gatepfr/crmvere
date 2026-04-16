@@ -67,7 +67,7 @@ export async function processDemand(
       "resumo_ia": "Um resumo detalhado e organizado. Use tópicos (•) e negrito (**) para destacar pontos chave como: **Assunto**, **Localização**, **Urgência**.",
       "prioridade": "baixa" | "media" | "alta" | "urgente",
       "acao_sugerida": "ação recomendada para o gabinete",
-      "precisa_retorno": true | false,
+      "precisa_retorno": true | false, // APENAS true se você NÃO souber responder ou se o cidadão pedir falar com um humano/equipe. Se você respondeu com sucesso, use false.
       "resposta_usuario": "Sua resposta direta, gentil e personalizada ao cidadão."
     }
     |||JSON|||

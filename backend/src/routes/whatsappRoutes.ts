@@ -121,8 +121,38 @@ router.post('/instance/logout', async (req, res) => {
       }).where(eq(tenants.id, tenant.id));
     }
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (error: any) {
     res.status(500).json({ error: 'Falha ao desconectar' });
+  }
+});
+
+// Envio direto (usado para aniversários e mensagens avulsas)
+router.post('/send-direct', async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const { phone, message } = req.body;
+
+    if (!tenantId || !phone || !message) {
+      return res.status(400).json({ error: 'Parâmetros ausentes (phone, message)' });
+    }
+
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant?.whatsappInstanceId) {
+      return res.status(400).json({ error: 'WhatsApp não conectado neste gabinete.' });
+    }
+
+    const { url, token } = getEvolutionConfig(tenant);
+    const evo = new EvolutionService(url, token);
+    
+    // Normaliza o JID para o envio (garante @s.whatsapp.net)
+    const targetJid = phone.includes('@') ? phone : `${phone.replace(/\D/g, '')}@s.whatsapp.net`;
+    
+    await evo.sendMessage(tenant.whatsappInstanceId, targetJid, message);
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error sending direct message:', error.message);
+    res.status(500).json({ error: 'Falha ao enviar mensagem via WhatsApp.' });
   }
 });
 
