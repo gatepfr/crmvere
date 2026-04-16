@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { spawn } from 'child_process';
 import { db } from '../db';
-import { tseCandidatos, tseLocaisVotacao, tseVotosSecao } from '../db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { tseCandidatos } from '../db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { authenticate } from '../middleware/auth';
 import Redis from 'ioredis';
 
@@ -12,21 +12,16 @@ router.use(authenticate);
 const redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 /**
- * Inicia o processo de importação do TSE via script Python
+ * Inicia o processo de importação
  */
 router.post('/importar', async (req, res) => {
   const { ano, uf, municipio, nrCandidato } = req.body;
   const tenantId = req.user?.tenantId;
 
   if (!tenantId) return res.status(403).json({ error: 'Tenant required' });
-  if (!ano || !uf || !municipio || !nrCandidato) {
-    return res.status(400).json({ error: 'Parâmetros incompletos (ano, uf, municipio, nrCandidato)' });
-  }
 
-  console.log(`[ELEICOES] Disparando importação: ${ano} ${uf} ${municipio} - Candidato ${nrCandidato}`);
-
-  // Dispara o script Python em background
-  const pythonProcess = spawn('python3', [
+  // Dispara o script Python
+  spawn('python3', [
     'src/scripts/tse_import.py',
     ano.toString(),
     uf.toUpperCase(),
@@ -34,71 +29,64 @@ router.post('/importar', async (req, res) => {
     nrCandidato.toString(),
     tenantId
   ], {
-    env: { ...process.env, PYTHONUNBUFFERED: '1' }
-  });
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    detached: true,
+    stdio: 'ignore'
+  }).unref();
 
-  pythonProcess.stdout.on('data', (data) => console.log(`[PYTHON STDOUT] ${data}`));
-  pythonProcess.stderr.on('data', (data) => console.error(`[PYTHON STDERR] ${data}`));
-
-  res.json({ status: 'started', message: 'Importação iniciada em segundo plano.' });
+  res.json({ status: 'started' });
 });
 
 /**
- * Consulta o progresso da importação no Redis
+ * Consulta progresso
  */
 router.get('/status', async (req, res) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'Tenant required' });
 
-  try {
-    const progress = await redisClient.get(`tse:import:${tenantId}:progress`);
-    const step = await redisClient.get(`tse:import:${tenantId}:step`);
+  const progress = await redisClient.get(`tse:import:${tenantId}:progress`);
+  const step = await redisClient.get(`tse:import:${tenantId}:step`);
 
-    res.json({
-      percent: progress ? parseInt(progress) : 0,
-      step: step || 'Aguardando...'
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao consultar status do Redis' });
-  }
+  res.json({
+    percent: progress ? parseInt(progress) : 0,
+    step: step || 'Aguardando...'
+  });
 });
 
 /**
- * Retorna os dados resumidos para o Dashboard
+ * Retorna os dados para o Dashboard (Versão Robusta)
  */
 router.get('/resumo', async (req, res) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'Tenant required' });
 
   try {
-    // Busca dados do candidato vinculado
     const [candidato] = await db.select().from(tseCandidatos).where(eq(tseCandidatos.tenantId, tenantId)).limit(1);
-    
     if (!candidato) return res.json({ setup_required: true });
 
-    // Consulta na View Materializada (Simulada via SQL bruto para v1.0)
+    // Consulta direta nas tabelas em vez de depender da View (mais seguro para v1.0)
     const stats = await db.execute(sql`
       SELECT 
-        nm_bairro, 
-        total_votos 
-      FROM (
-        SELECT 
-            l.nm_bairro,
-            SUM(v.qt_votos) as total_votos
-        FROM tse_votos_secao v
-        JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.cd_municipio = l.cd_municipio
-        WHERE v.nr_candidato = ${candidato.nrCandidato}
-        GROUP BY l.nm_bairro
-      ) as sub
+          l.nm_bairro,
+          SUM(v.qt_votos) as total_votos
+      FROM tse_votos_secao v
+      JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+        AND v.cd_municipio = l.cd_municipio 
+        AND v.ano_eleicao = l.ano_eleicao
+      WHERE v.nr_candidato = ${candidato.nrCandidato}
+      GROUP BY l.nm_bairro
       ORDER BY total_votos DESC
+      LIMIT 50
     `);
 
     res.json({
       candidato,
-      bairros: stats.rows
+      bairros: stats.rows || []
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('[ELEICOES ERROR]', error.message);
+    // Retorna vazio em vez de erro 500 para evitar logout
+    res.json({ candidato: null, bairros: [], error: 'Dados ainda não processados.' });
   }
 });
 
