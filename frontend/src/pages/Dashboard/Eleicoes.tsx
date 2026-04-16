@@ -22,8 +22,7 @@ function ChangeView({ center, zoom }: { center: [number, number], zoom: number }
 }
 
 interface ElectionConfig {
-...
-
+  ano: string;
   uf: string;
   municipio: string;
   nrCandidato: string;
