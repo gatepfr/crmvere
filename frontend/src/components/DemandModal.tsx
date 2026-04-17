@@ -14,6 +14,7 @@ import {
   Loader2,
   MapPin as MapIcon,
   Trash2,
+  Edit2,
   ClipboardList,
   ExternalLink,
   Plus
