@@ -200,12 +200,27 @@ export const updateDemand = async (req: Request, res: Response) => {
 
 export const updateAtendimento = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { precisaRetorno } = req.body;
+  const { precisaRetorno, status, categoria, prioridade } = req.body;
   const tenantId = req.user?.tenantId;
+  
   try {
-    await db.update(atendimentos).set({ precisaRetorno, updatedAt: new Date() }).where(and(eq(atendimentos.id, id), eq(atendimentos.tenantId, tenantId!)));
+    const updateData: any = { updatedAt: new Date() };
+    if (precisaRetorno !== undefined) updateData.precisaRetorno = precisaRetorno;
+    if (categoria) updateData.categoria = categoria;
+    if (prioridade) updateData.prioridade = prioridade;
+    // Note: 'status' isn't on atendimentos table usually, but we can treat 'concluida' as unsetting 'precisaRetorno'
+    if (status === 'concluida') updateData.precisaRetorno = false;
+
+    await db.update(atendimentos)
+      .set(updateData)
+      .where(and(
+        eq(atendimentos.id, id), 
+        eq(atendimentos.tenantId, tenantId!)
+      ));
+
     res.json({ success: true });
   } catch (error) {
+    console.error('[UPDATE ATENDIMENTO ERROR]', error);
     res.status(500).json({ error: 'Failed' });
   }
 };
