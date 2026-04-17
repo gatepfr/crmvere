@@ -57,8 +57,8 @@ export default function Eleicoes() {
       if (configRes.data) {
         setConfig(prev => ({
           ...prev,
-          uf: configRes.data.uf || prev.uf,
-          municipio: configRes.data.municipio || prev.municipio
+          uf: (configRes.data.uf || prev.uf).toUpperCase(),
+          municipio: (configRes.data.municipio || prev.municipio).toUpperCase()
         }));
       }
 
