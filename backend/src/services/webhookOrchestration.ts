@@ -179,18 +179,31 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     if (tenant.whatsappInstanceId) {
       const evoUrl = process.env.EVOLUTION_URL || 'http://evolution_api:8080';
       const evoToken = tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
-      console.log(`[ORCHESTRATOR] Enviando WhatsApp via ${evoUrl} (Instância: ${tenant.whatsappInstanceId})`);
       const evolution = new EvolutionService(evoUrl, evoToken);
+
+      // Fallback de Segurança para o JID
+      const targetJid = normalized.jid || `${normalized.from}@s.whatsapp.net`;
+
+      if (!targetJid || targetJid.startsWith('@')) {
+        console.error(`[ORCHESTRATOR FATAL] Destinatário inválido para envio: "${targetJid}"`);
+        return { status: 'invalid_recipient' };
+      }
+
+      console.log(`[ORCHESTRATOR] Enviando WhatsApp para ${targetJid} via ${evoUrl}`);
 
       // Resposta para o Munícipe
       if (aiResult?.resposta_usuario) {
-        await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario);
+        await evolution.sendMessage(tenant.whatsappInstanceId, targetJid, aiResult.resposta_usuario);
         console.log(`[ORCHESTRATOR] Resposta enviada ao munícipe.`);
       }
 
       // 9. ALERTA PARA A EQUIPE (Se a IA marcou precisa_retorno)
       if (aiResult?.precisa_retorno && tenant.whatsappNotificationNumber) {
-        console.log(`[ORCHESTRATOR] 🚨 Alertando equipe no número ${tenant.whatsappNotificationNumber}`);
+        const teamJid = tenant.whatsappNotificationNumber.includes('@') 
+          ? tenant.whatsappNotificationNumber 
+          : `${tenant.whatsappNotificationNumber.replace(/\D/g, '')}@s.whatsapp.net`;
+
+        console.log(`[ORCHESTRATOR] 🚨 Alertando equipe no número ${teamJid}`);
         
         const cleanSummary = aiResult.resumo_ia?.replace(/\*\*/g, '').replace(/\*/g, '') || 'Sem resumo disponível';
         const alertMsg = `🚨 *ALERTA DE ATENDIMENTO HUMANO*\n\n` +
@@ -200,7 +213,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
                         `📝 *RESUMO:* ${cleanSummary}\n\n` +
                         `⚠️ _A IA solicitou ajuda humana. Acesse o painel para assumir._`;
         
-        await evolution.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, alertMsg)
+        await evolution.sendMessage(tenant.whatsappInstanceId, teamJid, alertMsg)
           .catch(e => console.error('[ORCHESTRATOR ALERT ERROR]:', e.message));
       }
     }

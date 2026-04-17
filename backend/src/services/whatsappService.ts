@@ -13,30 +13,30 @@ export interface IncomingMessage {
  * Normalizes the payload from Evolution API into a standard format.
  */
 export const normalizeEvolution = (payload: any, tenantId: string): IncomingMessage => {
-  // Evolution API v2 encapsula em data.messages[]
-  const messageData = payload.data?.messages?.[0] || payload.data || {};
+  // Tenta encontrar o objeto da mensagem (v2 costuma usar data.messages[0])
+  const data = payload.data || {};
+  const messageEntry = data.messages?.[0] || data || {};
+  
+  // Tenta capturar o JID de múltiplos lugares possíveis
+  const remoteJid = messageEntry.key?.remoteJid || 
+                    messageEntry.remoteJid || 
+                    data.key?.remoteJid || 
+                    data.remoteJid || 
+                    payload.jid || 
+                    '';
 
-  // Extract event type
-  let event = payload.event || 'unknown';
-  if (event === 'unknown' && messageData.message) {
-    event = 'MESSAGES_UPSERT';
-  }
-
-  const remoteJid = messageData.key?.remoteJid || payload.data?.key?.remoteJid || '';
-  const fromMe = messageData.key?.fromMe || false;
-
-  // Robust group/broadcast/newsletter detection
+  const fromMe = messageEntry.key?.fromMe || data.key?.fromMe || false;
+  
+  // Detecção de Grupo/Broadcast
   const isGroup = remoteJid.endsWith('@g.us') || 
                   remoteJid.endsWith('@broadcast') || 
                   remoteJid.endsWith('@newsletter') ||
                   remoteJid.endsWith('@temp');
-
+  
   let from = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '') || '';
-
-  // Clean phone number: remove non-digits
+  
+  // Limpeza e correção de nono dígito (Brasil)
   from = from.replace(/\D/g, '');
-
-  // Intelligent Brazilian correction (9th digit)
   if (!isGroup && from.startsWith('55')) {
     const ddd = from.slice(2, 4);
     const rest = from.slice(4);
@@ -45,12 +45,16 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
     }
   }
 
-  const name = messageData.pushName || payload.data?.pushName || '';
-
-  // Extract text from various message types
+  // Tenta capturar o Nome de múltiplos lugares
+  const name = messageEntry.pushName || 
+               data.pushName || 
+               payload.pushName || 
+               payload.instance || 
+               'Cidadão';
+  
+  // Extração de Texto (mantendo a lógica robusta anterior)
   const extractText = (m: any): string => {
     if (!m) return '';
-
     if (m.ephemeralMessage?.message) return extractText(m.ephemeralMessage.message);
     if (m.viewOnceMessage?.message) return extractText(m.viewOnceMessage.message);
     if (m.viewOnceMessageV2?.message) return extractText(m.viewOnceMessageV2.message);
@@ -73,10 +77,10 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
     return '';
   };
 
-  const text = extractText(messageData.message);
+  const text = extractText(messageEntry.message || data.message);
 
   return {
-    event,
+    event: payload.event || 'MESSAGES_UPSERT',
     from,
     jid: remoteJid,
     name,
