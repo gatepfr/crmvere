@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes, tenants, atendimentos, tseCandidatos } from '../db/schema';
+import { demandas, municipes, tenants, atendimentos } from '../db/schema';
 import { eq, sql, desc, and } from 'drizzle-orm';
 
 export const getDashboardStats = async (req: Request, res: Response) => {

@@ -128,6 +128,7 @@ export default function DashboardHome() {
       {/* Grid de Cards Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card: Munícipes Totais */}
+
         <div 
           onClick={() => navigate('/dashboard/municipes')}
           className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all group cursor-pointer relative overflow-hidden"
