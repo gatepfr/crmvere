@@ -53,21 +53,16 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       municipe = newMunicipe;
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
+    // Busca atendimento criado HOJE (Fuso Brasília) para este munícipe
     let [existingAtendimento] = await db.select()
       .from(atendimentos)
       .where(and(
         eq(atendimentos.municipeId, municipe.id), 
-        eq(atendimentos.tenantId, tenantId)
+        eq(atendimentos.tenantId, tenantId),
+        sql`date_trunc('day', ${atendimentos.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')`
       ))
       .orderBy(desc(atendimentos.updatedAt))
       .limit(1);
-
-    if (existingAtendimento && existingAtendimento.createdAt < todayStart) {
-      existingAtendimento = undefined;
-    }
 
     // 5. Verifica se o atendimento já está aguardando retorno humano
     // AJUSTE: Se a última mensagem foi há mais de 2 horas, permitimos que a IA tente responder novamente
