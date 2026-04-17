@@ -109,28 +109,30 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
     try {
-      if (existingAtendimento) {
-        console.log(`[ORCHESTRATOR] Atualizando atendimento existente ${existingAtendimento.id}`);
-        await db.update(atendimentos).set({
+      // Usamos upsert baseado na constraint de unicidade (tenantId, municipeId)
+      await db.insert(atendimentos).values({
+        tenantId,
+        municipeId: municipe.id,
+        resumoIa: updatedHistory,
+        categoria: aiResult?.categoria,
+        prioridade: aiResult?.prioridade,
+        precisaRetorno: aiResult?.precisa_retorno || false,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [atendimentos.tenantId, atendimentos.municipeId],
+        set: {
           resumoIa: updatedHistory,
-          categoria: aiResult?.categoria || existingAtendimento.categoria,
-          prioridade: aiResult?.prioridade || existingAtendimento.prioridade,
-          precisaRetorno: aiResult?.precisa_retorno || existingAtendimento.precisaRetorno,
+          categoria: aiResult?.categoria || sql`${atendimentos.categoria}`,
+          prioridade: aiResult?.prioridade || sql`${atendimentos.prioridade}`,
+          precisaRetorno: aiResult?.precisa_retorno !== undefined ? aiResult.precisa_retorno : sql`${atendimentos.precisaRetorno}`,
           updatedAt: new Date(),
-        }).where(eq(atendimentos.id, existingAtendimento.id));
-      } else {
-        console.log(`[ORCHESTRATOR] Criando novo atendimento`);
-        await db.insert(atendimentos).values({
-          tenantId,
-          municipeId: municipe.id,
-          resumoIa: updatedHistory,
-          categoria: aiResult?.categoria,
-          prioridade: aiResult?.prioridade,
-          precisaRetorno: aiResult?.precisa_retorno || false
-        });
-      }
+        }
+      });
+      console.log(`[ORCHESTRATOR] Atendimento salvo/atualizado para ${municipe.name}`);
     } catch (dbError: any) {
-      console.error(`[ORCHESTRATOR DB ERROR] Falha ao salvar no banco, mas prosseguindo com WhatsApp:`, dbError.message);
+      console.error(`[ORCHESTRATOR DB ERROR] Falha crítica ao salvar atendimento:`, dbError.message);
+      // Aqui poderíamos lançar o erro se quisermos que a orquestração falhe e não mande o WhatsApp
     }
 
     // 8. Fluxo de Envio de WhatsApp
