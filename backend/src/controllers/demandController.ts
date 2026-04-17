@@ -198,6 +198,38 @@ export const updateDemand = async (req: Request, res: Response) => {
   }
 };
 
+export const listCategories = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  const defs = [
+    { id: '1', name: 'SAÚDE', color: '#db2777' },
+    { id: '2', name: 'INFRAESTRUTURA', color: '#2563eb' },
+    { id: '3', name: 'SEGURANÇA', color: '#dc2626' },
+    { id: '4', name: 'EDUCAÇÃO', color: '#7c3aed' },
+    { id: '5', name: 'ESPORTE', color: '#059669' },
+    { id: '6', name: 'OUTRO', color: '#4b5563' }
+  ];
+
+  try {
+    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    
+    if (cats.length === 0) {
+      // Tenta criar em background, mas já retorna os padrões para não travar a UI
+      for (const c of defs) {
+        db.insert(demandCategories).values({ name: c.name, color: c.color, tenantId }).onConflictDoNothing()
+          .catch(e => console.error('Silent seed error', e));
+      }
+      return res.json(defs);
+    }
+    
+    res.json(cats);
+  } catch (error) {
+    console.error('[LIST CATEGORIES ERROR]', error);
+    res.json(defs); // Retorna padrões em caso de erro crítico no banco
+  }
+};
+
 export const updateAtendimento = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const { precisaRetorno, status, categoria, prioridade } = req.body;
@@ -205,11 +237,16 @@ export const updateAtendimento = async (req: Request, res: Response) => {
   
   try {
     const updateData: any = { updatedAt: new Date() };
-    if (precisaRetorno !== undefined) updateData.precisaRetorno = precisaRetorno;
+    
+    // Se mandou status 'concluida', desmarca a atenção humana
+    if (status === 'concluida') {
+      updateData.precisaRetorno = false;
+    } else if (precisaRetorno !== undefined) {
+      updateData.precisaRetorno = precisaRetorno;
+    }
+
     if (categoria) updateData.categoria = categoria;
     if (prioridade) updateData.prioridade = prioridade;
-    // Note: 'status' isn't on atendimentos table usually, but we can treat 'concluida' as unsetting 'precisaRetorno'
-    if (status === 'concluida') updateData.precisaRetorno = false;
 
     await db.update(atendimentos)
       .set(updateData)
@@ -221,36 +258,6 @@ export const updateAtendimento = async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('[UPDATE ATENDIMENTO ERROR]', error);
-    res.status(500).json({ error: 'Failed' });
-  }
-};
-
-export const listCategories = async (req: Request, res: Response) => {
-  const tenantId = req.user?.tenantId;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
-
-  try {
-    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
-    
-    if (cats.length === 0) {
-      const defs = [
-        { name: 'SAÚDE', color: '#db2777' },
-        { name: 'INFRAESTRUTURA', color: '#2563eb' },
-        { name: 'SEGURANÇA', color: '#dc2626' },
-        { name: 'EDUCAÇÃO', color: '#7c3aed' },
-        { name: 'ESPORTE', color: '#059669' },
-        { name: 'OUTRO', color: '#4b5563' }
-      ];
-      for (const c of defs) {
-        await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
-      }
-      const newCats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
-      return res.json(newCats);
-    }
-    
-    res.json(cats);
-  } catch (error) {
-    console.error('[LIST CATEGORIES ERROR]', error);
     res.status(500).json({ error: 'Failed' });
   }
 };

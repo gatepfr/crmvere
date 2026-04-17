@@ -244,9 +244,9 @@ export default function Demands() {
               resumoIa: selectedAtendimento.atendimentos.resumoIa,
               precisaRetorno: selectedAtendimento.atendimentos.precisaRetorno,
               createdAt: selectedAtendimento.atendimentos.createdAt,
-              status: 'nova',
-              categoria: 'outro',
-              prioridade: 'media'
+              status: selectedAtendimento.atendimentos.precisaRetorno ? 'nova' : 'concluida',
+              categoria: selectedAtendimento.atendimentos.categoria || 'OUTRO',
+              prioridade: selectedAtendimento.atendimentos.prioridade || 'media'
             },
             municipes: selectedAtendimento.municipes
           }}
