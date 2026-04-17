@@ -87,6 +87,10 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
     
+    if not DATABASE_URL:
+        report_progress(tenant_id, "Erro: DATABASE_URL não configurada", 0)
+        return
+
     municipio_norm = normalize_text(municipio_nome)
     nr_cand_str = str(nr_candidato).strip()
     
@@ -202,7 +206,10 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
 
         report_progress(tenant_id, "Inteligência Gerada com Sucesso!", 100)
     except Exception as e:
-        report_progress(tenant_id, f"Erro: {str(e)}", 0)
+        err_msg = str(e) if str(e) else "Erro desconhecido no processamento"
+        report_progress(tenant_id, f"Erro: {err_msg}", 0)
+        print(f"[ERROR] {err_msg}")
+        sys.exit(1)
     finally:
         if conn: conn.close()
         if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)

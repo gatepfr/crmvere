@@ -20,9 +20,11 @@ router.post('/importar', async (req, res) => {
 
   if (!tenantId) return res.status(403).json({ error: 'Tenant required' });
 
-  console.log(`[ELEICOES] Disparando importação: ${ano} ${uf} ${municipio} - Candidato ${nrCandidato}`);
+  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+  
+  console.log(`[ELEICOES] Disparando importação: ${ano} ${uf} ${municipio} - Candidato ${nrCandidato} usando ${pythonCmd}`);
 
-  const pythonProcess = spawn('python3', [
+  const pythonProcess = spawn(pythonCmd, [
     'src/scripts/tse_import.py',
     ano.toString(),
     uf.toUpperCase(),
@@ -31,6 +33,20 @@ router.post('/importar', async (req, res) => {
     tenantId
   ], {
     env: { ...process.env, PYTHONUNBUFFERED: '1' }
+  });
+
+  pythonProcess.on('error', (err) => {
+    console.error(`[ELEICOES] Falha ao iniciar processo Python (${pythonCmd}):`, err);
+    redisClient.set(`tse:import:${tenantId}:step`, `Erro: Falha ao iniciar Python (${err.message})`);
+    redisClient.set(`tse:import:${tenantId}:progress`, 0);
+  });
+
+  pythonProcess.on('close', (code) => {
+    console.log(`[ELEICOES] Processo Python finalizado com código ${code}`);
+    if (code !== 0) {
+      redisClient.set(`tse:import:${tenantId}:step`, `Erro: O processamento falhou (Código ${code})`);
+      redisClient.set(`tse:import:${tenantId}:progress`, 0);
+    }
   });
 
   pythonProcess.stdout.on('data', (data) => console.log(`[PYTHON STDOUT] ${data.toString()}`));

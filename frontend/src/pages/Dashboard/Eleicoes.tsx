@@ -79,10 +79,17 @@ export default function Eleicoes() {
   const checkImportStatus = useCallback(async () => {
     try {
       const res = await api.get('/eleicoes/status');
-      setProgress(res.data);
-      if (res.data.percent === 100) {
-        setImporting(false);
-        fetchSummary();
+      if (res.data) {
+        setProgress(res.data);
+        if (res.data.percent === 100) {
+          setImporting(false);
+          fetchSummary();
+        }
+        if (res.data.step?.toLowerCase().includes('erro')) {
+           // Se o passo contém a palavra erro, paramos a importação para o usuário ver o erro
+           setImporting(false);
+           alert(res.data.step);
+        }
       }
     } catch (err) {
       console.error('Erro ao checar status:', err);
