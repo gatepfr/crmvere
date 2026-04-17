@@ -37,9 +37,9 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       sql`${atendimentos.createdAt} >= ${todayStart}`
     )).orderBy(desc(atendimentos.createdAt)).limit(1);
 
-    // 3. Standby Humano (Opcional, 10 min)
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const isHumanActive = existingAtendimento?.lastHumanInteractionAt && new Date(existingAtendimento.lastHumanInteractionAt) > tenMinutesAgo;
+    // 3. Standby Humano (Opcional, 30 min)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const isHumanActive = existingAtendimento?.lastHumanInteractionAt && new Date(existingAtendimento.lastHumanInteractionAt) > thirtyMinutesAgo;
 
     const currentHistory = existingAtendimento?.resumoIa || '';
     const updatedHistory = `${currentHistory}\nCidadão: ${normalized.text}`.trim();

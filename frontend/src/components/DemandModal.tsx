@@ -258,7 +258,7 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
                 <Clock size={14} className="absolute left-3 top-3.5 text-slate-400" />
                 <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={status} onChange={e => handleUpdateField('status', e.target.value)}>
                   <option value="nova">Em Aberto</option>
-                  <option value="concluida">Concluída (Libera IA)</option>
+                  <option value="concluida">Concluída</option>
                   <option value="cancelada">Cancelada</option>
                 </select>
               </div>
