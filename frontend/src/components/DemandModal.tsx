@@ -26,6 +26,8 @@ interface DemandModalProps {
   onOpenCreateDemand?: (municipe: any) => void;
 }
 
+interface Category { id: string; name: string; color: string; }
+
 export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDemand }: DemandModalProps) {
   const [status, setStatus] = useState(demand.demandas.status);
   const [prioridade, setPrioridade] = useState(demand.demandas.prioridade);
@@ -44,6 +46,7 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
   const [sendingMessage, setSendingMessage] = useState(false);
   const [manualMessage, setManualMessage] = useState('');
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [moving, setMoving] = useState(false);
 
   // Novos estados legislativos
@@ -68,7 +71,10 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     if (demand.municipes.phone) {
       setDisplayPhone(formatPhone(demand.municipes.phone));
     }
-  }, [demand.municipes.phone]);
+    // Fetch categories and campaigns
+    api.get('/demands/categories').then(res => setCategories(res.data)).catch(e => console.error(e));
+    api.get('/kanban/campaigns').then(res => setCampaigns(res.data)).catch(e => console.error(e));
+  }, [demand.municipes.phone, demand.demandas.id]);
 
   const applyPhoneMask = (value: string) => {
     const raw = value.replace(/\D/g, '');
@@ -112,12 +118,6 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    api.get('/kanban/campaigns')
-      .then(res => setCampaigns(res.data))
-      .catch(err => console.error('Error loading campaigns', err));
-  }, []);
 
   const handleSendMessage = async () => {
     if (!manualMessage.trim()) return;
