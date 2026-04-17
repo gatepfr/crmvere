@@ -168,14 +168,26 @@ router.post('/send', async (req, res) => {
 
     if (!tenant?.whatsappInstanceId || !demand) return res.status(404).json({ error: 'Não encontrado' });
 
-    const config = getEvolutionConfig(tenant);
-    const evo = new EvolutionService(config.url, config.token);
+    const { url, token } = getEvolutionConfig(tenant);
+    const evo = new EvolutionService(url, token);
     await evo.sendMessage(tenant.whatsappInstanceId, demand.municipe.phone, message);
 
+    // 1. Atualiza o histórico da demanda
     await db.update(demandas).set({ 
         descricao: `${demand.demand.descricao}\n\nGabinete: ${message}`,
         updatedAt: new Date() 
     }).where(eq(demandas.id, demandId));
+
+    // 2. Atualiza o atendimento (para calar a IA por 10 min)
+    // Buscamos o atendimento de hoje deste munícipe
+    await db.update(atendimentos).set({
+        updatedAt: new Date(), // Isso sinaliza interação humana recente
+        resumoIa: sql`${atendimentos.resumoIa} || '\n\nGabinete: ' || ${message}`
+    }).where(and(
+        eq(atendimentos.municipeId, demand.municipe.id),
+        eq(atendimentos.tenantId, tenantId!),
+        sql`date_trunc('day', ${atendimentos.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')`
+    ));
 
     res.json({ success: true });
   } catch (error: any) {

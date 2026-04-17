@@ -64,12 +64,11 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       .orderBy(desc(atendimentos.updatedAt))
       .limit(1);
 
-    // 5. Verifica se o atendimento já está aguardando retorno humano
-    // AJUSTE: Se a última mensagem foi há mais de 2 horas, permitimos que a IA tente responder novamente
-    // para não deixar o munícipe no vácuo se a equipe esqueceu de desmarcar o "precisa retorno".
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    if (existingAtendimento?.precisaRetorno && existingAtendimento.updatedAt > twoHoursAgo) {
-      console.log(`[ORCHESTRATOR] Atendimento de ${municipe.name} aguardando retorno humano recente. Ignorando IA.`);
+    // 5. Verifica Standby (Intervenção Humana)
+    // Se houve interação recente (últimos 10 minutos), a IA silencia para o humano assumir.
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    if (existingAtendimento && existingAtendimento.updatedAt > tenMinutesAgo) {
+      console.log(`[ORCHESTRATOR] Atendimento de ${municipe.name} com interação humana recente (< 10 min). IA em standby.`);
       return { status: 'waiting_human' };
     }
 
