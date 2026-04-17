@@ -44,18 +44,30 @@ def find_column(columns, keywords):
 
 def download_and_extract(url, target_path, state_filter=None):
     print(f"Baixando: {url}")
+    zip_file = os.path.join(target_path, "temp.zip")
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=300, stream=True)
-        if response.status_code == 200:
-            with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-                files = z.namelist()
-                to_extract = [f for f in files if not state_filter or f"_{state_filter.upper()}.csv" in f.upper()]
-                if not to_extract: to_extract = files
-                for f in to_extract: z.extract(f, target_path)
-            return True
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        with requests.get(url, headers=headers, timeout=600, stream=True) as r:
+            if r.status_code != 200:
+                print(f"[DOWNLOAD ERROR] Status {r.status_code} para {url}")
+                return False
+            with open(zip_file, 'wb') as f:
+                shutil.copyfileobj(r.raw, f)
+        
+        with zipfile.ZipFile(zip_file) as z:
+            files = z.namelist()
+            to_extract = [f for f in files if not state_filter or f"_{state_filter.upper()}.csv" in f.upper()]
+            if not to_extract: to_extract = files
+            for f in to_extract:
+                print(f"Extraindo: {f}")
+                z.extract(f, target_path)
+        
+        os.remove(zip_file)
+        return True
+    except Exception as e:
+        print(f"[ZIP ERROR] {str(e)}")
+        if os.path.exists(zip_file): os.remove(zip_file)
         return False
-    except: return False
 
 def safe_int(val, default=0):
     try:
