@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { tenants, demandas, municipes } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { tenants, demandas, municipes, atendimentos } from '../db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { EvolutionService } from '../services/evolutionService';
 
 const router = Router();
