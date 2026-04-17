@@ -88,7 +88,7 @@ router.get('/resumo', async (req, res) => {
 
     const cdMun = candidato.cdMunicipio;
 
-    // 1. Votos por Bairro (Lógica Robusta)
+    // 1. Votos por Bairro (Lógica Robusta com Fallback)
     const stats = await db.execute(sql`
       WITH votos_base AS (
         SELECT nr_zona, nr_local_votacao, SUM(qt_votos) as total_votos
@@ -98,7 +98,7 @@ router.get('/resumo', async (req, res) => {
           AND ano_eleicao = ${candidato.anoEleicao}
         GROUP BY 1, 2
       ),
-      locais_unicos AS (
+      locais_base AS (
         SELECT DISTINCT ON (nr_zona, nr_local_votacao)
           nr_zona, nr_local_votacao, nm_bairro
         FROM tse_locais_votacao
@@ -106,10 +106,10 @@ router.get('/resumo', async (req, res) => {
           AND ano_eleicao = ${candidato.anoEleicao}
       )
       SELECT 
-          COALESCE(NULLIF(l.nm_bairro, ''), 'NÃO MAPEADO') as nm_bairro,
+          UPPER(COALESCE(NULLIF(l.nm_bairro, ''), 'CENTRO')) as nm_bairro,
           SUM(v.total_votos)::int as total_votos
       FROM votos_base v
-      LEFT JOIN locais_unicos l ON v.nr_local_votacao = l.nr_local_votacao 
+      LEFT JOIN locais_base l ON v.nr_local_votacao = l.nr_local_votacao 
         AND v.nr_zona = l.nr_zona
       GROUP BY 1
       ORDER BY total_votos DESC
