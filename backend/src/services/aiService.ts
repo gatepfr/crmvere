@@ -52,23 +52,26 @@ export async function processDemand(
     4. Responda ao cidadão de forma natural e humana no campo "resposta_usuario".
     5. Extraia os dados técnicos (categoria, prioridade, etc) para controle interno do gabinete.
 
+    CATEGORIAS PERMITIDAS (USE EXATAMENTE UMA DESTAS):
+    SAÚDE, INFRAESTRUTURA, SEGURANÇA, EDUCAÇÃO, ESPORTE, OUTRO.
+
     BASE DE CONHECIMENTO DO GABINETE:
     ${knowledgeBaseContent || 'Nenhuma informação adicional disponível.'}
 
     HISTÓRICO E MENSAGEM DO CIDADÃO:
     ${messageText}
 
-    Responda EXCLUSIVAMENTE com um objeto JSON no formato abaixo, envolto pelos delimitadores |||JSON|||.
+    Responda EXCLUSIVAMENTE com um objeto JSON válido, envolto pelos delimitadores |||JSON|||.
 
     |||JSON|||
     {
-      "categoria": "saude" | "infraestrutura" | "seguranca" | "educacao" | "funcionario_publico" | "outro",
-      "subcategoria": "2 ou 3 palavras sobre o tema",
-      "resumo_ia": "Um resumo detalhado e organizado. Use tópicos (•) e negrito (**) para destacar pontos chave como: **Assunto**, **Localização**, **Urgência**.",
+      "categoria": "NOME_DA_CATEGORIA",
+      "subcategoria": "assunto resumido",
+      "resumo_ia": "Resumo organizado dos pontos chave.",
       "prioridade": "baixa" | "media" | "alta" | "urgente",
-      "acao_sugerida": "ação recomendada para o gabinete",
-      "precisa_retorno": true | false, // APENAS true se você NÃO souber responder ou se o cidadão pedir falar com um humano/equipe. Se você respondeu com sucesso, use false.
-      "resposta_usuario": "Sua resposta direta, gentil e personalizada ao cidadão."
+      "acao_sugerida": "O que o gabinete deve fazer",
+      "precisa_retorno": true | false,
+      "resposta_usuario": "Sua resposta gentil ao cidadão."
     }
     |||JSON|||
   `;

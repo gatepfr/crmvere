@@ -90,6 +90,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const history = existingAtendimento?.resumoIa || '';
     let promptContext = history ? `${history}\nCidadão: ${normalized.text}` : `Cidadão: ${normalized.text}`;
     
+    console.log(`[ORCHESTRATOR] Chamando IA (${provider})...`);
     const resultIA = await processDemand(promptContext, {
       provider: provider as any,
       apiKey: apiKey,
@@ -99,15 +100,18 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     }, undefined, knowledgeBaseContent);
 
     const aiResult = resultIA.data;
+    console.log(`[ORCHESTRATOR] Resposta da IA recebida. Usuário receberá: ${aiResult?.resposta_usuario?.substring(0, 50)}...`);
     const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
     if (existingAtendimento) {
+      console.log(`[ORCHESTRATOR] Atualizando atendimento existente ${existingAtendimento.id}`);
       await db.update(atendimentos).set({
         resumoIa: updatedHistory,
         precisaRetorno: aiResult?.precisa_retorno || existingAtendimento.precisaRetorno,
         updatedAt: new Date(),
       }).where(eq(atendimentos.id, existingAtendimento.id));
     } else {
+      console.log(`[ORCHESTRATOR] Criando novo atendimento`);
       await db.insert(atendimentos).values({
         tenantId,
         municipeId: municipe.id,
@@ -118,13 +122,15 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     // 8. Fluxo de Envio de WhatsApp
     if (tenant.whatsappInstanceId) {
-      const evoUrl = 'http://evolution_api:8080';
+      const evoUrl = process.env.EVOLUTION_URL || 'http://evolution_api:8080';
       const evoToken = tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
+      console.log(`[ORCHESTRATOR] Enviando WhatsApp via ${evoUrl} (Instância: ${tenant.whatsappInstanceId})`);
       const evolution = new EvolutionService(evoUrl, evoToken);
 
       // Resposta para o Munícipe
       if (aiResult?.resposta_usuario) {
         await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiResult.resposta_usuario);
+        console.log(`[ORCHESTRATOR] Resposta enviada ao munícipe.`);
       }
 
       // 9. ALERTA PARA A EQUIPE (Se a IA marcou precisa_retorno)
