@@ -13,55 +13,55 @@ export interface IncomingMessage {
  * Normalizes the payload from Evolution API into a standard format.
  */
 export const normalizeEvolution = (payload: any, tenantId: string): IncomingMessage => {
-  // Extract event type - fallback to upsert if message data exists
+  // Evolution API v2 encapsula em data.messages[]
+  const messageData = payload.data?.messages?.[0] || payload.data || {};
+
+  // Extract event type
   let event = payload.event || 'unknown';
-  if (event === 'unknown' && payload.data?.message) {
+  if (event === 'unknown' && messageData.message) {
     event = 'MESSAGES_UPSERT';
   }
-  const remoteJid = payload.data?.key?.remoteJid || '';
-  const fromMe = payload.data?.key?.fromMe || false;
-  
+
+  const remoteJid = messageData.key?.remoteJid || payload.data?.key?.remoteJid || '';
+  const fromMe = messageData.key?.fromMe || false;
+
   // Robust group/broadcast/newsletter detection
   const isGroup = remoteJid.endsWith('@g.us') || 
                   remoteJid.endsWith('@broadcast') || 
                   remoteJid.endsWith('@newsletter') ||
                   remoteJid.endsWith('@temp');
-  
+
   let from = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '') || '';
-  
+
   // Clean phone number: remove non-digits
   from = from.replace(/\D/g, '');
-  
-  // Intelligent Brazilian correction (9th digit) - Only for personal chats
+
+  // Intelligent Brazilian correction (9th digit)
   if (!isGroup && from.startsWith('55')) {
-    const rawNumber = from.slice(2);
-    if (rawNumber.length === 10) {
-      const ddd = rawNumber.slice(0, 2);
-      const phone = rawNumber.slice(2);
-      from = `55${ddd}9${phone}`;
+    const ddd = from.slice(2, 4);
+    const rest = from.slice(4);
+    if (rest.length === 8) {
+      from = `55${ddd}9${rest}`;
     }
   }
 
-  const name = payload.data?.pushName || '';
-  
-  // Extract text from various message types (including nested messages like ephemeralMessage)
+  const name = messageData.pushName || payload.data?.pushName || '';
+
+  // Extract text from various message types
   const extractText = (m: any): string => {
     if (!m) return '';
 
-    // Handle nested structures (ephemeral, viewOnce)
     if (m.ephemeralMessage?.message) return extractText(m.ephemeralMessage.message);
     if (m.viewOnceMessage?.message) return extractText(m.viewOnceMessage.message);
     if (m.viewOnceMessageV2?.message) return extractText(m.viewOnceMessageV2.message);
     if (m.documentWithCaptionMessage?.message) return extractText(m.documentWithCaptionMessage.message);
 
-    // Texto direto ou legenda
     if (m.conversation) return m.conversation;
     if (m.extendedTextMessage?.text) return m.extendedTextMessage.text;
     if (m.imageMessage?.caption) return m.imageMessage.caption;
     if (m.videoMessage?.caption) return m.videoMessage.caption;
     if (m.documentMessage?.caption) return m.documentMessage.caption;
 
-    // Placeholders para mídia sem texto
     if (m.imageMessage) return '[Imagem]';
     if (m.videoMessage) return '[Vídeo]';
     if (m.audioMessage) return '[Áudio]';
@@ -72,7 +72,8 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
 
     return '';
   };
-  const text = extractText(payload.data?.message);
+
+  const text = extractText(messageData.message);
 
   return {
     event,
@@ -85,3 +86,4 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
     fromMe,
   };
 };
+
