@@ -8,6 +8,7 @@ import {
   deleteAtendimento,
   getDemand, 
   updateDemand, 
+  deleteDemand,
   updateMunicipe, 
   deleteMunicipe, 
   createDemand, 
@@ -37,6 +38,7 @@ router.get('/', listDemands);
 router.post('/', createDemand);
 router.get('/:id', getDemand);
 router.patch('/:id/status', updateDemand);
+router.delete('/:id', deleteDemand);
 
 // Rotas de Categorias
 router.get('/categories', listCategories);

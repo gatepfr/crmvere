@@ -299,6 +299,15 @@ export const importMunicipes = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteDemand = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  try {
+    await db.delete(demandas).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+};
+
 export const getDemand = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const tenantId = req.user?.tenantId;
