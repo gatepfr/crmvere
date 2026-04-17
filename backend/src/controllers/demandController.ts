@@ -37,7 +37,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
   try {
     const conds = [eq(municipes.tenantId, tenantId!)];
     if (search) {
-      conds.push(ilike(municipes.name, `%${search}%`) as any);
+      conds.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`)) as any);
     }
     if (birthday) {
       conds.push(sql`to_char(${municipes.birthDate}, 'DD-MM') = to_char(now() AT TIME ZONE 'America/Sao_Paulo', 'DD-MM')`);
