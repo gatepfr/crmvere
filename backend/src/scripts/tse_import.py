@@ -57,8 +57,18 @@ def download_and_extract(url, target_path, state_filter=None):
         
         with zipfile.ZipFile(zip_file) as z:
             files = z.namelist()
-            to_extract = [f for f in files if not state_filter or f"_{state_filter.upper()}.csv" in f.upper()]
-            if not to_extract: to_extract = files
+            # Busca flexível: contém _UF.CSV ou _BRASIL.CSV (independente de case)
+            search_str = f"_{state_filter.upper()}.CSV" if state_filter else None
+            
+            if search_str:
+                to_extract = [f for f in files if search_str in f.upper() or "_BRASIL.CSV" in f.upper()]
+            else:
+                to_extract = files
+                
+            if not to_extract: 
+                print(f"[WARN] Filtro {search_str} não encontrou nada no ZIP. Extraindo tudo.")
+                to_extract = files
+
             for f in to_extract:
                 print(f"Extraindo: {f}")
                 z.extract(f, target_path)
