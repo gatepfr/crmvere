@@ -61,15 +61,16 @@ def safe_int(val, default=0):
     except: return default
 
 def geocode_address(nome, endereco, bairro, cidade, uf):
+    # Tenta geocodificar, mas não trava se falhar
     url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(f'{nome}, {cidade} - {uf}, Brasil')}&format=json&limit=1"
     try:
-        res = requests.get(url, headers={'User-Agent': 'CRM-Bot/1.0'}, timeout=10).json()
+        res = requests.get(url, headers={'User-Agent': 'CRM-Bot/1.1'}, timeout=5).json()
         if res: return res[0]['lat'], res[0]['lon']
     except: pass
     return None, None
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
-    print(f"--- IMPORTAÇÃO TSE V10 (ESTADO: {uf}) ---")
+    print(f"--- IMPORTAÇÃO TSE V11 (ESTADO: {uf}) ---")
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
@@ -125,7 +126,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             if cd_municipio_real: break
 
         if not cd_municipio_real:
-            raise Exception(f"Candidato {nr_cand_norm} não encontrado no TSE.")
+            raise Exception(f"Candidato {nr_cand_norm} não encontrado.")
 
         # 2. Locais
         report_progress(tenant_id, "Mapeando Locais de Votação...", 30)
@@ -140,10 +141,17 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                 df_l.columns = [c.upper() for c in df_l.columns]
                 cd_mun_l = find_column(df_l.columns, ['CD_MUNICIPIO']) or find_column(df_l.columns, ['SG_UE'])
                 locais = df_l[df_l[cd_mun_l].apply(normalize_code) == cd_municipio_real].drop_duplicates(subset=['NR_ZONA', 'NR_LOCAL_VOTACAO'])
+                
+                name_loc_col = find_column(df_l.columns, ['NM_LOCAL_VOTACAO']) or find_column(df_l.columns, ['NM_LOC_VOT'])
+                addr_col = find_column(df_l.columns, ['DS_ENDERECO']) or find_column(df_l.columns, ['DS_END'])
+                bairro_col = find_column(df_l.columns, ['NM_BAIRRO']) or find_column(df_l.columns, ['NM_BAI'])
+
                 l_data = []
                 for _, r in locais.iterrows():
-                    lat, lng = geocode_address(r['NM_LOCAL_VOTACAO'], r['DS_ENDERECO'], r['NM_BAIRRO'], municipio_nome, uf)
-                    l_data.append((int(ano), cd_municipio_real, safe_int(r['NR_ZONA']), safe_int(r['NR_LOCAL_VOTACAO']), r['NM_LOCAL_VOTACAO'], r['DS_ENDERECO'], r['NM_BAIRRO'], lat, lng))
+                    # Coleta bairro e dados básicos
+                    lat, lng = None, None # Geocode opcional para não travar
+                    l_data.append((int(ano), cd_municipio_real, safe_int(r['NR_ZONA']), safe_int(r['NR_LOCAL_VOTACAO']), r.get(name_loc_col, 'LOCAL'), r.get(addr_col, 'ENDERECO'), r.get(bairro_col, 'NÃO INFORMADO'), lat, lng))
+                
                 if l_data:
                     execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro, latitude, longitude) VALUES %s", l_data)
                     conn.commit()
@@ -154,7 +162,8 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         cur.execute("DELETE FROM tse_votos_secao WHERE cd_municipio = %s AND nr_candidato = %s AND ano_eleicao = %s", (cd_municipio_real, nr_cand_norm, int(ano)))
         conn.commit()
 
-        if download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_{ano}_{uf}.zip", tmp_dir):
+        url_votos = f"https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_{ano}_{uf}.zip"
+        if download_and_extract(url_votos, tmp_dir):
             for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV')]:
                 try:
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=50000, dtype=str)
@@ -174,16 +183,24 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         cur.execute("DELETE FROM tse_perfil_eleitorado WHERE cd_municipio = %s AND ano_eleicao = %s", (cd_municipio_real, int(ano)))
         conn.commit()
 
-        if download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/perfil_eleitorado/perfil_eleitorado_{ano}.zip", tmp_dir, uf):
+        url_perf = f"https://cdn.tse.jus.br/estatistica/sead/odsele/perfil_eleitorado/perfil_eleitorado_{ano}.zip"
+        if download_and_extract(url_perf, tmp_dir, uf):
             for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV')]:
                 try:
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=50000, dtype=str)
                     for chunk in chunks:
                         chunk.columns = [c.upper() for c in chunk.columns]
                         c_mun = find_column(chunk.columns, ['CD_MUNICIPIO']) or find_column(chunk.columns, ['SG_UE'])
+                        
+                        bairro_p_col = find_column(chunk.columns, ['NM_BAIRRO']) or find_column(chunk.columns, ['NM_BAI'])
+                        gen_p_col = find_column(chunk.columns, ['DS_GENERO']) or find_column(chunk.columns, ['DS_SEXO'])
+                        age_p_col = find_column(chunk.columns, ['DS_FAIXA_ETARIA']) or find_column(chunk.columns, ['DS_FAIXA'])
+                        esc_p_col = find_column(chunk.columns, ['DS_GRAU_ESCOLARIDADE']) or find_column(chunk.columns, ['DS_GRAU'])
+                        qt_p_col = find_column(chunk.columns, ['QT_ELEITORES_PERFIL']) or find_column(chunk.columns, ['QT_ELEITORES'])
+
                         f_perf = chunk[chunk[c_mun].apply(normalize_code) == cd_municipio_real]
                         if not f_perf.empty:
-                            p_data = [(int(ano), cd_municipio_real, r.get('NM_BAIRRO', 'NÃO INFORMADO'), r.get('DS_GENERO', 'NÃO INFORMADO'), r.get('DS_FAIXA_ETARIA', 'NÃO INFORMADO'), r.get('DS_GRAU_ESCOLARIDADE', 'NÃO INFORMADO'), safe_int(r.get('QT_ELEITORES_PERFIL', 0) or r.get('QT_ELEITORES', 0))) for _, r in f_perf.iterrows()]
+                            p_data = [(int(ano), cd_municipio_real, r.get(bairro_p_col, 'NÃO INFORMADO'), r.get(gen_p_col, 'NÃO INFORMADO'), r.get(age_p_col, 'NÃO INFORMADO'), r.get(esc_p_col, 'NÃO INFORMADO'), safe_int(r.get(qt_p_col, 0))) for _, r in f_perf.iterrows()]
                             execute_values(cur, "INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) VALUES %s", p_data)
                             conn.commit()
                 except: continue
