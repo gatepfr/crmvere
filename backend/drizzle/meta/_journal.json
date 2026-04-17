@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775821296048,
+      "tag": "0000_concerned_lethal_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776002673898,
+      "tag": "0001_cute_stardust",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776030290573,
+      "tag": "0002_far_young_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776168576539,
+      "tag": "0003_heavy_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776169469539,
+      "tag": "0004_spicy_norman_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776175292435,
+      "tag": "0005_far_magneto",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776386956235,
+      "tag": "0006_add_demand_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776388839857,
+      "tag": "0007_fix_category_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776389637583,
+      "tag": "0008_add_atendimento_ai_fields",
+      "breakpoints": true
+    }
+  ]
+}
