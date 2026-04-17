@@ -1,20 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import NewDemandModal from '../../components/NewDemandModal';
+import DemandModal from '../../components/DemandModal';
 import { 
   ClipboardList, 
   Search, 
   MessageSquare, 
   CheckCircle2, 
   Circle, 
-  ExternalLink, 
   Loader2, 
   MapPin, 
   Plus,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
-  FileText
+  FileText,
+  Edit2,
+  Trash2,
+  Send
 } from 'lucide-react';
 
 interface Demand {
@@ -27,6 +30,7 @@ interface Demand {
   documentUrl: string | null;
   createdAt: string;
   municipes: {
+    id: string;
     name: string;
     phone: string;
     bairro: string | null;
@@ -46,6 +50,7 @@ export default function Legislativo() {
   const [searchTerm, setSearchTerm] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
 
   const loadDemands = useCallback(async () => {
@@ -99,6 +104,17 @@ export default function Legislativo() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja realmente excluir esta indicação? Esta ação não pode ser desfeita.')) return;
+    try {
+      await api.delete(`/demands/${id}`);
+      setDemands(prev => prev.filter(d => d.id !== id));
+      alert('Excluído com sucesso!');
+    } catch (err) {
+      alert('Erro ao excluir.');
+    }
+  };
+
   const sendToWhatsApp = async (d: Demand) => {
     if (!d.documentUrl) {
       alert('Adicione o link da indicação primeiro!');
@@ -123,15 +139,15 @@ export default function Legislativo() {
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-700 pb-10">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <ClipboardList className="text-blue-600" size={32} />
-            Demandas & Indicações
+            Indicações Legislativas
           </h1>
           <div className="flex items-center gap-4 mt-1">
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Gestão Legislativa do Gabinete</p>
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Transformando demandas em proposituras</p>
             <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black border border-blue-100 uppercase">
               {pagination.total} TOTAL
             </span>
@@ -151,7 +167,7 @@ export default function Legislativo() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input 
             type="text"
-            placeholder="Buscar por nome ou bairro..."
+            placeholder="Buscar por nome, bairro ou assunto..."
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-blue-200 transition-all font-bold text-sm"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -164,7 +180,7 @@ export default function Legislativo() {
           }`}
         >
           <AlertCircle size={14} />
-          Pendentes de Indicação
+          Pendentes de Protocolo
         </button>
 
         <div className="h-8 w-[1px] bg-slate-100 mx-1 hidden lg:block"></div>
@@ -176,7 +192,6 @@ export default function Legislativo() {
         >
           <option value="25">25 / pág</option>
           <option value="50">50 / pág</option>
-          <option value="100">100 / pág</option>
           <option value="all">Ver Todos</option>
         </select>
       </div>
@@ -187,64 +202,88 @@ export default function Legislativo() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-6 py-4">Munícipe / Bairro</th>
-                <th className="px-6 py-4">Assunto</th>
-                <th className="px-6 py-4 text-center">Protocolar?</th>
-                <th className="px-6 py-4 text-center">Nº Indicação</th>
-                <th className="px-6 py-4 text-right">Retorno WhatsApp</th>
+                <th className="px-6 py-4 w-1/4">Munícipe</th>
+                <th className="px-6 py-4 w-2/5">Assunto Detalhado</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center w-32">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredDemands.map(d => (
-                <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4">
+                <tr key={d.id} className="group hover:bg-slate-50/30 transition-all align-top">
+                  <td className="px-6 py-5">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900">{d.municipes.name}</span>
-                      <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1">
-                        <MapPin size={10} /> {d.municipes.bairro || 'Não informado'}
+                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{d.municipes.name}</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mt-1">
+                        <MapPin size={10} /> {d.municipes.bairro || 'Centro'}
                       </span>
+                      <div className="mt-3 flex items-center gap-2">
+                         <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase border border-blue-100">
+                           {d.categoria}
+                         </span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col max-w-xs">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-black uppercase w-fit mb-1">{d.categoria}</span>
-                      <span className="text-xs text-slate-500 line-clamp-2">{d.descricao}</span>
+                  <td className="px-6 py-5">
+                    <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap font-medium">
+                      {d.descricao}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button onClick={() => toggleLegislativo(d.id, d.isLegislativo)}>
-                      {d.isLegislativo ? (
-                        <CheckCircle2 className="text-emerald-500 mx-auto" size={24} />
-                      ) : (
-                        <Circle className="text-slate-200 mx-auto hover:text-blue-400 transition-colors" size={24} />
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {d.isLegislativo ? (
-                      <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-black border border-blue-100">
-                        {d.numeroIndicacao || 'S/N'}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300">---</span>
+                    {d.documentUrl && (
+                      <a 
+                        href={d.documentUrl} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 mt-3 text-blue-600 font-bold text-[10px] uppercase hover:underline"
+                      >
+                        <FileText size={12} /> Ver documento oficial
+                      </a>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                  <td className="px-6 py-5 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <button 
+                        onClick={() => toggleLegislativo(d.id, d.isLegislativo)}
+                        className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-black uppercase border transition-all ${
+                          d.isLegislativo 
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+                            : 'bg-white border-slate-200 text-slate-400 hover:border-blue-400 hover:text-blue-500'
+                        }`}
+                      >
+                        {d.isLegislativo ? `Indicação ${d.numeroIndicacao || 'S/N'}` : 'Não protocolada'}
+                      </button>
+                      
+                      {d.isLegislativo && (
+                        <button 
+                          onClick={() => sendToWhatsApp(d)}
+                          className="flex items-center gap-1.5 text-blue-500 hover:text-blue-700 font-bold text-[10px] uppercase transition-colors"
+                        >
+                          <Send size={12} /> Avisar no WhatsApp
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex justify-end items-center gap-1">
+                      <button 
+                        onClick={() => setSelectedDemand({ demandas: d, municipes: d.municipes })}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        title="Editar Detalhes"
+                      >
+                        <Edit2 size={18} />
+                      </button>
                       <button 
                         onClick={() => updateDocUrl(d.id)}
-                        className={`p-2 rounded-lg border transition-all ${d.documentUrl ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-600'}`}
-                        title="Anexar Link/PDF"
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                        title="Anexar Link PDF"
                       >
                         <FileText size={18} />
                       </button>
                       <button 
-                        onClick={() => sendToWhatsApp(d)}
-                        disabled={!d.isLegislativo}
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 disabled:opacity-30"
-                        title="Enviar para o Munícipe"
+                        onClick={() => handleDelete(d.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        title="Excluir Indicação"
                       >
-                        <MessageSquare size={18} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </td>
@@ -281,6 +320,14 @@ export default function Legislativo() {
       {isNewModalOpen && (
         <NewDemandModal 
           onClose={() => setIsNewModalOpen(false)} 
+          onUpdate={loadDemands} 
+        />
+      )}
+
+      {selectedDemand && (
+        <DemandModal 
+          demand={selectedDemand} 
+          onClose={() => setSelectedDemand(null)} 
           onUpdate={loadDemands} 
         />
       )}
