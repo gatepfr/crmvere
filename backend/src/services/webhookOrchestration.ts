@@ -81,13 +81,11 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     // 6. Verifica Standby (Intervenção Humana nos últimos 10 min)
     // Se houve interação humana (lastHumanInteractionAt) há menos de 10 min, a IA silencia.
-    // Usamos SQL para a comparação ser exata com o relógio do banco.
     let isHumanActive = false;
     if (existingAtendimento?.lastHumanInteractionAt) {
-      const [{ active }] = await db.select({ 
-        active: sql<boolean>`${existingAtendimento.lastHumanInteractionAt} > (now() - interval '10 minutes')` 
-      });
-      isHumanActive = active;
+      const lastInteraction = new Date(existingAtendimento.lastHumanInteractionAt).getTime();
+      const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+      isHumanActive = lastInteraction > tenMinutesAgo;
     }
 
     // 7. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo (updatedAt)
