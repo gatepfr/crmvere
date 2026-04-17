@@ -134,39 +134,54 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             raise Exception("Não foi possível baixar os dados de candidatos do TSE (URL indisponível ou erro de rede)")
 
         # FILTRO CRÍTICO: Processa apenas o arquivo do estado selecionado para não estourar a RAM
-        files = [f for f in os.listdir(tmp_dir) if f.lower().endswith('.csv') and 'consulta_cand' in f.lower()]
-        target_file_pattern = f"_{uf.upper()}.csv"
-        # Se baixou o zip do estado, o arquivo vai ter _UF.csv. Se baixou o nacional, filtramos o estado na lista.
-        state_files = [f for f in files if target_file_pattern in f.upper() or '_BRASIL.csv' in f.upper()]
+        all_files = os.listdir(tmp_dir)
+        print(f"Arquivos no diretório temporário: {all_files}")
+        
+        target_pattern = f"CONSULTA_CAND_2024_{uf.upper()}.CSV"
+        state_files = [f for f in all_files if f.upper().endswith('.CSV') and (uf.upper() in f.upper() or 'BRASIL' in f.upper())]
         
         if not state_files:
-            raise Exception(f"Arquivo de candidatos para o estado {uf} não encontrado nos dados baixados.")
+            # Tenta busca mais flexível se a exata falhar
+            state_files = [f for f in all_files if f.upper().endswith('.CSV') and 'CONSULTA_CAND' in f.upper()]
+            
+        if not state_files:
+            raise Exception(f"Nenhum arquivo CSV de candidatos encontrado em {tmp_dir}. Arquivos presentes: {all_files}")
 
+        print(f"Arquivos selecionados para análise: {state_files}")
         cd_municipio_real = None
         for file in state_files:
-            print(f"Analisando arquivo: {file}")
+            print(f"Analisando conteúdo de: {file}")
             # Lê em chunks para economizar memória
-            chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str, on_bad_lines='skip', chunksize=10000)
-            
-            for df in chunks:
-                df.columns = [c.upper() for c in df.columns]
-                city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
-                cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['CD', 'UE'])
-                num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
+            try:
+                chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str, on_bad_lines='skip', chunksize=10000)
                 
-                if city_col and num_col:
-                    df['CITY_NORM'] = df[city_col].apply(normalize_text)
-                    cand = df[(df['CITY_NORM'] == municipio_norm) & (df[num_col] == nr_cand_str)]
-                    if not cand.empty:
-                        c = cand.iloc[0]
-                        cd_municipio_real = normalize_code(c[cd_mun_col])
-                        cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
-                        cur.execute("""
-                            INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (tenant_id, ano, c[find_column(df.columns, ['NM', 'CANDIDATO'])], c[num_col], c[find_column(df.columns, ['SG', 'PARTIDO'])], cd_municipio_real, c[city_col], c[find_column(df.columns, ['DS', 'SITUACAO', 'TOT'])]))
-                        break
-            if cd_municipio_real: break
+                for df in chunks:
+                    df.columns = [c.upper() for c in df.columns]
+                    # Log das colunas apenas no primeiro chunk do primeiro arquivo para depurar
+                    if cd_municipio_real is None and file == state_files[0]:
+                        print(f"Colunas encontradas: {list(df.columns)[:10]}...")
+
+                    city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
+                    cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['CD', 'UE'])
+                    num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
+                    
+                    if city_col and num_col:
+                        df['CITY_NORM'] = df[city_col].apply(normalize_text)
+                        cand = df[(df['CITY_NORM'] == municipio_norm) & (df[num_col] == nr_cand_str)]
+                        if not cand.empty:
+                            c = cand.iloc[0]
+                            cd_municipio_real = normalize_code(c[cd_mun_col])
+                            print(f"Candidato encontrado! Município: {c[city_col]} (Código: {cd_municipio_real})")
+                            cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
+                            cur.execute("""
+                                INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            """, (tenant_id, ano, c[find_column(df.columns, ['NM', 'CANDIDATO'])], c[num_col], c[find_column(df.columns, ['SG', 'PARTIDO'])], cd_municipio_real, c[city_col], c[find_column(df.columns, ['DS', 'SITUACAO', 'TOT'])]))
+                            break
+                if cd_municipio_real: break
+            except Exception as e:
+                print(f"Erro ao ler arquivo {file}: {str(e)}")
+                continue
 
         if not cd_municipio_real:
             report_progress(tenant_id, f"Candidato {nr_cand_str} não encontrado em {municipio_nome}-{uf}.", 0)
