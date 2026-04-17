@@ -64,6 +64,13 @@
       "when": 1776389637583,
       "tag": "0008_add_atendimento_ai_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776394372012,
+      "tag": "0009_fix_atendimentos_and_categories",
+      "breakpoints": true
     }
   ]
 }

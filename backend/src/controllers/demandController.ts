@@ -172,7 +172,7 @@ export const createDemand = async (req: Request, res: Response) => {
       return newDemand;
     });
     res.status(201).json(result);
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+  } catch (error) { res.status(500).json({ error: 'Failed to create demand' }); }
 };
 
 export const updateDemand = async (req: Request, res: Response) => {
@@ -200,16 +200,15 @@ export const listCategories = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   const defs = [
-    { id: '1', name: 'SAÚDE', color: '#db2777' }, { id: '2', name: 'INFRAESTRUTURA', color: '#2563eb' },
-    { id: '3', name: 'SEGURANÇA', color: '#dc2626' }, { id: '4', name: 'EDUCAÇÃO', color: '#7c3aed' },
-    { id: '5', name: 'ESPORTE', color: '#059669' }, { id: '6', name: 'OUTRO', color: '#4b5563' }
+    { name: 'SAÚDE', color: '#db2777' }, { name: 'INFRAESTRUTURA', color: '#2563eb' },
+    { name: 'SEGURANÇA', color: '#dc2626' }, { name: 'EDUCAÇÃO', color: '#7c3aed' },
+    { name: 'ESPORTE', color: '#059669' }, { name: 'OUTRO', color: '#4b5563' }
   ];
   try {
     const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
     if (cats.length === 0) {
-      for (const c of defs) await db.insert(demandCategories).values({ name: c.name, color: c.color, tenantId }).onConflictDoNothing();
-      const newCats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
-      return res.json(newCats);
+      for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
+      return res.json(await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId)));
     }
     res.json(cats);
   } catch (error) { res.json(defs); }
@@ -250,6 +249,9 @@ export const seedCategories = async (req: Request, res: Response) => {
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
+/**
+ * IMPORTAÇÃO E UTILITÁRIOS
+ */
 export const importMunicipes = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const file = req.file;
@@ -305,7 +307,5 @@ export const getDemand = async (req: Request, res: Response) => {
     const [demand] = await db.select({ demandas: demandas, municipes: municipes }).from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id)).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
     if (!demand) return res.status(404).json({ error: 'Demand not found' });
     res.status(200).json(demand);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed' });
-  }
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
