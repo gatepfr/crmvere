@@ -22,7 +22,6 @@ router.post('/importar', async (req, res) => {
 
   console.log(`[ELEICOES] Disparando importação: ${ano} ${uf} ${municipio} - Candidato ${nrCandidato}`);
 
-  // Dispara o script Python permitindo que o log apareça no stdout/stderr do Docker
   const pythonProcess = spawn('python3', [
     'src/scripts/tse_import.py',
     ano.toString(),
@@ -57,7 +56,7 @@ router.get('/status', async (req, res) => {
 });
 
 /**
- * Retorna os dados para o Dashboard (Versão de Alta Tolerância)
+ * Retorna os dados para o Dashboard
  */
 router.get('/resumo', async (req, res) => {
   const tenantId = req.user?.tenantId;
@@ -65,26 +64,29 @@ router.get('/resumo', async (req, res) => {
 
   try {
     const [candidato] = await db.select().from(tseCandidatos).where(eq(tseCandidatos.tenantId, tenantId)).limit(1);
-    if (!candidato) return res.json({ setup_required: true });
+    
+    // Se não houver candidato, força o frontend a mostrar o formulário
+    if (!candidato) {
+      return res.json({ setup_required: true });
+    }
 
-    const cdMun = parseInt(candidato.cdMunicipio || '0');
+    const cdMun = candidato.cdMunicipio;
 
-    // 1. Busca votos agrupados por seção PRIMEIRO (Garante soma exata do TSE)
-    // 2. Depois mapeia para bairros usando subquery de locais únicos
+    // 1. Votos por Bairro (Lógica Robusta)
     const stats = await db.execute(sql`
       WITH votos_base AS (
         SELECT nr_zona, nr_local_votacao, SUM(qt_votos) as total_votos
         FROM tse_votos_secao
         WHERE nr_candidato = ${candidato.nrCandidato}
-          AND cd_municipio::int = ${cdMun}
+          AND cd_municipio = ${cdMun}
           AND ano_eleicao = ${candidato.anoEleicao}
         GROUP BY 1, 2
       ),
       locais_unicos AS (
-        SELECT DISTINCT ON (nr_zona, nr_local_votacao, cd_municipio, ano_eleicao)
-          nr_zona, nr_local_votacao, cd_municipio, ano_eleicao, nm_bairro
+        SELECT DISTINCT ON (nr_zona, nr_local_votacao)
+          nr_zona, nr_local_votacao, nm_bairro
         FROM tse_locais_votacao
-        WHERE cd_municipio::int = ${cdMun}
+        WHERE cd_municipio = ${cdMun}
           AND ano_eleicao = ${candidato.anoEleicao}
       )
       SELECT 
@@ -97,24 +99,24 @@ router.get('/resumo', async (req, res) => {
       ORDER BY total_votos DESC
     `);
 
-    // Busca o total real de votos direto na tabela de votos (Sem Joins = Zero erro)
+    // 2. Total Geral (Fonte da Verdade)
     const totalVotosResult = await db.execute(sql`
       SELECT SUM(qt_votos) as total 
       FROM tse_votos_secao 
       WHERE nr_candidato = ${candidato.nrCandidato}
-        AND cd_municipio::int = ${cdMun}
+        AND cd_municipio = ${cdMun}
         AND ano_eleicao = ${candidato.anoEleicao}
     `);
 
     const totalVotos = Number(totalVotosResult.rows[0]?.total || 0);
 
-    // Mapa de Calor (Com coordenadas únicas)
+    // 3. Mapa de Calor
     const mapaCalor = await db.execute(sql`
       WITH votos_local AS (
         SELECT nr_zona, nr_local_votacao, SUM(qt_votos) as votos
         FROM tse_votos_secao
         WHERE nr_candidato = ${candidato.nrCandidato}
-          AND cd_municipio::int = ${cdMun}
+          AND cd_municipio = ${cdMun}
           AND ano_eleicao = ${candidato.anoEleicao}
         GROUP BY 1, 2
       ),
@@ -122,7 +124,7 @@ router.get('/resumo', async (req, res) => {
         SELECT DISTINCT ON (nr_zona, nr_local_votacao)
           nr_zona, nr_local_votacao, nm_local_votacao, latitude, longitude
         FROM tse_locais_votacao
-        WHERE cd_municipio::int = ${cdMun}
+        WHERE cd_municipio = ${cdMun}
           AND ano_eleicao = ${candidato.anoEleicao}
           AND latitude IS NOT NULL
       )
@@ -136,27 +138,25 @@ router.get('/resumo', async (req, res) => {
         AND v.nr_zona = c.nr_zona
     `);
 
-    // Busca Perfil: Gênero
+    // 4. Perfil Eleitorado
     const perfilGenero = await db.execute(sql`
       SELECT UPPER(ds_genero) as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
-      WHERE cd_municipio::int = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
+      WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY value DESC
     `);
 
-    // Busca Perfil: Faixa Etária
     const perfilIdade = await db.execute(sql`
       SELECT ds_faixa_etaria as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
-      WHERE cd_municipio::int = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
+      WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY label ASC
     `);
 
-    // Busca Perfil: Escolaridade
     const perfilEscolaridade = await db.execute(sql`
       SELECT ds_grau_escolaridade as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
-      WHERE cd_municipio::int = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
+      WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY value DESC
     `);
 
@@ -175,7 +175,8 @@ router.get('/resumo', async (req, res) => {
     });
   } catch (error: any) {
     console.error('[ELEICOES ERROR]', error.message);
-    res.json({ candidato: null, bairros: [], error: 'Erro ao processar dados.' });
+    // Em caso de erro, ainda tenta mostrar o formulário como fallback
+    res.json({ setup_required: true, error: error.message });
   }
 });
 

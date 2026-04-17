@@ -1,4 +1,3 @@
-import pd
 import pandas as pd
 import requests
 import os
