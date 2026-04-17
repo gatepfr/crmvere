@@ -20,8 +20,13 @@ import {
   Send,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  FileDown,
+  Users,
+  X
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Demand {
   id: string;
@@ -59,6 +64,10 @@ export default function Legislativo() {
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   
+  // PDF Export States
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -104,7 +113,6 @@ export default function Legislativo() {
   };
 
   const updateDocUrl = async (d: Demand) => {
-    // Se já tiver link, ele aparece pré-preenchido no prompt
     const url = prompt('Cole o link do PDF ou da Indicação no site da Câmara:', d.documentUrl || '');
     if (url === null) return;
     try {
@@ -124,6 +132,15 @@ export default function Legislativo() {
     } catch (err) {
       alert('Erro ao excluir.');
     }
+  };
+
+  const formatPhone = (phone: string) => {
+    if (!phone) return '';
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length >= 12 && cleaned.startsWith('55')) cleaned = cleaned.slice(2);
+    if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
+    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    return phone;
   };
 
   const sendToWhatsApp = async (d: Demand) => {
@@ -192,6 +209,83 @@ export default function Legislativo() {
     return sortOrder === 'asc' ? <ArrowUp size={12} className="text-blue-600" /> : <ArrowDown size={12} className="text-blue-600" />;
   };
 
+  const exportToPDF = async (mode: 'page' | 'all') => {
+    setExporting(true);
+    try {
+      let dataToExport = sortedDemands;
+
+      if (mode === 'all') {
+        const res = await api.get(`/demands?limit=1000&search=${searchTerm}`);
+        dataToExport = res.data.data.map((d: any) => ({
+          ...d.demandas,
+          municipes: d.municipes
+        }));
+      }
+
+      const doc = new jsPDF();
+      
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RELATÓRIO DE INDICAÇÕES', 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('CRM DO VERÊ - GESTÃO LEGISLATIVA', 14, 28);
+      doc.text(`GERADO EM: ${new Date().toLocaleString('pt-BR')}`, 140, 28);
+
+      const tableData = dataToExport.map(d => [
+        d.municipes.name,
+        d.municipes.bairro || '---',
+        d.descricao,
+        d.isLegislativo ? `IND ${d.numeroIndicacao || 'S/N'}` : 'PENDENTE',
+        new Date(d.createdAt).toLocaleDateString('pt-BR')
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['MUNÍCIPE', 'BAIRRO', 'ASSUNTO / SOLICITAÇÃO', 'STATUS', 'DATA']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold',
+          halign: 'left'
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: [51, 65, 85]
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        columnStyles: {
+          2: { cellWidth: 80 } // Assunto mais largo
+        },
+        margin: { top: 45 },
+        didDrawPage: (data) => {
+          const str = "Página " + doc.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(str, 14, doc.internal.pageSize.height - 10);
+          doc.text("CRM do Verê - Sistema de Gestão", 160, doc.internal.pageSize.height - 10);
+        }
+      });
+
+      doc.save(`indicacoes-${mode}-${new Date().getTime()}.pdf`);
+      setIsExportModalOpen(false);
+    } catch (err) {
+      alert('Erro ao exportar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pb-10">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -207,13 +301,22 @@ export default function Legislativo() {
             </span>
           </div>
         </div>
-        <button 
-          onClick={() => setIsNewModalOpen(true)}
-          className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
-        >
-          <Plus size={20} />
-          NOVA INDICAÇÃO
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsExportModalOpen(true)}
+            className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+            title="Exportar PDF"
+          >
+            <FileDown size={24} />
+          </button>
+          <button 
+            onClick={() => setIsNewModalOpen(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
+          >
+            <Plus size={20} />
+            NOVA INDICAÇÃO
+          </button>
+        </div>
       </header>
 
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-3">
@@ -396,6 +499,61 @@ export default function Legislativo() {
           onClose={() => setSelectedDemand(null)} 
           onUpdate={loadDemands} 
         />
+      )}
+
+      {/* Export Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">Exportar Indicações</h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <button 
+                onClick={() => exportToPDF('page')}
+                disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors">
+                    <FileDown size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Página Atual</p>
+                    <p className="text-xs text-slate-500">Exportar registros visíveis na tela</p>
+                  </div>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => exportToPDF('all')}
+                disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Todas Indicações</p>
+                    <p className="text-xs text-slate-500">Exportar todo o histórico (máx 1000)</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            {exporting && (
+              <div className="px-6 pb-6 text-center">
+                <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
+                  <Loader2 className="animate-spin" size={16} />
+                  Gerando PDF...
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
