@@ -283,6 +283,57 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+              <div className="relative">
+                <Clock size={14} className="absolute left-3 top-3 text-slate-400" />
+                <select 
+                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none focus:bg-white focus:border-blue-300 outline-none transition-all"
+                  value={status}
+                  onChange={e => handleUpdateField('status', e.target.value)}
+                >
+                  <option value="nova">Nova</option>
+                  <option value="em_andamento">Em Andamento</option>
+                  <option value="concluida">Concluída</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
+              <div className="relative">
+                <Tag size={14} className="absolute left-3 top-3 text-slate-400" />
+                <select 
+                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none focus:bg-white focus:border-blue-300 outline-none transition-all"
+                  value={categoria}
+                  onChange={e => handleUpdateField('categoria', e.target.value)}
+                >
+                  <option value="">Selecione...</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prioridade</label>
+              <div className="relative">
+                <AlertCircle size={14} className="absolute left-3 top-3 text-slate-400" />
+                <select 
+                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none focus:bg-white focus:border-blue-300 outline-none transition-all"
+                  value={prioridade}
+                  onChange={e => handleUpdateField('prioridade', e.target.value)}
+                >
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <div className="flex justify-between items-center text-slate-800 font-bold">
               <div className="flex items-center gap-2">
