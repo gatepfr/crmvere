@@ -18,7 +18,7 @@ import {
   ClipboardList,
   ExternalLink,
   Plus
-  } from 'lucide-react';
+} from 'lucide-react';
 
 interface DemandModalProps {
   demand: any;
@@ -29,10 +29,19 @@ interface DemandModalProps {
 
 interface Category { id: string; name: string; color: string; }
 
+const DEFAULT_CATEGORIES_FALLBACK = [
+  { id: 'f1', name: 'SAÚDE', color: '#db2777' },
+  { id: 'f2', name: 'INFRAESTRUTURA', color: '#2563eb' },
+  { id: 'f3', name: 'SEGURANÇA', color: '#dc2626' },
+  { id: 'f4', name: 'EDUCAÇÃO', color: '#7c3aed' },
+  { id: 'f5', name: 'ESPORTE', color: '#059669' },
+  { id: 'f6', name: 'OUTRO', color: '#4b5563' }
+];
+
 export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDemand }: DemandModalProps) {
   const [status, setStatus] = useState(demand.demandas.status);
-  const [prioridade, setPrioridade] = useState(demand.demandas.prioridade);
-  const [categoria, setCategoria] = useState(demand.demandas.categoria);
+  const [prioridade, setPrioridade] = useState(demand.demandas.prioridade || 'media');
+  const [categoria, setCategoria] = useState(demand.demandas.categoria || 'OUTRO');
   const [municipe, setMunicipe] = useState({
     name: demand.municipes.name,
     phone: demand.municipes.phone,
@@ -42,13 +51,10 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
   const [displayPhone, setDisplayPhone] = useState('');
   const [resumoIa, setResumoIa] = useState(demand.demandas.resumoIa || demand.demandas.descricao || '');
   const [isEditing, setIsEditing] = useState(false);
-  const [isEditingResumo, setIsEditingResumo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [manualMessage, setManualMessage] = useState('');
-  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [moving, setMoving] = useState(false);
 
   // Novos estados legislativos
   const [isLegislativo, setIsLegislativo] = useState(demand.demandas.isLegislativo);
@@ -68,17 +74,8 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     return phone;
   };
 
-  useEffect(() => {
-    if (demand.municipes.phone) {
-      setDisplayPhone(formatPhone(demand.municipes.phone));
-    }
-    // Fetch categories and campaigns
-    api.get('/demands/categories').then(res => setCategories(res.data)).catch(e => console.error(e));
-    api.get('/kanban/campaigns').then(res => setCampaigns(res.data)).catch(e => console.error(e));
-  }, [demand.municipes.phone, demand.demandas.id]);
-
   const applyPhoneMask = (value: string) => {
-    const raw = value.replace(/\D/g, '');
+    const raw = value.replace(/\D/g, '').slice(0, 11);
     let masked = raw;
     if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
     if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
@@ -88,10 +85,20 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     setMunicipe(prev => ({ ...prev, phone: dbNumber }));
   };
 
+  useEffect(() => {
+    if (demand.municipes.phone) {
+      const formatted = formatPhone(demand.municipes.phone);
+      setDisplayPhone(formatted);
+    }
+    // Carrega categorias com fallback
+    api.get('/demands/categories')
+      .then(res => setCategories(res.data.length > 0 ? res.data : DEFAULT_CATEGORIES_FALLBACK))
+      .catch(() => setCategories(DEFAULT_CATEGORIES_FALLBACK));
+  }, [demand.municipes.phone, demand.demandas.id]);
+
   const handleUpdateField = async (field: string, value: string) => {
     setLoading(true);
     try {
-      // Determina se estamos editando um Atendimento Online ou uma Demanda Oficial
       const isAtendimento = !!demand.atendimentoId || demand.demandas.status === 'nova';
       const endpoint = isAtendimento 
         ? `/demands/atendimentos/${demand.demandas.id}`
@@ -103,46 +110,11 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
       if (field === 'prioridade') setPrioridade(value);
       if (field === 'categoria') setCategoria(value);
       onUpdate();
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Erro ao atualizar ${field}:`, err);
-      alert('Falha ao salvar alteração no banco de dados.');
+      alert(`Erro: O banco de dados não pôde salvar esta alteração. Verifique se as migrações foram rodadas.`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUpdateLegislativo = async () => {
-    setLoading(true);
-    try {
-      await api.patch(`/demands/${demand.demandas.id}/status`, { 
-        isLegislativo, 
-        numeroIndicacao, 
-        documentUrl 
-      });
-      onUpdate();
-      alert('Status legislativo atualizado!');
-    } catch (err) {
-      alert('Falha ao atualizar dados legislativos.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!manualMessage.trim()) return;
-    setSendingMessage(true);
-    try {
-      await api.post('/whatsapp/send', {
-        demandId: demand.demandas.id,
-        message: manualMessage
-      });
-      setResumoIa((prev: string) => `${prev}\n\nGabinete: ${manualMessage}`);
-      setManualMessage('');
-      onUpdate();
-    } catch (err) {
-      alert('Falha ao enviar mensagem pelo WhatsApp.');
-    } finally {
-      setSendingMessage(false);
     }
   };
 
@@ -152,23 +124,9 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
       await api.patch(`/demands/municipe/${demand.municipes.id}`, municipe);
       setIsEditing(false);
       onUpdate();
-      alert('Dados atualizados!');
+      alert('Dados do cidadão atualizados!');
     } catch (err) {
       alert('Falha ao atualizar dados do munícipe.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateResumo = async () => {
-    setLoading(true);
-    try {
-      await api.patch(`/demands/${demand.demandas.id}/status`, { resumoIa });
-      setIsEditingResumo(false);
-      onUpdate();
-      alert('Resumo atualizado!');
-    } catch (err) {
-      alert('Falha ao atualizar resumo.');
     } finally {
       setLoading(false);
     }
@@ -188,149 +146,119 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    handleUpdateField('status', newStatus);
+  const handleSendMessage = async () => {
+    if (!manualMessage.trim()) return;
+    setSendingMessage(true);
+    try {
+      await api.post('/whatsapp/send', {
+        demandId: demand.demandas.id,
+        message: manualMessage
+      });
+      setResumoIa((prev: string) => `${prev}\n\nGabinete: ${manualMessage}`);
+      setManualMessage('');
+      onUpdate();
+      alert('Resposta enviada!');
+    } catch (err) {
+      alert('Falha ao enviar mensagem pelo WhatsApp.');
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
-  const moveToKanban = async (campaignId: string) => {
-    setMoving(true);
+  const handleUpdateLegislativo = async () => {
+    setLoading(true);
     try {
-      const payload = {
-        name: demand.municipes.name,
-        phone: demand.municipes.phone,
-        notes: `Demanda original: ${resumoIa}`,
-        municipeId: demand.municipes.id
-      };
-      await api.post(`/kanban/campaigns/${campaignId}/leads`, payload);
-      alert('Convertido em Lead com sucesso!');
-    } catch (err: any) {
-      alert(`Falha ao mover para Kanban: ${err.message}`);
+      await api.patch(`/demands/${demand.demandas.id}/status`, { isLegislativo, numeroIndicacao, documentUrl });
+      onUpdate();
+      alert('Dados legislativos salvos!');
+    } catch (err) {
+      alert('Falha ao salvar indicação.');
     } finally {
-      setMoving(false);
+      setLoading(false);
     }
   };
 
   const formatText = (text: string) => {
     if (!text) return '';
-    return text.split('\n').map((line, lineIndex) => {
-      let content: React.ReactNode = line;
-      const parts = line.split(/(\*\*.*?\*\*)/g).map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="text-slate-900">{part.slice(2, -2)}</strong>;
-        }
-        return part;
-      });
-      content = parts;
-      if (line.startsWith('Cidadão:') || line.startsWith('Munícipe:')) {
-        return (
-          <div key={lineIndex} className="mb-3 pb-2 border-b border-slate-100 last:border-0">
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-1">Solicitação do Cidadão</span>
-            <div className="text-slate-900 font-semibold">{content}</div>
-          </div>
-        );
-      }
-      if (line.startsWith('AI:') || line.startsWith('Gabinete:') || line.startsWith('Resposta:')) {
-        return (
-          <div key={lineIndex} className="mb-3 pl-4 border-l-2 border-slate-200 py-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Resposta do Gabinete</span>
-            <div className="text-slate-600 italic leading-relaxed">{content}</div>
-          </div>
-        );
-      }
-      return <div key={lineIndex} className="mb-2">{content}</div>;
-    });
+    return text.split('\n').map((line, idx) => <div key={idx} className="mb-2">{line}</div>);
   };
-
-  if (!demand) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        
+        {/* HEADER */}
         <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Detalhes do Registro</h3>
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-widest mt-1">
-              CRM-PROTOCOLO-{new Date(demand.demandas.createdAt).getFullYear()}-{demand.demandas.id.slice(0, 5).toUpperCase()}
-            </p>
+            <h3 className="text-xl font-bold text-slate-900">Gerenciar Atendimento</h3>
+            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">ID: {demand.demandas.id.slice(0, 8)}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-            <X size={20} className="text-slate-500" />
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} className="text-slate-500" /></button>
         </div>
 
-        <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100">
-            <div className="flex justify-between items-start mb-4">
+        <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          
+          {/* SEÇÃO CIDADÃO COM BOTÕES DE EDITAR/EXCLUIR */}
+          <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100 relative group">
+            <div className="flex justify-between items-start">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                  <User size={24} />
-                </div>
+                <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg"><User size={24} /></div>
                 <div>
-                  <p className="text-xs text-blue-600 uppercase font-bold tracking-wider">Cidadão</p>
-                  <h4 className="text-xl font-bold text-slate-900 leading-tight">
-                    {isEditing ? (
-                      <input className="bg-white border border-blue-200 rounded px-2 py-1 text-sm mt-1 w-full" value={municipe.name} onChange={e => setMunicipe({...municipe, name: e.target.value})} />
-                    ) : municipe.name}
-                  </h4>
+                  <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">Munícipe</p>
+                  {isEditing ? (
+                    <input 
+                      className="mt-1 px-3 py-1 bg-white border border-blue-200 rounded-lg text-sm font-bold w-full outline-none focus:ring-2 focus:ring-blue-500"
+                      value={municipe.name}
+                      onChange={e => setMunicipe({...municipe, name: e.target.value})}
+                    />
+                  ) : (
+                    <h4 className="text-lg font-bold text-slate-900">{municipe.name}</h4>
+                  )}
                 </div>
               </div>
+              
+              {/* BOTÕES DE AÇÃO DO CIDADÃO */}
               <div className="flex gap-2">
                 {isEditing ? (
                   <button onClick={handleUpdateMunicipe} className="p-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-all"><CheckCircle2 size={16} /></button>
                 ) : (
                   <>
-                    <button onClick={() => setIsEditing(true)} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm" title="Editar Munícipe"><Edit2 size={16} /></button>
-                    <button onClick={handleDeleteMunicipe} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-red-600 hover:border-red-200 transition-all shadow-sm" title="Excluir Munícipe"><Trash2 size={16} /></button>
+                    <button onClick={() => setIsEditing(true)} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" title="Editar"><Edit2 size={16} /></button>
+                    <button onClick={handleDeleteMunicipe} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-red-600 hover:border-red-300 transition-all shadow-sm" title="Excluir"><Trash2 size={16} /></button>
                   </>
                 )}
               </div>
             </div>
-            {isEditing ? (
-              <div className="space-y-4 pt-2 animate-in slide-in-from-top-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
-                    <input 
-                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                      value={displayPhone}
-                      onChange={e => applyPhoneMask(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
-                    <input 
-                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                      value={municipe.bairro}
-                      onChange={e => setMunicipe({...municipe, bairro: e.target.value})}
-                    />
-                  </div>
-                </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
+                {isEditing ? (
+                  <input className="w-full px-3 py-2 bg-white border border-blue-100 rounded-xl text-sm font-bold outline-none" value={displayPhone} onChange={e => applyPhoneMask(e.target.value)} />
+                ) : (
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-600"><Phone size={14} className="text-blue-400" /> {displayPhone}</div>
+                )}
               </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-sm text-slate-600 font-medium flex items-center">
-                  <Phone size={14} className="mr-2 text-slate-400" /> {displayPhone}
-                </div>
-                <div className="text-sm text-slate-600 font-medium flex items-center">
-                  <MapIcon size={14} className="mr-2 text-slate-400" /> {municipe.bairro || 'Não informado'}
-                </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
+                {isEditing ? (
+                  <input className="w-full px-3 py-2 bg-white border border-blue-100 rounded-xl text-sm font-bold outline-none" value={municipe.bairro} onChange={e => setMunicipe({...municipe, bairro: e.target.value})} />
+                ) : (
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-600"><MapIcon size={14} className="text-blue-400" /> {municipe.bairro || 'Não informado'}</div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
+          {/* TRIAGEM (DROPDOWNS) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
               <div className="relative">
-                <Clock size={14} className="absolute left-3 top-3 text-slate-400" />
-                <select 
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none focus:bg-white focus:border-blue-300 outline-none transition-all"
-                  value={status}
-                  onChange={e => handleUpdateField('status', e.target.value)}
-                >
-                  <option value="nova">Nova</option>
-                  <option value="em_andamento">Em Andamento</option>
-                  <option value="concluida">Concluída</option>
+                <Clock size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={status} onChange={e => handleUpdateField('status', e.target.value)}>
+                  <option value="nova">Em Aberto</option>
+                  <option value="concluida">Concluída (Libera IA)</option>
                   <option value="cancelada">Cancelada</option>
                 </select>
               </div>
@@ -339,12 +267,8 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
               <div className="relative">
-                <Tag size={14} className="absolute left-3 top-3 text-slate-400" />
-                <select 
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none focus:bg-white focus:border-blue-300 outline-none transition-all"
-                  value={categoria}
-                  onChange={e => handleUpdateField('categoria', e.target.value)}
-                >
+                <Tag size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={categoria} onChange={e => handleUpdateField('categoria', e.target.value)}>
                   <option value="">Selecione...</option>
                   {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
@@ -354,12 +278,8 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prioridade</label>
               <div className="relative">
-                <AlertCircle size={14} className="absolute left-3 top-3 text-slate-400" />
-                <select 
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold appearance-none focus:bg-white focus:border-blue-300 outline-none transition-all"
-                  value={prioridade}
-                  onChange={e => handleUpdateField('prioridade', e.target.value)}
-                >
+                <AlertCircle size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={prioridade} onChange={e => handleUpdateField('prioridade', e.target.value)}>
                   <option value="baixa">Baixa</option>
                   <option value="media">Média</option>
                   <option value="alta">Alta</option>
@@ -369,68 +289,35 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
             </div>
           </div>
 
+          {/* HISTÓRICO */}
           <div className="space-y-3">
-            <div className="flex justify-between items-center text-slate-800 font-bold">
-              <div className="flex items-center gap-2">
-                <MessageSquare size={18} className="text-blue-600" />
-                <h4>Resumo e Histórico</h4>
-              </div>
-            </div>
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 leading-relaxed min-h-[100px]">
-              <div className="whitespace-pre-wrap font-medium">{formatText(resumoIa)}</div>
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><MessageSquare size={16} /> Resumo e Histórico</h4>
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700 leading-relaxed max-h-40 overflow-y-auto">
+              <div className="text-sm font-medium">{formatText(resumoIa)}</div>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-            <h4 className="text-slate-800 font-bold flex items-center gap-2">
-              <ClipboardList size={18} className="text-emerald-600" />
-              Ações de Gabinete
-            </h4>
-            <button 
-              onClick={() => onOpenCreateDemand ? onOpenCreateDemand(demand.municipes) : handleUpdateLegislativo()}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
-            >
-              <Plus size={16} />
-              Criar Demanda Oficial
+          {/* RESPONDER WHATSAPP */}
+          <div className="pt-6 border-t border-slate-100 space-y-4">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Phone size={16} className="text-green-600" /> Enviar Resposta WhatsApp</h4>
+            <textarea className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-bold outline-none focus:border-green-500 transition-all" rows={3} placeholder="Digite sua resposta aqui..." value={manualMessage} onChange={e => setManualMessage(e.target.value)} />
+            <button disabled={sendingMessage || !manualMessage.trim()} onClick={handleSendMessage} className="w-full bg-green-600 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-green-100 hover:bg-green-700 flex items-center justify-center gap-2 transition-all">
+              {sendingMessage ? <Loader2 size={18} className="animate-spin" /> : <MessageSquare size={18} />}
+              ENVIAR AGORA
             </button>
           </div>
-          
-          {isLegislativo && (
-            <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-4">
-              <h5 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">DADOS LEGISLATIVOS</h5>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Nº Indicação</label>
-                  <input className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-2 text-sm font-bold" value={numeroIndicacao} onChange={e => setNumeroIndicacao(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Link PDF</label>
-                  <input className="w-full bg-white border border-emerald-100 rounded-xl px-4 py-2 text-sm font-bold" value={documentUrl} onChange={e => setDocumentUrl(e.target.value)} />
-                </div>
-              </div>
-              <button onClick={handleUpdateLegislativo} className="w-full py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md">ATUALIZAR INDICAÇÃO</button>
-            </div>
-          )}
 
-          <div className="pt-6 border-t border-slate-100 space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold">
-              <Phone size={18} className="text-green-600" />
-              <h4>Responder WhatsApp</h4>
-            </div>
-            <div className="flex flex-col gap-3">
-              <textarea className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-medium" rows={3} placeholder="Digite sua resposta direta..." value={manualMessage} onChange={e => setManualMessage(e.target.value)} />
-              <div className="flex justify-end">
-                <button disabled={sendingMessage || !manualMessage.trim()} onClick={handleSendMessage} className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50">
-                  {sendingMessage ? <Loader2 size={18} className="animate-spin" /> : <MessageSquare size={18} />}
-                  Enviar Resposta
-                </button>
-              </div>
-            </div>
+          {/* CRIAR DEMANDA OFICIAL */}
+          <div className="pt-4 flex justify-center">
+            <button onClick={() => onOpenCreateDemand ? onOpenCreateDemand(demand.municipes) : handleUpdateLegislativo()} className="text-blue-600 font-black text-[10px] uppercase tracking-widest hover:underline flex items-center gap-1">
+              <Plus size={14} /> Transformar em Protocolo Oficial
+            </button>
           </div>
+
         </div>
 
-        <div className="p-6 bg-slate-50 flex justify-end">
-          <button onClick={onClose} className="px-8 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-100">Fechar</button>
+        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+          <button onClick={onClose} className="px-10 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all shadow-sm">Fechar</button>
         </div>
       </div>
     </div>
