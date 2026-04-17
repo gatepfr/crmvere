@@ -95,13 +95,16 @@ def geocode_address(nome, endereco, bairro, cidade, uf):
     return None, None
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
+    print(f"--- INICIANDO IMPORTAÇÃO TSE V3 (ESTADO: {uf}) ---")
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
     
     if not DATABASE_URL:
-        report_progress(tenant_id, "Erro: DATABASE_URL não configurada", 0)
-        return
+        msg = "Erro: Variável DATABASE_URL não encontrada no ambiente"
+        report_progress(tenant_id, msg, 0)
+        print(f"[CRITICAL] {msg}")
+        sys.exit(1)
 
     municipio_norm = normalize_text(municipio_nome)
     nr_cand_str = str(nr_candidato).strip()
