@@ -52,6 +52,16 @@ export default function Eleicoes() {
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
+      // Busca dados do gabinete para pre-preencher o formulário
+      const configRes = await api.get('/config/me');
+      if (configRes.data) {
+        setConfig(prev => ({
+          ...prev,
+          uf: configRes.data.uf || prev.uf,
+          municipio: configRes.data.municipio || prev.municipio
+        }));
+      }
+
       const res = await api.get('/eleicoes/resumo');
       if (res.data.setup_required) {
         setSetupMode(true);
