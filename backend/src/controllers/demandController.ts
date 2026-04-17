@@ -255,6 +255,34 @@ export const listCategories = async (req: Request, res: Response) => {
   }
 };
 
+export const createCategory = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const { name, color, icon } = req.body;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
+  try {
+    const [nc] = await db.insert(demandCategories)
+      .values({ tenantId, name: name.toUpperCase().trim(), color, icon })
+      .onConflictDoNothing()
+      .returning();
+    res.status(201).json(nc);
+  } catch (error) { 
+    res.status(500).json({ error: 'Failed' }); 
+  }
+};
+
+export const deleteCategory = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
+  try {
+    await db.delete(demandCategories)
+      .where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId)));
+    res.json({ success: true });
+  } catch (error) { 
+    res.status(500).json({ error: 'Failed' }); 
+  }
+};
+
 export const seedCategories = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant' });
