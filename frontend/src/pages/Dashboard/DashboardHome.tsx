@@ -42,10 +42,6 @@ interface DashboardData {
     uniqueBairros: number;
     dailyTokenLimit: number;
     tokenUsageTotal: number;
-    electorateGender?: {
-      masculino: number;
-      feminino: number;
-    };
   };
   categoryStats: { name: string; value: number }[];
   dailyStats: { date: string; count: number }[];
@@ -130,7 +126,7 @@ export default function DashboardHome() {
       </header>
 
       {/* Grid de Cards Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card: Munícipes Totais */}
         <div 
           onClick={() => navigate('/dashboard/municipes')}
@@ -193,32 +189,6 @@ export default function DashboardHome() {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bairros</p>
           <div className="flex items-baseline gap-2">
             <h3 className="text-3xl font-black text-slate-900">{summary.uniqueBairros || 0}</h3>
-          </div>
-        </div>
-
-        {/* Card: Eleitorado Masculino */}
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center text-blue-600 mb-4">
-            <Users size={24} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Eleitores M.</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">
-              {summary.electorateGender?.masculino?.toLocaleString('pt-BR') || '---'}
-            </h3>
-          </div>
-        </div>
-
-        {/* Card: Eleitorado Feminino */}
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="bg-pink-50 w-12 h-12 rounded-2xl flex items-center justify-center text-pink-600 mb-4">
-            <Users size={24} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Eleitoras F.</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">
-              {summary.electorateGender?.feminino?.toLocaleString('pt-BR') || '---'}
-            </h3>
           </div>
         </div>
       </div>

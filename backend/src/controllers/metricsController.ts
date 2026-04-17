@@ -39,24 +39,6 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       day: sql`DATE_TRUNC('day', ${demandas.createdAt})`
     }).from(demandas).where(and(eq(demandas.tenantId, tenantId), sql`${demandas.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`)).groupBy(sql`DATE_TRUNC('day', ${demandas.createdAt}), TO_CHAR(${demandas.createdAt} AT TIME ZONE 'America/Sao_Paulo', 'DD/MM')`).orderBy(sql`DATE_TRUNC('day', ${demandas.createdAt}) ASC`);
 
-    // Busca Perfil do Eleitorado (Gênero)
-    const [candidato] = await db.select().from(tseCandidatos).where(eq(tseCandidatos.tenantId, tenantId)).limit(1);
-    let electorateGender = { masculino: 0, feminino: 0 };
-    
-    if (candidato) {
-      const genderStats = await db.execute(sql`
-        SELECT UPPER(ds_genero) as label, SUM(qt_eleitores) as value
-        FROM tse_perfil_eleitorado
-        WHERE cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')} AND ano_eleicao = ${candidato.anoEleicao}
-        GROUP BY 1
-      `);
-
-      genderStats.rows.forEach((row: any) => {
-        if (row.label === 'MASCULINO') electorateGender.masculino = Number(row.value);
-        if (row.label === 'FEMININO') electorateGender.feminino = Number(row.value);
-      });
-    }
-
     res.json({
       summary: { 
         total: summary?.total || 0, 
@@ -66,8 +48,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         birthdaysToday: municipeSummary?.birthdaysToday || 0,
         uniqueBairros: municipeSummary?.uniqueBairros || 0,
         dailyTokenLimit: tenant?.dailyTokenLimit || 0,
-        tokenUsageTotal: tenant?.tokenUsageTotal || 0,
-        electorateGender // Adicionado
+        tokenUsageTotal: tenant?.tokenUsageTotal || 0
       },
       categoryStats: categoryStats.map(c => ({ ...c, value: Number(c.value) })),
       dailyStats: last7Days.map(d => ({ date: d.date, count: Number(d.count) }))
