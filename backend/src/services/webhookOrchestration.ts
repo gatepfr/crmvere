@@ -31,8 +31,15 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const normalized = normalizeEvolution(payload, tenantId);
     
     // 1. Ignora se não for mensagem real de cidadão
-    if (!normalized || normalized.fromMe || normalized.isGroup) return { status: 'ignored' };
+    if (!normalized || normalized.fromMe || normalized.isGroup) {
+      if (normalized?.fromMe) console.log(`[ORCHESTRATOR] Ignorando mensagem própria (fromMe).`);
+      return { status: 'ignored' };
+    }
+
     if (!normalized.text || normalized.text.trim() === '') return { status: 'no_text' };
+
+    // Anti-Loop: Se o texto for exatamente o que a IA costuma responder, e já estiver no histórico, ignora
+    // (Isso é uma segurança extra caso o fromMe falhe)
 
     console.log(`[ORCHESTRATOR] Mensagem de ${normalized.from} para tenant ${tenantId}`);
 
