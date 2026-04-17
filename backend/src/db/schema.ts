@@ -92,9 +92,7 @@ export const atendimentos = pgTable("atendimentos", {
   precisaRetorno: boolean("precisa_retorno").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantMunicipeUnq: unique("atendimento_tenant_municipe_unq").on(table.tenantId, table.municipeId),
-}));
+});
 
 export const demandas = pgTable("demandas", {
   id: uuid("id").primaryKey().defaultRandom(),

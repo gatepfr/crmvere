@@ -106,33 +106,38 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     const aiResult = resultIA.data;
     console.log(`[ORCHESTRATOR] Resposta da IA recebida. Usuário receberá: ${aiResult?.resposta_usuario?.substring(0, 50)}...`);
-    const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
+    
+    // Histórico: Se for um atendimento de hoje, anexamos ao histórico existente.
+    // Caso contrário, começamos um histórico novo.
+    const updatedHistory = existingAtendimento 
+      ? `${existingAtendimento.resumoIa}\nCidadão: ${normalized.text}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`
+      : `Cidadão: ${normalized.text}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
     try {
-      // Usamos upsert baseado na constraint de unicidade (tenantId, municipeId)
-      await db.insert(atendimentos).values({
-        tenantId,
-        municipeId: municipe.id,
-        resumoIa: updatedHistory,
-        categoria: aiResult?.categoria,
-        prioridade: aiResult?.prioridade,
-        precisaRetorno: aiResult?.precisa_retorno || false,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [atendimentos.tenantId, atendimentos.municipeId],
-        set: {
+      if (existingAtendimento) {
+        console.log(`[ORCHESTRATOR] Atualizando atendimento de hoje para ${municipe.name}`);
+        await db.update(atendimentos).set({
           resumoIa: updatedHistory,
           categoria: aiResult?.categoria || sql`${atendimentos.categoria}`,
           prioridade: aiResult?.prioridade || sql`${atendimentos.prioridade}`,
           precisaRetorno: aiResult?.precisa_retorno !== undefined ? aiResult.precisa_retorno : sql`${atendimentos.precisaRetorno}`,
           updatedAt: new Date(),
-        }
-      });
-      console.log(`[ORCHESTRATOR] Atendimento salvo/atualizado para ${municipe.name}`);
+        }).where(eq(atendimentos.id, existingAtendimento.id));
+      } else {
+        console.log(`[ORCHESTRATOR] Criando NOVO atendimento diário para ${municipe.name}`);
+        await db.insert(atendimentos).values({
+          tenantId,
+          municipeId: municipe.id,
+          resumoIa: updatedHistory,
+          categoria: aiResult?.categoria,
+          prioridade: aiResult?.prioridade,
+          precisaRetorno: aiResult?.precisa_retorno || false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
     } catch (dbError: any) {
-      console.error(`[ORCHESTRATOR DB ERROR] Falha crítica ao salvar atendimento:`, dbError.message);
-      // Aqui poderíamos lançar o erro se quisermos que a orquestração falhe e não mande o WhatsApp
+      console.error(`[ORCHESTRATOR DB ERROR] Falha ao salvar atendimento:`, dbError.message);
     }
 
     // 8. Fluxo de Envio de WhatsApp
