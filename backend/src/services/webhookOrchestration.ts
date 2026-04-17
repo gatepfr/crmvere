@@ -31,7 +31,8 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const normalized = normalizeEvolution(payload, tenantId);
     
     if (normalized.fromMe || normalized.isGroup) return { status: 'ignored' };
-    if (!normalized.text || normalized.text.trim() === '') return { status: 'no_text' };
+    // Ajuste: Removemos o bloqueio de "no_text" para permitir que mídias ([Imagem], etc) apareçam no painel
+    const messageContent = normalized.text || '[Mensagem sem texto]';
 
     console.log(`[ORCHESTRATOR] Mensagem de ${normalized.from} para tenant ${tenantId}`);
 

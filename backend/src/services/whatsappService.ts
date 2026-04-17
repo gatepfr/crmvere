@@ -47,21 +47,31 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
   // Extract text from various message types (including nested messages like ephemeralMessage)
   const extractText = (m: any): string => {
     if (!m) return '';
-    
+
     // Handle nested structures (ephemeral, viewOnce)
     if (m.ephemeralMessage?.message) return extractText(m.ephemeralMessage.message);
     if (m.viewOnceMessage?.message) return extractText(m.viewOnceMessage.message);
     if (m.viewOnceMessageV2?.message) return extractText(m.viewOnceMessageV2.message);
     if (m.documentWithCaptionMessage?.message) return extractText(m.documentWithCaptionMessage.message);
 
-    return m.conversation || 
-           m.extendedTextMessage?.text || 
-           m.imageMessage?.caption ||
-           m.videoMessage?.caption ||
-           m.documentMessage?.caption ||
-           '';
-  };
+    // Texto direto ou legenda
+    if (m.conversation) return m.conversation;
+    if (m.extendedTextMessage?.text) return m.extendedTextMessage.text;
+    if (m.imageMessage?.caption) return m.imageMessage.caption;
+    if (m.videoMessage?.caption) return m.videoMessage.caption;
+    if (m.documentMessage?.caption) return m.documentMessage.caption;
 
+    // Placeholders para mídia sem texto
+    if (m.imageMessage) return '[Imagem]';
+    if (m.videoMessage) return '[Vídeo]';
+    if (m.audioMessage) return '[Áudio]';
+    if (m.documentMessage) return '[Arquivo]';
+    if (m.stickerMessage) return '[Figurinha]';
+    if (m.locationMessage) return '[Localização]';
+    if (m.contactMessage || m.contactsArrayMessage) return '[Contato]';
+
+    return '';
+  };
   const text = extractText(payload.data?.message);
 
   return {
