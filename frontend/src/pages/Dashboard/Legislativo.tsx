@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import NewDemandModal from '../../components/NewDemandModal';
 import DemandModal from '../../components/DemandModal';
+import LegislativoEditModal from '../../components/LegislativoEditModal';
 import { 
   ClipboardList, 
   Search, 
@@ -499,7 +500,7 @@ export default function Legislativo() {
       )}
 
       {selectedDemand && (
-        <DemandModal 
+        <LegislativoEditModal 
           demand={selectedDemand} 
           onClose={() => setSelectedDemand(null)} 
           onUpdate={loadDemands} 
