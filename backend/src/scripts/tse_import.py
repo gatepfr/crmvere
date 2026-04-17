@@ -30,8 +30,11 @@ def normalize_text(text):
     return "".join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
 
 def normalize_code(code):
-    if not code: return ""
-    return str(code).strip().lstrip('0')
+    if not code: return "0"
+    try:
+        return str(int(float(str(code).strip())))
+    except:
+        return "0"
 
 def find_column(columns, keywords):
     for c in columns:
