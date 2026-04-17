@@ -99,7 +99,14 @@ export default function Demands() {
 
   useEffect(() => {
     fetchAtendimentos();
-  }, [fetchAtendimentos]);
+    
+    // Auto-refresh a cada 15 segundos
+    const interval = setInterval(() => {
+      if (!loading) fetchAtendimentos();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [fetchAtendimentos, loading]);
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';

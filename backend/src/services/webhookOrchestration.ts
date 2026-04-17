@@ -67,7 +67,8 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       return { status: 'municipe_error' };
     }
 
-    // Busca atendimento criado HOJE (Fuso Brasília) para este munícipe
+    // 5. Busca Atendimento de Hoje (Fuso Brasília)
+    // Usamos SQL para comparar a data e garantir que não haja erro de fuso entre Node e Postgres
     let [existingAtendimento] = await db.select()
       .from(atendimentos)
       .where(and(
@@ -78,27 +79,30 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       .orderBy(desc(atendimentos.updatedAt))
       .limit(1);
 
-    // 5. Verifica se é Intervenção Humana Recente (Standby de 10 min)
-    // Agora usamos 'lastHumanInteractionAt' para saber se um HUMANO mexeu.
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const isHumanActive = existingAtendimento && 
-                          existingAtendimento.lastHumanInteractionAt && 
-                          new Date(existingAtendimento.lastHumanInteractionAt) > tenMinutesAgo;
+    // 6. Verifica Standby (Intervenção Humana nos últimos 10 min)
+    // Se houve interação humana (lastHumanInteractionAt) há menos de 10 min, a IA silencia.
+    // Usamos SQL para a comparação ser exata com o relógio do banco.
+    let isHumanActive = false;
+    if (existingAtendimento?.lastHumanInteractionAt) {
+      const [{ active }] = await db.select({ 
+        active: sql<boolean>`${existingAtendimento.lastHumanInteractionAt} > (now() - interval '10 minutes')` 
+      });
+      isHumanActive = active;
+    }
 
-    // 6. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo (updatedAt)
+    // 7. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo (updatedAt)
     const historyWithCitizen = existingAtendimento 
       ? `${existingAtendimento.resumoIa}\nCidadão: ${messageContent}`
       : `Cidadão: ${messageContent}`;
 
     try {
       if (existingAtendimento) {
-        console.log(`[ORCHESTRATOR] Atualizando atendimento de hoje ID: ${existingAtendimento.id}`);
         await db.update(atendimentos).set({
           resumoIa: historyWithCitizen,
-          updatedAt: new Date(), // Isso garante que vá para o topo da lista
+          updatedAt: new Date(),
         }).where(eq(atendimentos.id, existingAtendimento.id));
       } else {
-        console.log(`[ORCHESTRATOR] Criando NOVO registro de atendimento para ${municipe.name}`);
+        console.log(`[ORCHESTRATOR] Criando registro para ${municipe.name}`);
         const [newAtendimento] = await db.insert(atendimentos).values({
           tenantId,
           municipeId: municipe.id,
@@ -109,27 +113,23 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
         existingAtendimento = newAtendimento;
       }
     } catch (dbError: any) {
-      console.error(`[ORCHESTRATOR DB ERROR] Erro crítico ao salvar atendimento:`, dbError.message);
-      // Fallback para constraint antiga se a migração não tiver rodado
-      if (dbError.message.includes('unique constraint') || dbError.message.includes('atendimento_tenant_municipe_unq')) {
-         console.log(`[ORCHESTRATOR] Tentando fallback para update em registro antigo...`);
-         const [lastOne] = await db.select().from(atendimentos)
-           .where(and(eq(atendimentos.municipeId, municipe.id), eq(atendimentos.tenantId, tenantId)))
-           .orderBy(desc(atendimentos.updatedAt)).limit(1);
-         
-         if (lastOne) {
-           await db.update(atendimentos).set({
-             resumoIa: `${lastOne.resumoIa}\n[NEW] Cidadão: ${messageContent}`,
-             updatedAt: new Date()
-           }).where(eq(atendimentos.id, lastOne.id));
-           existingAtendimento = lastOne;
-         }
+      console.error(`[ORCHESTRATOR DB ERROR] Erro ao salvar:`, dbError.message);
+      // Fallback para constraint antiga
+      const [lastOne] = await db.select().from(atendimentos)
+        .where(and(eq(atendimentos.municipeId, municipe.id), eq(atendimentos.tenantId, tenantId)))
+        .orderBy(desc(atendimentos.updatedAt)).limit(1);
+      
+      if (lastOne) {
+        await db.update(atendimentos).set({
+          resumoIa: `${lastOne.resumoIa}\n[NEW] Cidadão: ${messageContent}`,
+          updatedAt: new Date()
+        }).where(eq(atendimentos.id, lastOne.id));
+        existingAtendimento = lastOne;
       }
     }
 
-    // 7. Se o humano estiver ativo, paramos por aqui (não chama IA nem responde)
     if (isHumanActive) {
-      console.log(`[ORCHESTRATOR] Humano ativo (< 10 min). IA em silêncio, apenas registrou no painel.`);
+      console.log(`[ORCHESTRATOR] Standby humano ativo para ${municipe.name}. Apenas registrei no painel.`);
       return { status: 'waiting_human' };
     }
 
