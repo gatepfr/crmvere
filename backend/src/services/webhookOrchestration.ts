@@ -84,8 +84,8 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     // 6. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo
     const historyWithCitizen = existingAtendimento 
-      ? `${existingAtendimento.resumoIa}\nCidadão: ${normalized.text}`
-      : `Cidadão: ${normalized.text}`;
+      ? `${existingAtendimento.resumoIa}\nCidadão: ${messageContent}`
+      : `Cidadão: ${messageContent}`;
 
     try {
       if (existingAtendimento) {
@@ -107,9 +107,6 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       }
     } catch (dbError: any) {
       console.error(`[ORCHESTRATOR DB ERROR] Erro crítico ao salvar atendimento:`, dbError.message);
-      // Se houver falha aqui (provavelmente por causa da constraint no servidor externo),
-      // precisamos forçar um "update" no registro mais recente do munícipe como fallback
-      // para que a conversa não se perca.
       if (dbError.message.includes('unique constraint') || dbError.message.includes('atendimento_tenant_municipe_unq')) {
          console.log(`[ORCHESTRATOR] Tentando fallback para update em registro antigo devido a constraint de banco...`);
          const [lastOne] = await db.select().from(atendimentos)
@@ -118,7 +115,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
          
          if (lastOne) {
            await db.update(atendimentos).set({
-             resumoIa: `${lastOne.resumoIa}\n[NOVO DIA] Cidadão: ${normalized.text}`,
+             resumoIa: `${lastOne.resumoIa}\n[NOVO DIA] Cidadão: ${messageContent}`,
              updatedAt: new Date()
            }).where(eq(atendimentos.id, lastOne.id));
            existingAtendimento = lastOne;
@@ -148,14 +145,15 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     if (!apiKey) return { status: 'no_ai_key' };
 
     // 9. Chamada da IA
+    // AJUSTE: Passamos apenas o texto da última mensagem para análise, mantendo o histórico anterior como contexto se necessário
     console.log(`[ORCHESTRATOR] Chamando IA (${provider})...`);
-    const resultIA = await processDemand(historyWithCitizen, {
+    const resultIA = await processDemand(messageContent, {
       provider: provider as any,
       apiKey: apiKey,
       model: model,
       aiBaseUrl: tenant?.aiBaseUrl || globalConfig?.aiBaseUrl,
       systemPrompt: tenant?.systemPrompt || ''
-    }, undefined, knowledgeBaseContent);
+    }, historyWithCitizen, knowledgeBaseContent);
 
     const aiResult = resultIA.data;
     console.log(`[ORCHESTRATOR] IA respondeu para ${municipe.name}`);
