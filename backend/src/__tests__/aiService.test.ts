@@ -36,7 +36,7 @@ describe('aiService', () => {
     
     const result = await processDemand(message, config, context);
     
-    expect(result).toEqual({
+    expect(result.data).toEqual({
       categoria: "saude",
       subcategoria: "agendamento",
       resumo_ia: "Paciente solicita agendamento de consulta.",
@@ -44,18 +44,20 @@ describe('aiService', () => {
       acao_sugerida: "Verificar disponibilidade na agenda da UBS",
       precisa_retorno: true
     });
+    expect(result.usage).toBeDefined();
   });
 
   it('should throw an error if JSON delimiter is missing', async () => {
     // Modify mock for this specific test
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const mockedModel = (new GoogleGenerativeAI('') as any).getGenerativeModel();
+    const mockedModel = (new (GoogleGenerativeAI as any)('') as any).getGenerativeModel();
     mockedModel.generateContent.mockResolvedValueOnce({
       response: {
-        text: () => 'Malformed response without delimiters'
+        text: () => 'Malformed response without delimiters',
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 }
       }
     });
 
-    await expect(processDemand("test", config, "context")).rejects.toThrow("Falha ao processar resposta da IA: Formato inválido");
+    await expect(processDemand("test", config, "context")).rejects.toThrow("Falha ao extrair JSON da resposta da IA");
   });
 });

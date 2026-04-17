@@ -40,8 +40,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
       conds.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`), ilike(municipes.bairro, `%${search}%`)) as any);
     }
     if (birthday) {
-      conds.push(sql`EXTRACT(DAY FROM ${municipes.birthDate}) = EXTRACT(DAY FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
-      conds.push(sql`EXTRACT(MONTH FROM ${municipes.birthDate}) = EXTRACT(MONTH FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
+      conds.push(sql`to_char(${municipes.birthDate} AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo', 'DD-MM') = to_char(now() AT TIME ZONE 'America/Sao_Paulo', 'DD-MM')`);
     }
     const [totalCount] = await db.select({ count: count() }).from(municipes).where(and(...conds));
     const results = await db.select({ 

@@ -2,32 +2,46 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
 import { EvolutionService } from '../services/evolutionService';
 
-vi.mock('axios');
+vi.mock('axios', () => {
+  const mockClient = {
+    get: vi.fn(),
+    post: vi.fn(),
+    delete: vi.fn(),
+  };
+  return {
+    default: {
+      create: vi.fn(() => mockClient),
+      ...mockClient
+    }
+  };
+});
 
 describe('EvolutionService', () => {
   const baseUrl = 'http://localhost:8080';
   const globalToken = 'global-token';
   let evolutionService: EvolutionService;
+  let mockClient: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
     evolutionService = new EvolutionService(baseUrl, globalToken);
+    // Get the mock client that was returned by axios.create
+    mockClient = (axios.create as any).mock.results[0].value;
   });
 
   it('should create an instance', async () => {
     const instanceName = 'test-instance';
     const mockResponse = { data: { instance: { instanceName: 'test-instance' } } };
-    (axios.post as any).mockResolvedValue(mockResponse);
+    mockClient.post.mockResolvedValue(mockResponse);
 
     const result = await evolutionService.createInstance(instanceName);
 
-    expect(axios.post).toHaveBeenCalledWith(
-      `${baseUrl}/instance/create`,
+    expect(mockClient.post).toHaveBeenCalledWith(
+      '/instance/create',
       expect.objectContaining({
         instanceName,
         qrcode: true,
-      }),
-      { headers: { apikey: globalToken } }
+      })
     );
     expect(result).toEqual(mockResponse.data);
   });
@@ -35,44 +49,40 @@ describe('EvolutionService', () => {
   it('should get QR code', async () => {
     const instanceName = 'test-instance';
     const mockResponse = { data: { base64: 'qr-code-data' } };
-    (axios.get as any).mockResolvedValue(mockResponse);
+    mockClient.get.mockResolvedValue(mockResponse);
 
     const result = await evolutionService.getQrCode(instanceName);
 
-    expect(axios.get).toHaveBeenCalledWith(`${baseUrl}/instance/connect/${instanceName}`, {
-      headers: { apikey: globalToken }
-    });
+    expect(mockClient.get).toHaveBeenCalledWith(`/instance/connect/${instanceName}`);
     expect(result).toEqual(mockResponse.data);
   });
 
   it('should get status', async () => {
     const instanceName = 'test-instance';
     const mockResponse = { data: { instance: { state: 'open' } } };
-    (axios.get as any).mockResolvedValue(mockResponse);
+    mockClient.get.mockResolvedValue(mockResponse);
 
     const result = await evolutionService.getStatus(instanceName);
 
-    expect(axios.get).toHaveBeenCalledWith(`${baseUrl}/instance/connectionState/${instanceName}`, {
-      headers: { apikey: globalToken }
-    });
+    expect(mockClient.get).toHaveBeenCalledWith(`/instance/connectionState/${instanceName}`);
     expect(result).toEqual(mockResponse.data);
   });
 
   it('should set webhook', async () => {
     const instanceName = 'test-instance';
     const webhookUrl = 'http://webhook.com';
-    (axios.post as any).mockResolvedValue({ data: { success: true } });
+    mockClient.post.mockResolvedValue({ data: { success: true } });
 
     await evolutionService.setWebhook(instanceName, webhookUrl);
 
-    expect(axios.post).toHaveBeenCalledWith(
-      `${baseUrl}/webhook/set/${instanceName}`,
-      {
-        enabled: true,
-        url: webhookUrl,
-        events: ['MESSAGES_UPSERT']
-      },
-      { headers: { apikey: globalToken } }
+    expect(mockClient.post).toHaveBeenCalledWith(
+      `/webhook/set/${instanceName}`,
+      expect.objectContaining({
+        webhook: expect.objectContaining({
+          enabled: true,
+          url: webhookUrl
+        })
+      })
     );
   });
 });

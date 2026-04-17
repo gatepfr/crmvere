@@ -24,6 +24,7 @@ describe('whatsappService', () => {
     expect(result).toEqual({
       event: 'MESSAGES_UPSERT',
       from: '5511999999999',
+      jid: '5511999999999@s.whatsapp.net',
       name: 'John Doe',
       text: 'Hello world',
       tenantId: 'tenant-123',

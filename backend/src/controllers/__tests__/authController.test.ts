@@ -22,6 +22,6 @@ describe('authController - login', () => {
     await login(req, res);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Invalid credentials' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Invalid credentials' });
   });
 });

@@ -140,24 +140,26 @@ export default function Municipes() {
     
     try {
       const today = new Date();
-      // Ajuste para o fuso de Brasília (UTC-3)
-      const brDateParts = new Intl.DateTimeFormat('en-US', {
+      // Pega dia e mês no fuso de Brasília
+      const brParts = new Intl.DateTimeFormat('pt-BR', {
         timeZone: 'America/Sao_Paulo',
-        day: 'numeric',
-        month: 'numeric'
+        day: '2-digit',
+        month: '2-digit'
       }).formatToParts(today);
       
-      const todayDay = brDateParts.find(p => p.type === 'day')?.value;
-      const todayMonth = brDateParts.find(p => p.type === 'month')?.value;
+      const todayDay = brParts.find(p => p.type === 'day')?.value;
+      const todayMonth = brParts.find(p => p.type === 'month')?.value;
 
       // A data no banco vem como ISO (ex: 1990-05-15T00:00:00.000Z)
-      const birthDate = new Date(dateStr);
-      // Usamos getUTCDate para evitar problemas de fuso no armazenamento pure date
-      const birthDay = birthDate.getUTCDate().toString();
-      const birthMonth = (birthDate.getUTCMonth() + 1).toString();
-
-      return birthDay === todayDay && birthMonth === todayMonth;
+      // Pegamos os componentes diretamente da string para evitar o fuso local do JS
+      const datePart = dateStr.split('T')[0];
+      const [y, m, d] = datePart.split('-');
+      
+      return d === todayDay && m === todayMonth;
     } catch (e) {
+      return false;
+    }
+  };
       return false;
     }
   };

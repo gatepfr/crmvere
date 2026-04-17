@@ -65,6 +65,15 @@ app.use('/api/map', mapRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/eleicoes', eleicoesRoutes);
 
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[GLOBAL ERROR]', err);
+  res.status(err.status || 500).json({ 
+    error: err.code || 'INTERNAL_SERVER_ERROR',
+    message: err.message || 'Ocorreu um erro interno no servidor.'
+  });
+});
+
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

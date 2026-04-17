@@ -51,35 +51,36 @@ export async function processDemand(
     3. Analise o contexto completo para não ser repetitivo.
     4. Responda ao cidadão de forma natural e humana no campo "resposta_usuario".
     5. Extraia os dados técnicos (categoria, prioridade, etc) para controle interno do gabinete.
+CATEGORIAS PERMITIDAS (USE EXATAMENTE UMA DESTAS):
+SAÚDE, INFRAESTRUTURA, SEGURANÇA, EDUCAÇÃO, ESPORTE, FUNCIONÁRIO PÚBLICO, OUTRO.
 
-    CATEGORIAS PERMITIDAS (USE EXATAMENTE UMA DESTAS):
-    SAÚDE, INFRAESTRUTURA, SEGURANÇA, EDUCAÇÃO, ESPORTE, OUTRO.
+BASE DE CONHECIMENTO DO GABINETE:
+${knowledgeBaseContent || 'Nenhuma informação adicional disponível.'}
 
-    BASE DE CONHECIMENTO DO GABINETE:
-    ${knowledgeBaseContent || 'Nenhuma informação adicional disponível.'}
+HISTÓRICO E MENSAGEM DO CIDADÃO:
+${messageText}
 
-    HISTÓRICO E MENSAGEM DO CIDADÃO:
-    ${messageText}
+Responda EXCLUSIVAMENTE com um objeto JSON válido, envolto pelos delimitadores |||JSON|||.
 
-    Responda EXCLUSIVAMENTE com um objeto JSON válido, envolto pelos delimitadores |||JSON|||.
+|||JSON|||
+{
+  "categoria": "NOME_DA_CATEGORIA",
+  "subcategoria": "assunto resumido",
+  "resumo_ia": "Resumo organizado dos pontos chave.",
+  "prioridade": "baixa" | "media" | "alta" | "urgente",
+  "acao_sugerida": "O que o gabinete deve fazer",
+  "precisa_retorno": true | false,
+  "resposta_usuario": "Sua resposta gentil ao cidadão."
+}
+|||JSON|||
+`;
 
-    |||JSON|||
-    {
-      "categoria": "NOME_DA_CATEGORIA",
-      "subcategoria": "assunto resumido",
-      "resumo_ia": "Resumo organizado dos pontos chave.",
-      "prioridade": "baixa" | "media" | "alta" | "urgente",
-      "acao_sugerida": "O que o gabinete deve fazer",
-      "precisa_retorno": true | false,
-      "resposta_usuario": "Sua resposta gentil ao cidadão."
-    }
-    |||JSON|||
-  `;
+let responseText = "";
+let usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
 
-  let responseText = "";
-  let usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+try {
+// ... (rest of the switch case stays the same)
 
-  try {
     console.log(`[AI SERVICE] Using provider: ${config.provider}, model: ${config.model}`);
     switch (config.provider) {
       case 'openrouter': {
@@ -253,21 +254,16 @@ export async function processDemand(
     try {
       // Tentativa 1: Parse direto (mais rápido)
       const parsedData = JSON.parse(cleanJson);
+      if (parsedData.categoria) parsedData.categoria = parsedData.categoria.toLowerCase().replace(/ /g, '_');
+      if (parsedData.prioridade) parsedData.prioridade = parsedData.prioridade.toLowerCase();
       return { data: parsedData, usage };
     } catch (parseError) {
       try {
         // Tentativa 2: Parse higienizado (para Llama/Groq)
         console.log("[AI SERVICE] Tentando parse higienizado...");
-        // Regex complexa para limpar apenas o que está FORA das aspas é difícil, 
-        // então vamos tentar uma abordagem de "limpeza de escape"
-        const extremeClean = cleanJson
-          .replace(/\n/g, "\\n") // Transforma quebras reais em \n de escape
-          .replace(/\r/g, "")
-          .replace(/\t/g, " ");
-          
-        // Mas a IA costuma mandar quebras reais dentro das strings. 
-        // Vamos tentar o parse mais tolerante:
         const parsedData = JSON.parse(cleanJson.replace(/\n/g, "\\n").replace(/\r/g, ""));
+        if (parsedData.categoria) parsedData.categoria = parsedData.categoria.toLowerCase().replace(/ /g, '_');
+        if (parsedData.prioridade) parsedData.prioridade = parsedData.prioridade.toLowerCase();
         return { data: parsedData, usage };
       } catch (secondError) {
         console.error("[AI SERVICE] Erro persistente no JSON:", cleanJson);

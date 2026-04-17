@@ -74,10 +74,10 @@ describe('POST /api/webhook/evolution/:tenantId', () => {
       .send(payload);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'received' });
+    expect(response.body).toEqual({ status: 'received', message: 'Processing started' });
   });
 
-  it('should ignore group messages', async () => {
+  it('should ignore group messages (by letting orchestration handle it)', async () => {
     const payload = {
       event: 'MESSAGES_UPSERT',
       data: {
@@ -94,10 +94,10 @@ describe('POST /api/webhook/evolution/:tenantId', () => {
       .send(payload);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'ignored_group' });
+    expect(response.body).toEqual({ status: 'received', message: 'Processing started' });
   });
 
-  it('should ignore fromMe messages', async () => {
+  it('should ignore fromMe messages (by letting orchestration handle it)', async () => {
     const payload = {
       event: 'MESSAGES_UPSERT',
       data: {
@@ -114,10 +114,10 @@ describe('POST /api/webhook/evolution/:tenantId', () => {
       .send(payload);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'ignored_from_me' });
+    expect(response.body).toEqual({ status: 'received', message: 'Processing started' });
   });
 
-  it('should ignore non-UPSERT events', async () => {
+  it('should ignore non-UPSERT events (by letting orchestration handle it)', async () => {
     const payload = {
       event: 'MESSAGES_UPDATE',
       data: {
@@ -134,6 +134,6 @@ describe('POST /api/webhook/evolution/:tenantId', () => {
       .send(payload);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'ignored_event', event: 'MESSAGES_UPDATE' });
+    expect(response.body).toEqual({ status: 'received', message: 'Processing started' });
   });
 });

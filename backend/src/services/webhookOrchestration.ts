@@ -83,7 +83,9 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       .map(doc => `--- DOCUMENTO: ${doc.fileName} ---\n${doc.textContent}`)
       .join('\n\n');
 
-    const [globalConfig] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
+    const configList = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
+    const globalConfig = configList[0];
+    
     const provider = tenant?.aiProvider || globalConfig?.aiProvider || 'gemini';
     const apiKey = tenant?.aiApiKey || globalConfig?.aiApiKey || process.env.GEMINI_API_KEY;
     const model = tenant?.aiModel || globalConfig?.aiModel || (provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o');
