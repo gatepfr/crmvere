@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import NewDemandModal from '../../components/NewDemandModal';
 import DemandModal from '../../components/DemandModal';
@@ -17,7 +17,10 @@ import {
   FileText,
   Edit2,
   Trash2,
-  Send
+  Send,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 interface Demand {
@@ -44,6 +47,9 @@ interface Pagination {
   totalPages: number;
 }
 
+type SortField = 'name' | 'subject' | 'number' | 'date';
+type SortOrder = 'asc' | 'desc';
+
 export default function Legislativo() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +58,10 @@ export default function Legislativo() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedDemand, setSelectedDemand] = useState<any>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   const loadDemands = useCallback(async () => {
     setLoading(true);
@@ -93,11 +103,12 @@ export default function Legislativo() {
     }
   };
 
-  const updateDocUrl = async (id: string) => {
-    const url = prompt('Cole o link do PDF ou da Indicação no site da Câmara:');
+  const updateDocUrl = async (d: Demand) => {
+    // Se já tiver link, ele aparece pré-preenchido no prompt
+    const url = prompt('Cole o link do PDF ou da Indicação no site da Câmara:', d.documentUrl || '');
     if (url === null) return;
     try {
-      await api.patch(`/demands/${id}/status`, { documentUrl: url });
+      await api.patch(`/demands/${d.id}/status`, { documentUrl: url });
       loadDemands();
     } catch (err) {
       alert('Erro ao atualizar link');
@@ -133,10 +144,53 @@ export default function Legislativo() {
     }
   };
 
-  const filteredDemands = demands.filter(d => {
-    if (onlyPending) return !d.isLegislativo;
-    return true;
-  });
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedDemands = useMemo(() => {
+    const filtered = demands.filter(d => {
+      if (onlyPending) return !d.isLegislativo;
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      let valA: any, valB: any;
+      
+      switch (sortField) {
+        case 'name':
+          valA = a.municipes.name.toLowerCase();
+          valB = b.municipes.name.toLowerCase();
+          break;
+        case 'subject':
+          valA = a.descricao.toLowerCase();
+          valB = b.descricao.toLowerCase();
+          break;
+        case 'number':
+          valA = a.numeroIndicacao || '';
+          valB = b.numeroIndicacao || '';
+          break;
+        case 'date':
+        default:
+          valA = new Date(a.createdAt).getTime();
+          valB = new Date(b.createdAt).getTime();
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [demands, onlyPending, sortField, sortOrder]);
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown size={12} className="text-slate-300 group-hover:text-slate-400" />;
+    return sortOrder === 'asc' ? <ArrowUp size={12} className="text-blue-600" /> : <ArrowDown size={12} className="text-blue-600" />;
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pb-10">
@@ -202,14 +256,26 @@ export default function Legislativo() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-6 py-4 w-1/4">Munícipe</th>
-                <th className="px-6 py-4 w-2/5">Assunto Detalhado</th>
-                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 w-1/4 cursor-pointer group" onClick={() => toggleSort('name')}>
+                  <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
+                    Munícipe <SortIcon field="name" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 w-2/5 cursor-pointer group" onClick={() => toggleSort('subject')}>
+                  <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
+                    Assunto Detalhado <SortIcon field="subject" />
+                  </div>
+                </th>
+                <th className="px-6 py-4 text-center cursor-pointer group" onClick={() => toggleSort('number')}>
+                  <div className="flex items-center justify-center gap-1.5 group-hover:text-blue-600 transition-colors">
+                    Nº Indicação <SortIcon field="number" />
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-center w-32">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredDemands.map(d => (
+              {sortedDemands.map(d => (
                 <tr key={d.id} className="group hover:bg-slate-50/30 transition-all align-top">
                   <td className="px-6 py-5">
                     <div className="flex flex-col">
@@ -272,7 +338,7 @@ export default function Legislativo() {
                         <Edit2 size={18} />
                       </button>
                       <button 
-                        onClick={() => updateDocUrl(d.id)}
+                        onClick={() => updateDocUrl(d)}
                         className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                         title="Anexar Link PDF"
                       >
