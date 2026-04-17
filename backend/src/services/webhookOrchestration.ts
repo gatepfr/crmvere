@@ -40,18 +40,31 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     if (!tenant) return { status: 'tenant_not_found' };
 
     const cleanPhone = normalizePhone(normalized.from);
-    let [municipe] = await db.select().from(municipes).where(
-      and(eq(municipes.phone, cleanPhone), eq(municipes.tenantId, tenantId))
-    );
-
-    if (!municipe) {
-      console.log(`[ORCHESTRATOR] Criando munícipe: ${normalized.name}`);
-      const [newMunicipe] = await db.insert(municipes).values({ 
+    console.log(`[ORCHESTRATOR] Buscando munícipe para o telefone: ${cleanPhone}`);
+    
+    let municipe;
+    try {
+      // Usamos upsert para o munícipe para garantir que ele exista sem disparar erro de duplicidade
+      const [upsertedMunicipe] = await db.insert(municipes).values({ 
         tenantId, 
         name: formatName(normalized.name || 'Cidadão'), 
         phone: cleanPhone 
+      }).onConflictDoUpdate({
+        target: [municipes.tenantId, municipes.phone],
+        set: { name: formatName(normalized.name || 'Cidadão') } // Atualiza o nome se mudar
       }).returning();
-      municipe = newMunicipe;
+      
+      municipe = upsertedMunicipe;
+    } catch (municipeError: any) {
+      console.error(`[ORCHESTRATOR ERROR] Falha ao gerenciar munícipe:`, municipeError.message);
+      // Fallback: tenta buscar se o insert falhou por algum outro motivo
+      const [existing] = await db.select().from(municipes).where(and(eq(municipes.phone, cleanPhone), eq(municipes.tenantId, tenantId)));
+      municipe = existing;
+    }
+
+    if (!municipe) {
+      console.error(`[ORCHESTRATOR FATAL] Não foi possível encontrar ou criar o munícipe.`);
+      return { status: 'municipe_error' };
     }
 
     // Busca atendimento criado HOJE (Fuso Brasília) para este munícipe
@@ -76,11 +89,13 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     try {
       if (existingAtendimento) {
+        console.log(`[ORCHESTRATOR] Atualizando atendimento de hoje ID: ${existingAtendimento.id}`);
         await db.update(atendimentos).set({
           resumoIa: historyWithCitizen,
           updatedAt: new Date(),
         }).where(eq(atendimentos.id, existingAtendimento.id));
       } else {
+        console.log(`[ORCHESTRATOR] Criando NOVO registro de atendimento para ${municipe.name}`);
         const [newAtendimento] = await db.insert(atendimentos).values({
           tenantId,
           municipeId: municipe.id,
@@ -90,9 +105,25 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
         }).returning();
         existingAtendimento = newAtendimento;
       }
-      console.log(`[ORCHESTRATOR] Mensagem registrada no painel para ${municipe.name}`);
     } catch (dbError: any) {
-      console.error(`[ORCHESTRATOR DB ERROR] Erro ao registrar mensagem:`, dbError.message);
+      console.error(`[ORCHESTRATOR DB ERROR] Erro crítico ao salvar atendimento:`, dbError.message);
+      // Se houver falha aqui (provavelmente por causa da constraint no servidor externo),
+      // precisamos forçar um "update" no registro mais recente do munícipe como fallback
+      // para que a conversa não se perca.
+      if (dbError.message.includes('unique constraint') || dbError.message.includes('atendimento_tenant_municipe_unq')) {
+         console.log(`[ORCHESTRATOR] Tentando fallback para update em registro antigo devido a constraint de banco...`);
+         const [lastOne] = await db.select().from(atendimentos)
+           .where(and(eq(atendimentos.municipeId, municipe.id), eq(atendimentos.tenantId, tenantId)))
+           .orderBy(desc(atendimentos.updatedAt)).limit(1);
+         
+         if (lastOne) {
+           await db.update(atendimentos).set({
+             resumoIa: `${lastOne.resumoIa}\n[NOVO DIA] Cidadão: ${normalized.text}`,
+             updatedAt: new Date()
+           }).where(eq(atendimentos.id, lastOne.id));
+           existingAtendimento = lastOne;
+         }
+      }
     }
 
     // 7. Se o humano estiver ativo, paramos por aqui (não chama IA nem responde)
