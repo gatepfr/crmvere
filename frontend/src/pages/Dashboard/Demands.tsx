@@ -5,17 +5,20 @@ import NewDemandModal from '../../components/NewDemandModal';
 import { 
   FileDown, 
   Loader2, 
-  MessageSquare, 
+  ClipboardList, 
   ArrowUpDown, 
   ArrowUp, 
   ArrowDown, 
   Plus, 
+  AlertCircle, 
   Search, 
+  Tag, 
   Clock,
   ChevronLeft,
   ChevronRight,
   Phone,
-  ClipboardList,
+  Filter,
+  MessageSquare,
   Edit2,
   Trash2
 } from 'lucide-react';
@@ -48,21 +51,9 @@ interface Pagination {
   totalPages: number;
 }
 
-type SortField = 'name' | 'phone' | 'date';
-type SortOrder = 'asc' | 'desc';
-
 const formatName = (name: string) => {
   if (!name) return '';
-  const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
-  return name
-    .toLowerCase()
-    .split(' ')
-    .filter(word => word.length > 0)
-    .map((word, index) => {
-      if (prepositions.includes(word) && index !== 0) return word;
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    })
-    .join(' ');
+  return name.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 };
 
 export default function Demands() {
@@ -70,7 +61,6 @@ export default function Demands() {
   const [loading, setLoading] = useState(true);
   const [selectedAtendimento, setSelectedAtendimento] = useState<any>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
-  const [prefilledMunicipe, setPrefilledMunicipe] = useState<any>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterByAttention, setFilterByAttention] = useState(false);
@@ -94,19 +84,24 @@ export default function Demands() {
   }, [pagination.page, pagination.limit, searchTerm, filterByAttention]);
 
   useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-  }, [searchTerm, filterByAttention]);
-
-  useEffect(() => {
     fetchAtendimentos();
-    
-    // Auto-refresh a cada 15 segundos
     const interval = setInterval(() => {
-      if (!loading) fetchAtendimentos();
+      api.get(`/demands/atendimentos?page=1&limit=25&search=${searchTerm}&attention=${filterByAttention}`)
+        .then(res => setAtendimentos(res.data.data || []))
+        .catch(() => {});
     }, 15000);
-
     return () => clearInterval(interval);
-  }, [fetchAtendimentos, loading]);
+  }, [fetchAtendimentos, searchTerm, filterByAttention]);
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgente': return 'text-red-600 bg-red-50';
+      case 'alta': return 'text-orange-600 bg-orange-50';
+      case 'media': return 'text-amber-600 bg-amber-50';
+      case 'baixa': return 'text-emerald-600 bg-emerald-50';
+      default: return 'text-slate-600 bg-slate-50';
+    }
+  };
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
@@ -117,43 +112,19 @@ export default function Demands() {
     return phone;
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.text('Relatório de Atendimentos WhatsApp', 14, 20);
-    const tableData = atendimentos.map(a => [
-      a.municipes.name,
-      formatPhone(a.municipes.phone),
-      new Date(a.atendimentos.updatedAt).toLocaleDateString('pt-BR')
-    ]);
-    autoTable(doc, { head: [['Munícipe', 'WhatsApp', 'Última Interação']], body: tableData });
-    doc.save(`atendimentos.pdf`);
-  };
-
-  const handleDeleteAtendimento = async (id: string) => {
-    if (!confirm('Deseja realmente excluir este histórico de atendimento?')) return;
-    try {
-      await api.delete(`/demands/atendimentos/${id}`);
-      fetchAtendimentos();
-    } catch (err) {
-      alert('Falha ao excluir atendimento.');
-    }
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <MessageSquare className="text-blue-600" size={32} />
-            Atendimento (WhatsApp)
+            Atendimento
           </h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Conversas e Resumos da IA</p>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Histórico WhatsApp e IA</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={exportToPDF} className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 transition-all shadow-sm">
-            <FileDown size={20} />
-          </button>
-        </div>
+        <button onClick={() => setIsNewDemandModalOpen(true)} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+          <Plus size={18} /> ADICIONAR
+        </button>
       </header>
 
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex gap-3">
@@ -167,30 +138,14 @@ export default function Demands() {
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={() => setFilterByAttention(!filterByAttention)}
-            className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
-              filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
-            }`}
-          >
-            Atenção
-          </button>
-
-          <div className="h-8 w-[1px] bg-slate-100 mx-1 hidden lg:block"></div>
-
-          <select
-            className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
-            value={pagination.limit === 10000 ? 'all' : pagination.limit}
-            onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
-          >
-            <option value="25">25 / pág</option>
-            <option value="50">50 / pág</option>
-            <option value="100">100 / pág</option>
-            <option value="all">Ver Todos</option>
-          </select>
-        </div>
+        <button 
+          onClick={() => setFilterByAttention(!filterByAttention)}
+          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+            filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
+          }`}
+        >
+          Atenção
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
@@ -201,76 +156,42 @@ export default function Demands() {
               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <th className="pl-6 py-4">Munícipe</th>
                 <th className="px-4 py-4">WhatsApp</th>
-                <th className="px-4 py-4">Última Mensagem</th>
-                <th className="px-6 py-4 text-right">Ação</th>
+                <th className="px-4 py-4">Categoria</th>
+                <th className="px-4 py-4">Prioridade</th>
+                <th className="px-6 py-4 text-right">Data</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {atendimentos.map(a => (
-                <tr key={a.atendimentos.id} className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${a.atendimentos.precisaRetorno ? 'bg-red-50/30' : ''}`}>
-                  <td className="pl-6 py-4" onClick={() => setSelectedAtendimento(a)}>
+                <tr 
+                  key={a.atendimentos.id} 
+                  className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${a.atendimentos.precisaRetorno ? 'bg-red-50/30' : ''}`}
+                  onClick={() => setSelectedAtendimento(a)}
+                >
+                  <td className="pl-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">{formatName(a.municipes.name)}</span>
+                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{formatName(a.municipes.name)}</span>
                       {a.atendimentos.precisaRetorno && <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">EQUIPE</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-4" onClick={() => setSelectedAtendimento(a)}>
-                    <span className="text-xs font-bold text-slate-600">{formatPhone(a.municipes.phone)}</span>
+                  <td className="px-4 py-4">
+                    <div className="text-xs font-bold text-slate-600">{formatPhone(a.municipes.phone)}</div>
                   </td>
-                  <td className="px-4 py-4" onClick={() => setSelectedAtendimento(a)}>
-                    <span className="text-xs text-slate-400 font-medium">{new Date(a.atendimentos.updatedAt).toLocaleString('pt-BR')}</span>
+                  <td className="px-4 py-4">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{a.atendimentos.categoria?.replace('_', ' ') || 'OUTRO'}</span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setSelectedAtendimento(a); }}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                        title="Ver Detalhes / Editar"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setSelectedAtendimento(a); }}
-                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                        title="Transformar em Demanda Oficial"
-                      >
-                        <ClipboardList size={16} />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteAtendimento(a.atendimentos.id); }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Excluir Atendimento"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                  <td className="px-4 py-4">
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${getPriorityColor(a.atendimentos.prioridade || 'baixa')}`}>
+                      {a.atendimentos.prioridade || 'baixa'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right text-xs font-bold text-slate-400">
+                    {new Date(a.atendimentos.updatedAt).toLocaleDateString('pt-BR')}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-        {/* Pagination */}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {pagination.total} ATENDIMENTOS • PÁGINA {pagination.page} DE {pagination.totalPages}
-          </p>
-          <div className="flex items-center gap-1">
-            <button 
-              disabled={pagination.page === 1 || loading}
-              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button 
-              disabled={pagination.page === pagination.totalPages || loading}
-              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -286,28 +207,16 @@ export default function Demands() {
               categoria: selectedAtendimento.atendimentos.categoria || 'OUTRO',
               prioridade: selectedAtendimento.atendimentos.prioridade || 'media'
             },
-            atendimentoId: selectedAtendimento.atendimentos.id, // Explicit ID for webhook orchestration logic
+            atendimentoId: selectedAtendimento.atendimentos.id,
             municipes: selectedAtendimento.municipes
           }}
           onClose={() => setSelectedAtendimento(null)}
           onUpdate={fetchAtendimentos}
-          onOpenCreateDemand={(municipe: any) => {
-            setPrefilledMunicipe(municipe);
-            setSelectedAtendimento(null);
-            setIsNewDemandModalOpen(true);
-          }}
         />
       )}
 
       {isNewDemandModalOpen && (
-        <NewDemandModal 
-          onClose={() => {
-            setIsNewDemandModalOpen(false);
-            setPrefilledMunicipe(null);
-          }} 
-          onUpdate={fetchAtendimentos} 
-          prefilledMunicipe={prefilledMunicipe}
-        />
+        <NewDemandModal onClose={() => setIsNewDemandModalOpen(false)} onUpdate={fetchAtendimentos} />
       )}
     </div>
   );

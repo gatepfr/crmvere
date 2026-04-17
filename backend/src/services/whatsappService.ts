@@ -10,36 +10,25 @@ export interface IncomingMessage {
 }
 
 /**
- * Normalizes the payload from Evolution API into a standard format.
+ * Normaliza o sinal da Evolution API. 
+ * Foco: Identificar mensagens reais e ignorar o resto.
  */
 export const normalizeEvolution = (payload: any, tenantId: string): IncomingMessage | null => {
-  const event = payload.event || '';
-  // Só processamos mensagens novas (UPSERT ou CREATE)
-  if (!event.includes('MESSAGES_UPSERT') && !event.includes('MESSAGES_CREATE')) {
-    return null;
-  }
-
   const data = payload.data || {};
   const messageEntry = data.messages?.[0] || data || {};
-  
-  // Detecção ultra-rigorosa de mensagens enviadas por nós mesmos
-  const fromMe = messageEntry.key?.fromMe === true || 
-                 data.key?.fromMe === true || 
-                 payload.fromMe === true ||
-                 payload.data?.fromMe === true;
+  const message = messageEntry.message;
 
-  const remoteJid = messageEntry.key?.remoteJid || data.key?.remoteJid || '';
-  const isGroup = remoteJid.endsWith('@g.us') || remoteJid.includes('@broadcast');
-  
-  let from = remoteJid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace(/\D/g, '');
-  
-  // Correção de nono dígito
-  if (!isGroup && from.startsWith('55') && from.length === 12) {
-    from = `55${from.slice(2, 4)}9${from.slice(4)}`;
-  }
+  if (!message) return null;
 
-  const name = messageEntry.pushName || data.pushName || 'Cidadão';
-  
+  const remoteJid = messageEntry.key?.remoteJid || '';
+  const fromMe = messageEntry.key?.fromMe === true;
+
+  // Só queremos conversas individuais (ignora grupos e mensagens da própria IA)
+  if (remoteJid.endsWith('@g.us') || fromMe) return null;
+
+  // Extrai o número puro para busca no banco
+  const from = remoteJid.split('@')[0].replace(/\D/g, '');
+
   const extractText = (m: any): string => {
     if (!m) return '';
     if (m.ephemeralMessage?.message) return extractText(m.ephemeralMessage.message);
@@ -52,22 +41,20 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
            m.videoMessage?.caption ||
            (m.imageMessage ? '[Imagem]' : '') ||
            (m.audioMessage ? '[Áudio]' : '') ||
-           (m.videoMessage ? '[Vídeo]' : '') ||
-           (m.locationMessage ? '[Localização]' : '') ||
            '';
   };
 
-  const text = extractText(messageEntry.message);
+  const text = extractText(message);
+  if (!text) return null;
 
   return {
     event: 'MESSAGES_UPSERT',
     from,
     jid: remoteJid,
-    name,
+    name: messageEntry.pushName || 'Cidadão',
     text,
     tenantId,
-    isGroup,
-    fromMe,
+    isGroup: false,
+    fromMe: false
   };
 };
-
