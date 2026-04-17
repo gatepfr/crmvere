@@ -12,6 +12,7 @@ import unicodedata
 from datetime import datetime
 import time
 import urllib.parse
+import traceback
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -132,31 +133,43 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         if not success:
             raise Exception("Não foi possível baixar os dados de candidatos do TSE (URL indisponível ou erro de rede)")
 
+        # FILTRO CRÍTICO: Processa apenas o arquivo do estado selecionado para não estourar a RAM
         files = [f for f in os.listdir(tmp_dir) if f.lower().endswith('.csv') and 'consulta_cand' in f.lower()]
-        cd_municipio_real = None
+        target_file_pattern = f"_{uf.upper()}.csv"
+        # Se baixou o zip do estado, o arquivo vai ter _UF.csv. Se baixou o nacional, filtramos o estado na lista.
+        state_files = [f for f in files if target_file_pattern in f.upper() or '_BRASIL.csv' in f.upper()]
         
-        for file in files:
-            df = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str, on_bad_lines='skip')
-            df.columns = [c.upper() for c in df.columns]
-            city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
-            cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['CD', 'UE'])
-            num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
+        if not state_files:
+            raise Exception(f"Arquivo de candidatos para o estado {uf} não encontrado nos dados baixados.")
+
+        cd_municipio_real = None
+        for file in state_files:
+            print(f"Analisando arquivo: {file}")
+            # Lê em chunks para economizar memória
+            chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str, on_bad_lines='skip', chunksize=10000)
             
-            if city_col and num_col:
-                df['CITY_NORM'] = df[city_col].apply(normalize_text)
-                cand = df[(df['CITY_NORM'] == municipio_norm) & (df[num_col] == nr_cand_str)]
-                if not cand.empty:
-                    c = cand.iloc[0]
-                    cd_municipio_real = normalize_code(c[cd_mun_col])
-                    cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
-                    cur.execute("""
-                        INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (tenant_id, ano, c[find_column(df.columns, ['NM', 'CANDIDATO'])], c[num_col], c[find_column(df.columns, ['SG', 'PARTIDO'])], cd_municipio_real, c[city_col], c[find_column(df.columns, ['DS', 'SITUACAO', 'TOT'])]))
-                    break
+            for df in chunks:
+                df.columns = [c.upper() for c in df.columns]
+                city_col = find_column(df.columns, ['NM', 'MUN']) or find_column(df.columns, ['NM', 'UE'])
+                cd_mun_col = find_column(df.columns, ['CD', 'MUN']) or find_column(df.columns, ['CD', 'UE'])
+                num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
+                
+                if city_col and num_col:
+                    df['CITY_NORM'] = df[city_col].apply(normalize_text)
+                    cand = df[(df['CITY_NORM'] == municipio_norm) & (df[num_col] == nr_cand_str)]
+                    if not cand.empty:
+                        c = cand.iloc[0]
+                        cd_municipio_real = normalize_code(c[cd_mun_col])
+                        cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
+                        cur.execute("""
+                            INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (tenant_id, ano, c[find_column(df.columns, ['NM', 'CANDIDATO'])], c[num_col], c[find_column(df.columns, ['SG', 'PARTIDO'])], cd_municipio_real, c[city_col], c[find_column(df.columns, ['DS', 'SITUACAO', 'TOT'])]))
+                        break
+            if cd_municipio_real: break
 
         if not cd_municipio_real:
-            report_progress(tenant_id, "Candidato não encontrado.", 0)
+            report_progress(tenant_id, f"Candidato {nr_cand_str} não encontrado em {municipio_nome}-{uf}.", 0)
             return
 
         # LIMPEZA PREVENTIVA (Evita duplicar ao reimportar)
