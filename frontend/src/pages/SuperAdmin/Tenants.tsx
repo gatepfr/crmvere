@@ -18,7 +18,9 @@ import {
   ShieldAlert,
   ShieldCheck,
   Globe,
-  Cpu
+  Cpu,
+  Settings,
+  X
 } from 'lucide-react';
 
 interface Stats {
@@ -68,6 +70,15 @@ export default function Tenants() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Edit Modal State
+  const [editingTenant, setEditingTenant] = useState<any>(null);
+  const [editForm, setEditEditForm] = useState({
+    name: '',
+    slug: '',
+    birthdayMessage: '',
+    legislativeMessage: ''
+  });
 
   const [aiConfig, setAIConfig] = useState({
     aiProvider: 'gemini',
@@ -246,6 +257,30 @@ export default function Tenants() {
       alert('Gabinete criado com sucesso! Senha padrão: admin123');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Falha ao criar gabinete.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditTenant = (tenant: any) => {
+    setEditingTenant(tenant);
+    setEditEditForm({
+      name: tenant.name,
+      slug: tenant.slug,
+      birthdayMessage: tenant.birthdayMessage || '',
+      legislativeMessage: tenant.legislativeMessage || ''
+    });
+  };
+
+  const handleSaveTenant = async () => {
+    setLoading(true);
+    try {
+      await api.patch(`/superadmin/tenants/${editingTenant.id}`, editForm);
+      alert('Configurações do gabinete atualizadas!');
+      setEditingTenant(null);
+      loadData();
+    } catch (err) {
+      alert('Falha ao atualizar gabinete.');
     } finally {
       setLoading(false);
     }
@@ -500,6 +535,7 @@ export default function Tenants() {
                             <div className="flex justify-end gap-1.5">
                               <button onClick={() => setTrial(tenant.id)} className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100" title="Definir dias de Trial gratuito"><Clock size={16}/></button>
                               <button onClick={() => setLifetime(tenant.id)} className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100" title="Ativar acesso Vitalício (Lifetime)"><Infinity size={16}/></button>
+                              <button onClick={() => handleEditTenant(tenant)} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100" title="Configurar Gabinete (Mensagens, Nome, Slug)"><Settings size={16}/></button>
                               <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`} title={tenant.blocked ? "Desbloquear IA" : "Bloquear IA (Kill Switch)"}>{tenant.blocked ? <ShieldAlert size={16}/> : <ShieldCheck size={16}/>}</button>
                               <button onClick={() => toggleStatus(tenant)} className="p-2 bg-slate-100 rounded-xl" title={tenant.active ? "Desativar Gabinete" : "Ativar Gabinete"}><Power size={16}/></button>
                               <button onClick={() => handleDelete(tenant.id)} className="p-2 bg-red-50 text-red-600 rounded-xl" title="Excluir Gabinete Permanentemente"><Trash2 size={16}/></button>
@@ -585,6 +621,91 @@ export default function Tenants() {
           </div>
         )}
       </main>
+
+      {/* Modal de Edição de Gabinete */}
+      {editingTenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter">
+                  <Settings size={20} className="text-blue-600" />
+                  Configurar Gabinete
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ajuste de mensagens e identificação</p>
+              </div>
+              <button onClick={() => setEditingTenant(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome do Vereador</label>
+                  <input 
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editForm.name}
+                    onChange={e => setEditEditForm({...editForm, name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Slug (URL)</label>
+                  <input 
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editForm.slug}
+                    onChange={e => setEditEditForm({...editForm, slug: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-pink-50 rounded-2xl border border-pink-100 space-y-3">
+                  <label className="text-[10px] font-black text-pink-600 uppercase flex items-center gap-2">
+                    🎈 Mensagem de Aniversário
+                  </label>
+                  <textarea 
+                    className="w-full p-4 bg-white border border-pink-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-pink-500 min-h-[100px]"
+                    placeholder="Ex: Olá {nome}, parabéns pelo seu aniversário!..."
+                    value={editForm.birthdayMessage}
+                    onChange={e => setEditEditForm({...editForm, birthdayMessage: e.target.value})}
+                  />
+                  <p className="text-[9px] text-pink-400 font-bold uppercase tracking-tighter italic">* Use {'{nome}'} para inserir o nome do munícipe automaticamente.</p>
+                </div>
+
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
+                  <label className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2">
+                    📋 Mensagem de Indicação (Legislativo)
+                  </label>
+                  <textarea 
+                    className="w-full p-4 bg-white border border-blue-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                    placeholder="Ex: Olá {nome}! Sua solicitação sobre {assunto} virou a Indicação nº {numero}..."
+                    value={editForm.legislativeMessage}
+                    onChange={e => setEditEditForm({...editForm, legislativeMessage: e.target.value})}
+                  />
+                  <p className="text-[9px] text-blue-400 font-bold uppercase tracking-tighter italic">* Use {'{nome}'}, {'{assunto}'}, {'{numero}'} e {'{link}'} como variáveis.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button 
+                onClick={() => setEditingTenant(null)}
+                className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveTenant}
+                disabled={loading}
+                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? 'Salvando...' : 'Salvar Configurações'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="p-6 flex flex-col items-center gap-4">
         <button onClick={handleResetDatabase} className="text-[10px] font-black text-red-400 uppercase border border-red-200 px-3 py-1 rounded-lg">Zerar Banco de Dados</button>

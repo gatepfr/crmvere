@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { Building2, Save, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Building2, Save, Loader2, Image as ImageIcon, MessageSquare } from 'lucide-react';
+
+const DEFAULT_BIRTHDAY = "Olá {nome}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈";
+const DEFAULT_LEGISLATIVE = "Olá {nome}! Gostaria de informar que sua solicitação sobre *{assunto}* virou a Indicação oficial nº *{numero}*. Você pode acompanhar por aqui: {link}";
 
 export default function CabinetConfig() {
   const [config, setConfig] = useState({
@@ -10,7 +13,9 @@ export default function CabinetConfig() {
     partido: '',
     mandato: '',
     fotoUrl: '',
-    calendarUrl: ''
+    calendarUrl: '',
+    birthdayMessage: '',
+    legislativeMessage: ''
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -25,7 +30,9 @@ export default function CabinetConfig() {
           partido: res.data.partido || '',
           mandato: res.data.mandato || '',
           fotoUrl: res.data.fotoUrl || '',
-          calendarUrl: res.data.calendarUrl || ''
+          calendarUrl: res.data.calendarUrl || '',
+          birthdayMessage: res.data.birthdayMessage || DEFAULT_BIRTHDAY,
+          legislativeMessage: res.data.legislativeMessage || DEFAULT_LEGISLATIVE
         });
       })
       .catch(err => console.error('Erro ao carregar dados do gabinete:', err))
@@ -169,6 +176,67 @@ export default function CabinetConfig() {
                 <>
                   <Save className="mr-2 h-5 w-5" />
                   Salvar Dados do Gabinete
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mensagens Automáticas */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex items-center">
+            <MessageSquare className="h-5 w-5 mr-2 text-blue-600" />
+            <h3 className="font-bold text-slate-800 text-lg">Mensagens Automáticas (WhatsApp)</h3>
+          </div>
+
+          <div className="p-8 space-y-6">
+            <div className="p-5 bg-pink-50 rounded-2xl border border-pink-100 space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="block text-sm font-black text-pink-700 uppercase tracking-tight">🎈 Mensagem de Aniversário</label>
+                <span className="text-[10px] font-black text-pink-400 bg-white px-2 py-0.5 rounded border border-pink-100 uppercase">Variável: {'{nome}'}</span>
+              </div>
+              <textarea 
+                className="w-full px-4 py-3 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none transition-all bg-white font-medium text-sm min-h-[100px]"
+                value={config.birthdayMessage}
+                onChange={e => setConfig({...config, birthdayMessage: e.target.value})}
+                placeholder="Digite a mensagem de aniversário..."
+              />
+            </div>
+
+            <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100 space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="block text-sm font-black text-blue-700 uppercase tracking-tight">📋 Mensagem de Indicação (Legislativo)</label>
+                <span className="text-[10px] font-black text-blue-400 bg-white px-2 py-0.5 rounded border border-blue-100 uppercase flex gap-1">
+                  <span>{'{nome}'}</span>
+                  <span>{'{assunto}'}</span>
+                  <span>{'{numero}'}</span>
+                  <span>{'{link}'}</span>
+                </span>
+              </div>
+              <textarea 
+                className="w-full px-4 py-3 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white font-medium text-sm min-h-[100px]"
+                value={config.legislativeMessage}
+                onChange={e => setConfig({...config, legislativeMessage: e.target.value})}
+                placeholder="Digite a mensagem de indicação..."
+              />
+            </div>
+          </div>
+
+          <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <button 
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 flex items-center shadow-lg shadow-blue-500/20 active:scale-95"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-5 w-5" />
+                  Salvar Configurações de Mensagens
                 </>
               )}
             </button>
