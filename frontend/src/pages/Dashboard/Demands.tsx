@@ -248,6 +248,7 @@ export default function Demands() {
               categoria: selectedAtendimento.atendimentos.categoria || 'OUTRO',
               prioridade: selectedAtendimento.atendimentos.prioridade || 'media'
             },
+            atendimentoId: selectedAtendimento.atendimentos.id, // Explicit ID for webhook orchestration logic
             municipes: selectedAtendimento.municipes
           }}
           onClose={() => setSelectedAtendimento(null)}

@@ -275,20 +275,46 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
               </div>
               <div className="flex gap-2">
                 {isEditing ? (
-                  <button onClick={handleUpdateMunicipe} className="p-2 bg-green-600 text-white rounded-lg"><CheckCircle2 size={16} /></button>
+                  <button onClick={handleUpdateMunicipe} className="p-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-all"><CheckCircle2 size={16} /></button>
                 ) : (
-                  <button onClick={() => setIsEditing(true)} className="p-2 bg-white border border-slate-200 rounded-lg"><Layout size={16} /></button>
+                  <>
+                    <button onClick={() => setIsEditing(true)} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm" title="Editar Munícipe"><Edit2 size={16} /></button>
+                    <button onClick={handleDeleteMunicipe} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-red-600 hover:border-red-200 transition-all shadow-sm" title="Excluir Munícipe"><Trash2 size={16} /></button>
+                  </>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-sm text-slate-600 font-medium flex items-center">
-                <Phone size={14} className="mr-2 text-slate-400" /> {displayPhone}
+            {isEditing ? (
+              <div className="space-y-4 pt-2 animate-in slide-in-from-top-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
+                    <input 
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      value={displayPhone}
+                      onChange={e => applyPhoneMask(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
+                    <input 
+                      className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      value={municipe.bairro}
+                      onChange={e => setMunicipe({...municipe, bairro: e.target.value})}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-slate-600 font-medium flex items-center">
-                <MapIcon size={14} className="mr-2 text-slate-400" /> {municipe.bairro || 'Não informado'}
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-sm text-slate-600 font-medium flex items-center">
+                  <Phone size={14} className="mr-2 text-slate-400" /> {displayPhone}
+                </div>
+                <div className="text-sm text-slate-600 font-medium flex items-center">
+                  <MapIcon size={14} className="mr-2 text-slate-400" /> {municipe.bairro || 'Não informado'}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
