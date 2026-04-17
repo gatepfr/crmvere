@@ -38,6 +38,8 @@ export const tenants = pgTable("tenants", {
   dailyTokenLimit: integer("daily_token_limit").default(50000).notNull(), // Default 50k tokens
   tokenUsageTotal: integer("token_usage_total").default(0).notNull(),
   blocked: boolean("blocked").default(false).notNull(),
+  birthdayMessage: varchar("birthday_message", { length: 2000 }),
+  legislativeMessage: varchar("legislative_message", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -180,7 +180,9 @@ export const updateTenant = async (req: Request, res: Response) => {
     aiProvider,
     aiApiKey,
     aiModel,
-    aiBaseUrl
+    aiBaseUrl,
+    birthdayMessage,
+    legislativeMessage
   } = req.body;
   
   try {
@@ -193,6 +195,8 @@ export const updateTenant = async (req: Request, res: Response) => {
     if (aiApiKey !== undefined) updateData.aiApiKey = aiApiKey;
     if (aiModel) updateData.aiModel = aiModel;
     if (aiBaseUrl !== undefined) updateData.aiBaseUrl = aiBaseUrl;
+    if (birthdayMessage !== undefined) updateData.birthdayMessage = birthdayMessage;
+    if (legislativeMessage !== undefined) updateData.legislativeMessage = legislativeMessage;
     
     // Logic for token limit update
     if (tokenAdjustment !== undefined) {
