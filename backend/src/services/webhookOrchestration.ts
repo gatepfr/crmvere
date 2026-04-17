@@ -64,14 +64,43 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       .orderBy(desc(atendimentos.updatedAt))
       .limit(1);
 
-    // 5. Verifica Standby (Intervenção Humana)
-    // Se houve interação recente (últimos 10 minutos), a IA silencia para o humano assumir.
+    // 5. Verifica se é Intervenção Humana Recente (Standby de 10 min)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    if (existingAtendimento && existingAtendimento.updatedAt > tenMinutesAgo) {
-      console.log(`[ORCHESTRATOR] Atendimento de ${municipe.name} com interação humana recente (< 10 min). IA em standby.`);
+    const isHumanActive = existingAtendimento && existingAtendimento.updatedAt > tenMinutesAgo;
+
+    // 6. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo
+    const historyWithCitizen = existingAtendimento 
+      ? `${existingAtendimento.resumoIa}\nCidadão: ${normalized.text}`
+      : `Cidadão: ${normalized.text}`;
+
+    try {
+      if (existingAtendimento) {
+        await db.update(atendimentos).set({
+          resumoIa: historyWithCitizen,
+          updatedAt: new Date(),
+        }).where(eq(atendimentos.id, existingAtendimento.id));
+      } else {
+        const [newAtendimento] = await db.insert(atendimentos).values({
+          tenantId,
+          municipeId: municipe.id,
+          resumoIa: historyWithCitizen,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).returning();
+        existingAtendimento = newAtendimento;
+      }
+      console.log(`[ORCHESTRATOR] Mensagem registrada no painel para ${municipe.name}`);
+    } catch (dbError: any) {
+      console.error(`[ORCHESTRATOR DB ERROR] Erro ao registrar mensagem:`, dbError.message);
+    }
+
+    // 7. Se o humano estiver ativo, paramos por aqui (não chama IA nem responde)
+    if (isHumanActive) {
+      console.log(`[ORCHESTRATOR] Humano ativo (< 10 min). IA em silêncio, apenas registrou no painel.`);
       return { status: 'waiting_human' };
     }
 
+    // 8. Busca Configurações de IA
     const tenantDocs = await db.select().from(documents).where(eq(documents.tenantId, tenantId));
     let knowledgeBaseContent = tenantDocs
       .map(doc => `--- DOCUMENTO: ${doc.fileName} ---\n${doc.textContent}`)
@@ -86,11 +115,9 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
 
     if (!apiKey) return { status: 'no_ai_key' };
 
-    const history = existingAtendimento?.resumoIa || '';
-    let promptContext = history ? `${history}\nCidadão: ${normalized.text}` : `Cidadão: ${normalized.text}`;
-    
+    // 9. Chamada da IA
     console.log(`[ORCHESTRATOR] Chamando IA (${provider})...`);
-    const resultIA = await processDemand(promptContext, {
+    const resultIA = await processDemand(historyWithCitizen, {
       provider: provider as any,
       apiKey: apiKey,
       model: model,
@@ -99,39 +126,21 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     }, undefined, knowledgeBaseContent);
 
     const aiResult = resultIA.data;
-    console.log(`[ORCHESTRATOR] Resposta da IA recebida. Usuário receberá: ${aiResult?.resposta_usuario?.substring(0, 50)}...`);
-    
-    // Histórico: Se for um atendimento de hoje, anexamos ao histórico existente.
-    // Caso contrário, começamos um histórico novo.
-    const updatedHistory = existingAtendimento 
-      ? `${existingAtendimento.resumoIa}\nCidadão: ${normalized.text}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`
-      : `Cidadão: ${normalized.text}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
+    console.log(`[ORCHESTRATOR] IA respondeu para ${municipe.name}`);
+
+    // 10. Atualiza com a resposta da IA e Triagem
+    const finalHistory = `${historyWithCitizen}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
     try {
-      if (existingAtendimento) {
-        console.log(`[ORCHESTRATOR] Atualizando atendimento de hoje para ${municipe.name}`);
-        await db.update(atendimentos).set({
-          resumoIa: updatedHistory,
-          categoria: aiResult?.categoria || sql`${atendimentos.categoria}`,
-          prioridade: aiResult?.prioridade || sql`${atendimentos.prioridade}`,
-          precisaRetorno: aiResult?.precisa_retorno !== undefined ? aiResult.precisa_retorno : sql`${atendimentos.precisaRetorno}`,
-          updatedAt: new Date(),
-        }).where(eq(atendimentos.id, existingAtendimento.id));
-      } else {
-        console.log(`[ORCHESTRATOR] Criando NOVO atendimento diário para ${municipe.name}`);
-        await db.insert(atendimentos).values({
-          tenantId,
-          municipeId: municipe.id,
-          resumoIa: updatedHistory,
-          categoria: aiResult?.categoria,
-          prioridade: aiResult?.prioridade,
-          precisaRetorno: aiResult?.precisa_retorno || false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
+      await db.update(atendimentos).set({
+        resumoIa: finalHistory,
+        categoria: aiResult?.categoria || sql`${atendimentos.categoria}`,
+        prioridade: aiResult?.prioridade || sql`${atendimentos.prioridade}`,
+        precisaRetorno: aiResult?.precisa_retorno !== undefined ? aiResult.precisa_retorno : sql`${atendimentos.precisaRetorno}`,
+        updatedAt: new Date(),
+      }).where(eq(atendimentos.id, existingAtendimento.id));
     } catch (dbError: any) {
-      console.error(`[ORCHESTRATOR DB ERROR] Falha ao salvar atendimento:`, dbError.message);
+      console.error(`[ORCHESTRATOR DB ERROR] Erro ao salvar resposta da IA:`, dbError.message);
     }
 
     // 8. Fluxo de Envio de WhatsApp
