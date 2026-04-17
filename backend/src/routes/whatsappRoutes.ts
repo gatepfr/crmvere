@@ -181,7 +181,8 @@ router.post('/send', async (req, res) => {
     // 2. Atualiza o atendimento (para calar a IA por 10 min)
     // Buscamos o atendimento de hoje deste munícipe
     await db.update(atendimentos).set({
-        updatedAt: new Date(), // Isso sinaliza interação humana recente
+        updatedAt: new Date(), 
+        lastHumanInteractionAt: new Date(), // MARCAÇÃO HUMANA AQUI
         resumoIa: sql`${atendimentos.resumoIa} || '\n\nGabinete: ' || ${message}`
     }).where(and(
         eq(atendimentos.municipeId, demand.municipe.id),

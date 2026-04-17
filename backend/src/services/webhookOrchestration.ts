@@ -79,10 +79,13 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       .limit(1);
 
     // 5. Verifica se é Intervenção Humana Recente (Standby de 10 min)
+    // Agora usamos 'lastHumanInteractionAt' para saber se um HUMANO mexeu.
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const isHumanActive = existingAtendimento && existingAtendimento.updatedAt > tenMinutesAgo;
+    const isHumanActive = existingAtendimento && 
+                          existingAtendimento.lastHumanInteractionAt && 
+                          new Date(existingAtendimento.lastHumanInteractionAt) > tenMinutesAgo;
 
-    // 6. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo
+    // 6. SEMPRE atualiza o histórico com a mensagem do cidadão e sobe para o topo (updatedAt)
     const historyWithCitizen = existingAtendimento 
       ? `${existingAtendimento.resumoIa}\nCidadão: ${messageContent}`
       : `Cidadão: ${messageContent}`;
@@ -92,7 +95,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
         console.log(`[ORCHESTRATOR] Atualizando atendimento de hoje ID: ${existingAtendimento.id}`);
         await db.update(atendimentos).set({
           resumoIa: historyWithCitizen,
-          updatedAt: new Date(),
+          updatedAt: new Date(), // Isso garante que vá para o topo da lista
         }).where(eq(atendimentos.id, existingAtendimento.id));
       } else {
         console.log(`[ORCHESTRATOR] Criando NOVO registro de atendimento para ${municipe.name}`);
@@ -107,15 +110,16 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       }
     } catch (dbError: any) {
       console.error(`[ORCHESTRATOR DB ERROR] Erro crítico ao salvar atendimento:`, dbError.message);
+      // Fallback para constraint antiga se a migração não tiver rodado
       if (dbError.message.includes('unique constraint') || dbError.message.includes('atendimento_tenant_municipe_unq')) {
-         console.log(`[ORCHESTRATOR] Tentando fallback para update em registro antigo devido a constraint de banco...`);
+         console.log(`[ORCHESTRATOR] Tentando fallback para update em registro antigo...`);
          const [lastOne] = await db.select().from(atendimentos)
            .where(and(eq(atendimentos.municipeId, municipe.id), eq(atendimentos.tenantId, tenantId)))
            .orderBy(desc(atendimentos.updatedAt)).limit(1);
          
          if (lastOne) {
            await db.update(atendimentos).set({
-             resumoIa: `${lastOne.resumoIa}\n[NOVO DIA] Cidadão: ${messageContent}`,
+             resumoIa: `${lastOne.resumoIa}\n[NEW] Cidadão: ${messageContent}`,
              updatedAt: new Date()
            }).where(eq(atendimentos.id, lastOne.id));
            existingAtendimento = lastOne;

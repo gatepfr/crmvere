@@ -90,6 +90,7 @@ export const atendimentos = pgTable("atendimentos", {
   categoria: varchar("categoria", { length: 255 }), // Triagem da conversa
   prioridade: varchar("prioridade", { length: 50 }), // Triagem da conversa
   precisaRetorno: boolean("precisa_retorno").default(false),
+  lastHumanInteractionAt: timestamp("last_human_interaction_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
