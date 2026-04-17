@@ -137,23 +137,29 @@ export default function Municipes() {
 
   const isTodayBirthday = (dateStr: string | null) => {
     if (!dateStr) return false;
-    const birthDate = new Date(dateStr);
-    const today = new Date();
     
-    // Check if day and month match in Brazil time
-    const brDate = new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      timeZone: 'America/Sao_Paulo'
-    }).format(today);
-    
-    const [todayDay, todayMonth] = brDate.split('/');
-    
-    // We use UTC methods for the birthDate because it's stored as a pure date (T12:00:00Z)
-    const birthDay = birthDate.getUTCDate().toString().padStart(2, '0');
-    const birthMonth = (birthDate.getUTCMonth() + 1).toString().padStart(2, '0');
+    try {
+      const today = new Date();
+      // Ajuste para o fuso de Brasília (UTC-3)
+      const brDateParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Sao_Paulo',
+        day: 'numeric',
+        month: 'numeric'
+      }).formatToParts(today);
+      
+      const todayDay = brDateParts.find(p => p.type === 'day')?.value;
+      const todayMonth = brDateParts.find(p => p.type === 'month')?.value;
 
-    return birthDay === todayDay && birthMonth === todayMonth;
+      // A data no banco vem como ISO (ex: 1990-05-15T00:00:00.000Z)
+      const birthDate = new Date(dateStr);
+      // Usamos getUTCDate para evitar problemas de fuso no armazenamento pure date
+      const birthDay = birthDate.getUTCDate().toString();
+      const birthMonth = (birthDate.getUTCMonth() + 1).toString();
+
+      return birthDay === todayDay && birthMonth === todayMonth;
+    } catch (e) {
+      return false;
+    }
   };
 
   const handleSort = (key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount') => {
@@ -654,7 +660,7 @@ export default function Municipes() {
                     <h4 className="font-bold text-slate-900 flex items-center gap-1.5 leading-tight">
                       {m.name}
                       {m.demandCount > 0 && <span className="text-xs font-black text-blue-600">({m.demandCount})</span>}
-                      {isTodayBirthday(m.birthDate) && <span>🎂</span>}
+                      {isTodayBirthday(m.birthDate) && <span className="animate-bounce">🎈</span>}
                     </h4>
                     <div className="flex flex-col mt-1 gap-0.5">
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{formatPhone(m.phone)}</p>
@@ -668,7 +674,13 @@ export default function Municipes() {
                 </div>
                 <div className="flex gap-1">
                   {isTodayBirthday(m.birthDate) && (
-                    <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-600 bg-pink-50 rounded-lg" title="Mandar Parabéns"><MessageSquare size={14} /></button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} 
+                      className="w-10 h-10 flex items-center justify-center text-xl bg-pink-50 hover:bg-pink-100 rounded-xl transition-all shadow-sm border border-pink-100 animate-pulse" 
+                      title="Mandar Parabéns"
+                    >
+                      🎈
+                    </button>
                   )}
                   <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Edit2 size={16} /></button>
                   <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
@@ -758,7 +770,13 @@ export default function Municipes() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end items-center gap-1">
                       {isTodayBirthday(m.birthDate) && (
-                        <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="p-2 text-pink-500 hover:bg-pink-50 rounded-lg transition-all" title="Mandar Parabéns"><MessageSquare size={16} /></button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} 
+                          className="w-10 h-10 flex items-center justify-center text-xl bg-pink-50 hover:bg-pink-100 rounded-xl transition-all shadow-sm border border-pink-100 animate-pulse" 
+                          title="Mandar Parabéns"
+                        >
+                          🎈
+                        </button>
                       )}
                       <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={16} /></button>
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16} /></button>

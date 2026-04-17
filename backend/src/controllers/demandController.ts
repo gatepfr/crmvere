@@ -295,11 +295,57 @@ export const listMunicipes = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = req.query.limit === 'all' ? 10000 : (parseInt(req.query.limit as string) || 25);
   const search = req.query.search as string;
+  const birthday = req.query.birthday === 'true';
   const offset = (page - 1) * limit;
+
   try {
     const conds = [eq(municipes.tenantId, tenantId!)];
-    if (search) conds.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`)) as any);
-    const results = await db.select({ id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro, createdAt: municipes.createdAt, demandCount: sql<number>`count(${demandas.id})::int` }).from(municipes).leftJoin(demandas, eq(municipes.id, demandas.municipeId)).where(and(...conds)).groupBy(municipes.id).orderBy(municipes.name).limit(limit).offset(offset);
-    res.json({ data: results });
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+    if (search) {
+      conds.push(or(
+        ilike(municipes.name, `%${search}%`), 
+        ilike(municipes.phone, `%${search}%`),
+        ilike(municipes.bairro, `%${search}%`)
+      ) as any);
+    }
+
+    if (birthday) {
+      // Filtro de aniversário para Postgres (dia e mês coincidem com hoje no fuso de Brasília)
+      conds.push(sql`EXTRACT(DAY FROM ${municipes.birthDate}) = EXTRACT(DAY FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
+      conds.push(sql`EXTRACT(MONTH FROM ${municipes.birthDate}) = EXTRACT(MONTH FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
+    }
+
+    const [totalCount] = await db.select({ count: count() })
+      .from(municipes)
+      .where(and(...conds));
+
+    const results = await db.select({ 
+      id: municipes.id, 
+      name: municipes.name, 
+      phone: municipes.phone, 
+      bairro: municipes.bairro, 
+      birthDate: municipes.birthDate,
+      createdAt: municipes.createdAt, 
+      demandCount: sql<number>`count(${demandas.id})::int` 
+    })
+    .from(municipes)
+    .leftJoin(demandas, eq(municipes.id, demandas.municipeId))
+    .where(and(...conds))
+    .groupBy(municipes.id)
+    .orderBy(municipes.name)
+    .limit(limit)
+    .offset(offset);
+
+    res.json({ 
+      data: results,
+      pagination: {
+        page,
+        limit,
+        total: Number(totalCount?.count || 0),
+        totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit === 10000 ? 1 : limit))
+      }
+    });
+  } catch (error: any) { 
+    console.error('[LIST MUNICIPES ERROR]', error.message);
+    res.status(500).json({ error: 'Failed' }); 
+  }
 };
