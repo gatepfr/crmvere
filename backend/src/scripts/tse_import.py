@@ -114,9 +114,20 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
 
         # 1. Candidato
         report_progress(tenant_id, "Buscando Candidato...", 10)
-        url_cand = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip"
-        if not download_and_extract(url_cand, tmp_dir, uf):
-            download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip", tmp_dir)
+        
+        # Tenta primeiro o arquivo do estado (UF) que é muito menor
+        url_state = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip"
+        url_br = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip"
+        
+        print(f"Tentando baixar dados do estado: {url_state}")
+        success = download_and_extract(url_state, tmp_dir)
+        
+        if not success:
+            print("Arquivo do estado não encontrado ou falhou, tentando arquivo nacional (pesado)...")
+            success = download_and_extract(url_br, tmp_dir, uf)
+            
+        if not success:
+            raise Exception("Não foi possível baixar os dados de candidatos do TSE (URL indisponível ou erro de rede)")
 
         files = [f for f in os.listdir(tmp_dir) if f.lower().endswith('.csv') and 'consulta_cand' in f.lower()]
         cd_municipio_real = None
