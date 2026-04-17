@@ -41,6 +41,7 @@ def find_column(columns, keywords):
     return None
 
 def download_and_extract(url, target_path, state_filter=None):
+    print(f"Baixando: {url}")
     zip_file = os.path.join(target_path, "temp.zip")
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -61,16 +62,10 @@ def safe_int(val, default=0):
     except: return default
 
 def geocode_address(nome, endereco, bairro, cidade, uf):
-    # Tenta geocodificar, mas não trava se falhar
-    url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(f'{nome}, {cidade} - {uf}, Brasil')}&format=json&limit=1"
-    try:
-        res = requests.get(url, headers={'User-Agent': 'CRM-Bot/1.1'}, timeout=5).json()
-        if res: return res[0]['lat'], res[0]['lon']
-    except: pass
-    return None, None
+    return None, None # Desativado temporariamente para ganhar velocidade
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
-    print(f"--- IMPORTAÇÃO TSE V11 (ESTADO: {uf}) ---")
+    print(f"--- IMPORTAÇÃO TSE V12 (ESTADO: {uf}) ---")
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
@@ -85,42 +80,42 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         report_progress(tenant_id, "Buscando Candidato...", 10)
 
         # 1. Busca Candidato
-        url_state = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip"
-        if not download_and_extract(url_state, tmp_dir):
+        url_cand = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip"
+        if not download_and_extract(url_cand, tmp_dir):
             download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip", tmp_dir, uf)
 
         state_files = [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV') and 'CONSULTA_CAND' in f.upper()]
         cd_municipio_real = None
 
         for file in state_files:
+            print(f"Lendo: {file}")
             for enc in ['latin1', 'utf-8']:
                 try:
-                    chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding=enc, dtype=str, on_bad_lines='skip', chunksize=10000)
-                    for df in chunks:
-                        df.columns = [c.upper() for c in df.columns]
-                        city_col = find_column(df.columns, ['NM_UE']) or find_column(df.columns, ['NM_MUNICIPIO'])
-                        num_col = find_column(df.columns, ['NR_CANDIDATO'])
-                        if not city_col or not num_col: continue
+                    df_cand = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding=enc, dtype=str, on_bad_lines='skip')
+                    df_cand.columns = [c.upper() for c in df_cand.columns]
+                    city_col = find_column(df_cand.columns, ['NM_UE']) or find_column(df_cand.columns, ['NM_MUNICIPIO'])
+                    num_col = find_column(df_cand.columns, ['NR_CANDIDATO'])
+                    if not city_col or not num_col: continue
 
-                        df['CITY_NORM'] = df[city_col].apply(normalize_text)
-                        df['NUM_NORM'] = df[num_col].apply(normalize_code)
-                        cand = df[(df['CITY_NORM'] == municipio_norm) & (df['NUM_NORM'] == nr_cand_norm)]
-                        
-                        if not cand.empty:
-                            c = cand.iloc[0]
-                            cd_mun_col = find_column(df.columns, ['SG_UE']) or find_column(df.columns, ['CD_UE']) or find_column(df.columns, ['CD_MUNICIPIO'])
-                            cd_municipio_real = normalize_code(c[cd_mun_col])
-                            sit_col = find_column(df.columns, ['DS_SITUACAO_TOT']) or find_column(df.columns, ['DS_SITUACAO']) or num_col
-                            name_col = find_column(df.columns, ['NM_URNA_CANDIDATO']) or find_column(df.columns, ['NM_CANDIDATO']) or num_col
-                            part_col = find_column(df.columns, ['SG_PARTIDO']) or num_col
+                    df_cand['CITY_NORM'] = df_cand[city_col].apply(normalize_text)
+                    df_cand['NUM_NORM'] = df_cand[num_col].apply(normalize_code)
+                    cand = df_cand[(df_cand['CITY_NORM'] == municipio_norm) & (df_cand['NUM_NORM'] == nr_cand_norm)]
+                    
+                    if not cand.empty:
+                        c = cand.iloc[0]
+                        cd_mun_col = find_column(df_cand.columns, ['SG_UE']) or find_column(df_cand.columns, ['CD_UE']) or find_column(df_cand.columns, ['CD_MUNICIPIO'])
+                        cd_municipio_real = normalize_code(c[cd_mun_col])
+                        sit_col = find_column(df_cand.columns, ['DS_SITUACAO_TOT']) or find_column(df_cand.columns, ['DS_SITUACAO']) or num_col
+                        name_col = find_column(df_cand.columns, ['NM_URNA_CANDIDATO']) or find_column(df_cand.columns, ['NM_CANDIDATO']) or num_col
+                        part_col = find_column(df_cand.columns, ['SG_PARTIDO']) or num_col
 
-                            cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, int(ano)))
-                            cur.execute("""
-                                INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao) 
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            """, (tenant_id, int(ano), c[name_col], c[num_col], c[part_col], cd_municipio_real, c[city_col], c[sit_col]))
-                            conn.commit()
-                            break
+                        cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, int(ano)))
+                        cur.execute("""
+                            INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao) 
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (tenant_id, int(ano), c[name_col], c[num_col], c[part_col], cd_municipio_real, c[city_col], c[sit_col]))
+                        conn.commit()
+                        break
                     if cd_municipio_real: break
                 except: continue
             if cd_municipio_real: break
@@ -134,7 +129,9 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         conn.commit()
 
         url_locais = f"https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip"
-        download_and_extract(url_locais, tmp_dir, uf)
+        if not download_and_extract(url_locais, tmp_dir, uf):
+            download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_local_votacao/eleitorado_local_votacao_{ano}.zip", tmp_dir, uf)
+
         for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV')]:
             try:
                 df_l = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
@@ -148,12 +145,10 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
 
                 l_data = []
                 for _, r in locais.iterrows():
-                    # Coleta bairro e dados básicos
-                    lat, lng = None, None # Geocode opcional para não travar
-                    l_data.append((int(ano), cd_municipio_real, safe_int(r['NR_ZONA']), safe_int(r['NR_LOCAL_VOTACAO']), r.get(name_loc_col, 'LOCAL'), r.get(addr_col, 'ENDERECO'), r.get(bairro_col, 'NÃO INFORMADO'), lat, lng))
+                    l_data.append((int(ano), cd_municipio_real, safe_int(r['NR_ZONA']), safe_int(r['NR_LOCAL_VOTACAO']), r.get(name_loc_col, 'LOCAL'), r.get(addr_col, 'ENDERECO'), r.get(bairro_col, 'NÃO INFORMADO')))
                 
                 if l_data:
-                    execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro, latitude, longitude) VALUES %s", l_data)
+                    execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro) VALUES %s", l_data)
                     conn.commit()
             except: continue
 
@@ -200,7 +195,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
 
                         f_perf = chunk[chunk[c_mun].apply(normalize_code) == cd_municipio_real]
                         if not f_perf.empty:
-                            p_data = [(int(ano), cd_municipio_real, r.get(bairro_p_col, 'NÃO INFORMADO'), r.get(gen_p_col, 'NÃO INFORMADO'), r.get(age_p_col, 'NÃO INFORMADO'), r.get(esc_p_col, 'NÃO INFORMADO'), safe_int(r.get(qt_p_col, 0))) for _, r in f_perf.iterrows()]
+                            p_data = [(int(ano), cd_municipio_real, r.get(bairro_p_col, 'NÃO INFORMADO'), r.get(gen_p_col, 'NÃO INFORMADO'), r.get(age_p_col, 'NÃO INFORMADO'), r.get(esc_p_col, 'NÃO INFORMADO'), safe_int(r.get(qt_p_col, 0)))]
                             execute_values(cur, "INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) VALUES %s", p_data)
                             conn.commit()
                 except: continue
