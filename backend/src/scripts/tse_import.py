@@ -50,9 +50,16 @@ def download_and_extract(url, target_path, state_filter=None):
             with open(zip_file, 'wb') as f: shutil.copyfileobj(r.raw, f)
         with zipfile.ZipFile(zip_file) as z:
             files = z.namelist()
-            search_str = f"_{state_filter.upper()}.CSV" if state_filter else None
-            to_extract = [f for f in files if not search_str or search_str in f.upper() or "_BRASIL.CSV" in f.upper()]
-            for f in to_extract: z.extract(f, target_path)
+            # Se for arquivo nacional, não filtra por estado na extração
+            if state_filter:
+                search_str = f"_{state_filter.upper()}.CSV"
+                to_extract = [f for f in files if search_str in f.upper() or "_BRASIL.CSV" in f.upper()]
+                if not to_extract: to_extract = files # Fallback se não achar padrão
+            else:
+                to_extract = files
+            for f in to_extract:
+                print(f"Extraindo: {f}")
+                z.extract(f, target_path)
         os.remove(zip_file)
         return True
     except: return False
@@ -62,10 +69,15 @@ def safe_int(val, default=0):
     except: return default
 
 def geocode_address(nome, endereco, bairro, cidade, uf):
+    url = f"https://nominatim.openstreetmap.org/search?q={urllib.parse.quote(f'{nome}, {cidade} - {uf}, Brasil')}&format=json&limit=1"
+    try:
+        res = requests.get(url, headers={'User-Agent': 'CRM-Bot/1.1'}, timeout=5).json()
+        if res: return res[0]['lat'], res[0]['lon']
+    except: pass
     return None, None
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
-    print(f"--- IMPORTAÇÃO TSE V13 (ESTADO: {uf}) ---")
+    print(f"--- IMPORTAÇÃO TSE V14 (ESTADO: {uf}) ---")
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
@@ -79,9 +91,9 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         cur = conn.cursor()
         report_progress(tenant_id, "Buscando Candidato...", 10)
 
-        # 1. Candidato
+        # 1. Candidato (Filtro por UF)
         url_cand = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip"
-        if not download_and_extract(url_cand, tmp_dir):
+        if not download_and_extract(url_cand, tmp_dir, uf):
             download_and_extract(f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip", tmp_dir, uf)
 
         state_files = [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV') and 'CONSULTA_CAND' in f.upper()]
@@ -115,12 +127,13 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         if not cd_municipio_real:
             raise Exception("Candidato não encontrado nos arquivos do TSE.")
 
-        # 2. Locais (Para mapear Bairros)
+        # 2. Locais (NACIONAL - Sem filtro de UF no ZIP)
         report_progress(tenant_id, "Mapeando Redutos (Bairros)...", 30)
         cur.execute("DELETE FROM tse_locais_votacao WHERE cd_municipio = %s AND ano_eleicao = %s", (cd_municipio_real, int(ano)))
+        conn.commit()
         url_locais = f"https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip"
-        download_and_extract(url_locais, tmp_dir, uf)
-        for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV')]:
+        download_and_extract(url_locais, tmp_dir) # SEM FILTRO DE UF
+        for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV') and 'LOCAL' in f.upper()]:
             try:
                 df_l = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
                 df_l.columns = [c.upper() for c in df_l.columns]
@@ -139,12 +152,12 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     conn.commit()
             except: continue
 
-        # 3. Votos
+        # 3. Votos (FILTRO POR UF)
         report_progress(tenant_id, "Contando Votos Oficiais...", 60)
         cur.execute("DELETE FROM tse_votos_secao WHERE cd_municipio = %s AND nr_candidato = %s AND ano_eleicao = %s", (cd_municipio_real, nr_cand_norm, int(ano)))
         url_votos = f"https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_secao/votacao_secao_{ano}_{uf}.zip"
-        if download_and_extract(url_votos, tmp_dir):
-            for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV')]:
+        if download_and_extract(url_votos, tmp_dir, uf):
+            for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV') and 'SECAO' in f.upper()]:
                 try:
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=50000, dtype=str)
                     for chunk in chunks:
@@ -158,12 +171,13 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                             conn.commit()
                 except: continue
 
-        # 4. Perfil
+        # 4. Perfil (NACIONAL - Sem filtro de UF no ZIP)
         report_progress(tenant_id, "Analisando Perfil Demográfico...", 85)
         cur.execute("DELETE FROM tse_perfil_eleitorado WHERE cd_municipio = %s AND ano_eleicao = %s", (cd_municipio_real, int(ano)))
+        conn.commit()
         url_perf = f"https://cdn.tse.jus.br/estatistica/sead/odsele/perfil_eleitorado/perfil_eleitorado_{ano}.zip"
-        if download_and_extract(url_perf, tmp_dir, uf):
-            for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV')]:
+        if download_and_extract(url_perf, tmp_dir): # SEM FILTRO DE UF
+            for file in [f for f in os.listdir(tmp_dir) if f.upper().endswith('.CSV') and 'PERFIL' in f.upper()]:
                 try:
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=50000, dtype=str)
                     for chunk in chunks:
@@ -178,7 +192,6 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
 
                         f_perf = chunk[chunk[c_mun].apply(normalize_code) == cd_municipio_real]
                         if not f_perf.empty:
-                            # CORREÇÃO DO LOOP DE PERFIL (V13)
                             p_data = [(int(ano), cd_municipio_real, r.get(bairro_p_col, 'NÃO INFORMADO'), r.get(gen_p_col, 'NÃO INFORMADO'), r.get(age_p_col, 'NÃO INFORMADO'), r.get(esc_p_col, 'NÃO INFORMADO'), safe_int(r.get(qt_p_col, 0))) for _, r in f_perf.iterrows()]
                             execute_values(cur, "INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) VALUES %s", p_data)
                             conn.commit()
