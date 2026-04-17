@@ -127,12 +127,13 @@ export const createTenant = async (req: Request, res: Response) => {
 
     const result = await db.transaction(async (tx) => {
       // 1. Create the tenant
-      const [newTenant] = await tx.insert(tenants).values({ 
-        name, 
-        slug, 
-        dailyTokenLimit: defaultLimit 
+      const [newTenant] = await tx.insert(tenants).values({
+        name,
+        slug,
+        dailyTokenLimit: defaultLimit,
+        birthdayMessage: 'Olá {nome}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈',
+        legislativeMessage: 'Olá {nome}! Gostaria de informar que sua solicitação sobre *{assunto}* virou a Indicação oficial nº *{numero}*. Você pode acompanhar por aqui: {link}'
       }).returning();
-      
       if (!newTenant) {
         throw new Error('Failed to create tenant');
       }
