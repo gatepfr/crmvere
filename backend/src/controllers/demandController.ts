@@ -230,62 +230,52 @@ export const listCategories = async (req: Request, res: Response) => {
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
   try {
-    let cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
     
-    // Se não houver categorias, cria as padrões automaticamente
     if (cats.length === 0) {
       const defs = [
-        { name: 'SAÚDE', color: '#db2777', icon: 'Activity' },
-        { name: 'INFRAESTRUTURA', color: '#2563eb', icon: 'Hammer' },
-        { name: 'SEGURANÇA', color: '#dc2626', icon: 'Shield' },
-        { name: 'EDUCAÇÃO', color: '#7c3aed', icon: 'GraduationCap' },
-        { name: 'FUNC. PÚBLICO', color: '#ea580c', icon: 'Briefcase' },
-        { name: 'OUTRO', color: '#4b5563', icon: 'Tag' }
+        { name: 'SAÚDE', color: '#db2777' },
+        { name: 'INFRAESTRUTURA', color: '#2563eb' },
+        { name: 'SEGURANÇA', color: '#dc2626' },
+        { name: 'EDUCAÇÃO', color: '#7c3aed' },
+        { name: 'ESPORTE', color: '#059669' },
+        { name: 'OUTRO', color: '#4b5563' }
       ];
       for (const c of defs) {
         await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
       }
-      cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+      const newCats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+      return res.json(newCats);
     }
     
     res.json(cats);
   } catch (error) {
+    console.error('[LIST CATEGORIES ERROR]', error);
     res.status(500).json({ error: 'Failed' });
   }
 };
 
-export const createCategory = async (req: Request, res: Response) => {
-  const tenantId = req.user?.tenantId;
-  const { name, color, icon } = req.body;
-  try {
-    const [nc] = await db.insert(demandCategories).values({ tenantId: tenantId!, name, color, icon }).returning();
-    res.status(201).json(nc);
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
-};
-
-export const deleteCategory = async (req: Request, res: Response) => {
-  const { id } = req.params as { id: string };
-  const tenantId = req.user?.tenantId;
-  try {
-    await db.delete(demandCategories).where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId!)));
-    res.json({ success: true });
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
-};
-
 export const seedCategories = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   const defs = [
-    { name: 'SAÚDE', color: '#db2777', icon: 'Activity' },
-    { name: 'INFRAESTRUTURA', color: '#2563eb', icon: 'Hammer' },
-    { name: 'SEGURANÇA', color: '#dc2626', icon: 'Shield' },
-    { name: 'EDUCAÇÃO', color: '#7c3aed', icon: 'GraduationCap' },
-    { name: 'FUNC. PÚBLICO', color: '#ea580c', icon: 'Briefcase' },
-    { name: 'OUTRO', color: '#4b5563', icon: 'Tag' }
+    { name: 'SAÚDE', color: '#db2777' },
+    { name: 'INFRAESTRUTURA', color: '#2563eb' },
+    { name: 'SEGURANÇA', color: '#dc2626' },
+    { name: 'EDUCAÇÃO', color: '#7c3aed' },
+    { name: 'ESPORTE', color: '#059669' },
+    { name: 'OUTRO', color: '#4b5563' }
   ];
   try {
-    for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId: tenantId! }).onConflictDoNothing();
-    res.json({ success: true });
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+    for (const c of defs) {
+      await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
+    }
+    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    res.json(cats);
+  } catch (error) {
+    console.error('[SEED CATEGORIES ERROR]', error);
+    res.status(500).json({ error: 'Failed' });
+  }
 };
 
 export const updateMunicipe = async (req: Request, res: Response) => {

@@ -71,7 +71,6 @@ export const municipes = pgTable("municipes", {
   };
 });
 
-// Nova tabela para categorias personalizadas do gabinete
 export const demandCategories = pgTable("demand_categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }),
@@ -79,17 +78,23 @@ export const demandCategories = pgTable("demand_categories", {
   color: varchar("color", { length: 20 }).default("#2563eb"),
   icon: varchar("icon", { length: 50 }).default("Tag"),
   createdAt: timestamp("created_at").defaultNow().notNull()
-});
+}, (table) => ({
+  tenantNameUnq: unique("cat_tenant_name_unq").on(table.tenantId, table.name),
+}));
 
 export const atendimentos = pgTable("atendimentos", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
   municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "cascade" }).notNull(),
   resumoIa: varchar("resumo_ia", { length: 10000 }).notNull(),
+  categoria: varchar("categoria", { length: 255 }), // Triagem da conversa
+  prioridade: varchar("prioridade", { length: 50 }), // Triagem da conversa
   precisaRetorno: boolean("precisa_retorno").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantMunicipeUnq: unique("atendimento_tenant_municipe_unq").on(table.tenantId, table.municipeId),
+}));
 
 export const demandas = pgTable("demandas", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -90,13 +90,21 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
   const handleUpdateField = async (field: string, value: string) => {
     setLoading(true);
     try {
-      await api.patch(`/demands/${demand.demandas.id}/status`, { [field]: value });
+      // Determina se estamos editando um Atendimento Online ou uma Demanda Oficial
+      const isAtendimento = !!demand.atendimentoId || demand.demandas.status === 'nova';
+      const endpoint = isAtendimento 
+        ? `/demands/atendimentos/${demand.demandas.id}`
+        : `/demands/${demand.demandas.id}/status`;
+
+      await api.patch(endpoint, { [field]: value });
+      
       if (field === 'status') setStatus(value);
       if (field === 'prioridade') setPrioridade(value);
       if (field === 'categoria') setCategoria(value);
       onUpdate();
     } catch (err) {
       console.error(`Erro ao atualizar ${field}:`, err);
+      alert('Falha ao salvar alteração no banco de dados.');
     } finally {
       setLoading(false);
     }
