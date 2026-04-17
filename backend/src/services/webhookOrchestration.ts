@@ -110,6 +110,8 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       console.log(`[ORCHESTRATOR] Atualizando atendimento existente ${existingAtendimento.id}`);
       await db.update(atendimentos).set({
         resumoIa: updatedHistory,
+        categoria: aiResult?.categoria || existingAtendimento.categoria,
+        prioridade: aiResult?.prioridade || existingAtendimento.prioridade,
         precisaRetorno: aiResult?.precisa_retorno || existingAtendimento.precisaRetorno,
         updatedAt: new Date(),
       }).where(eq(atendimentos.id, existingAtendimento.id));
@@ -119,6 +121,8 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
         tenantId,
         municipeId: municipe.id,
         resumoIa: updatedHistory,
+        categoria: aiResult?.categoria,
+        prioridade: aiResult?.prioridade,
         precisaRetorno: aiResult?.precisa_retorno || false
       });
     }
