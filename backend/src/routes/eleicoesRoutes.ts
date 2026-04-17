@@ -75,10 +75,9 @@ router.get('/resumo', async (req, res) => {
       FROM tse_votos_secao v
       LEFT JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
         AND v.nr_zona = l.nr_zona
-        AND v.cd_municipio = l.cd_municipio 
         AND v.ano_eleicao = l.ano_eleicao
       WHERE v.nr_candidato = ${candidato.nrCandidato}
-        AND v.cd_municipio = ${candidato.cdMunicipio}
+        AND v.cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')}
         AND v.ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1
       ORDER BY total_votos DESC
@@ -90,7 +89,7 @@ router.get('/resumo', async (req, res) => {
       SELECT SUM(qt_votos) as total 
       FROM tse_votos_secao 
       WHERE nr_candidato = ${candidato.nrCandidato}
-        AND cd_municipio = ${candidato.cdMunicipio}
+        AND cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')}
         AND ano_eleicao = ${candidato.anoEleicao}
     `);
 
@@ -111,10 +110,9 @@ router.get('/resumo', async (req, res) => {
       FROM tse_votos_secao v
       JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
         AND v.nr_zona = l.nr_zona
-        AND v.cd_municipio = l.cd_municipio 
         AND v.ano_eleicao = l.ano_eleicao
       WHERE v.nr_candidato = ${candidato.nrCandidato}
-        AND v.cd_municipio = ${candidato.cdMunicipio}
+        AND v.cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')}
         AND v.ano_eleicao = ${candidato.anoEleicao}
         AND l.latitude IS NOT NULL
       GROUP BY 1, 2, 3
@@ -124,7 +122,7 @@ router.get('/resumo', async (req, res) => {
     const perfilGenero = await db.execute(sql`
       SELECT ds_genero as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
-      WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+      WHERE cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY value DESC
     `);
 
@@ -132,7 +130,7 @@ router.get('/resumo', async (req, res) => {
     const perfilIdade = await db.execute(sql`
       SELECT ds_faixa_etaria as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
-      WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+      WHERE cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY label ASC
     `);
 
@@ -140,7 +138,7 @@ router.get('/resumo', async (req, res) => {
     const perfilEscolaridade = await db.execute(sql`
       SELECT ds_grau_escolaridade as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
-      WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+      WHERE cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY value DESC
     `);
 

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes, tenants, atendimentos } from '../db/schema';
+import { demandas, municipes, tenants, atendimentos, tseCandidatos } from '../db/schema';
 import { eq, sql, desc, and } from 'drizzle-orm';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
@@ -39,6 +39,24 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       day: sql`DATE_TRUNC('day', ${demandas.createdAt})`
     }).from(demandas).where(and(eq(demandas.tenantId, tenantId), sql`${demandas.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`)).groupBy(sql`DATE_TRUNC('day', ${demandas.createdAt}), TO_CHAR(${demandas.createdAt} AT TIME ZONE 'America/Sao_Paulo', 'DD/MM')`).orderBy(sql`DATE_TRUNC('day', ${demandas.createdAt}) ASC`);
 
+    // Busca Perfil do Eleitorado (Gênero)
+    const [candidato] = await db.select().from(tseCandidatos).where(eq(tseCandidatos.tenantId, tenantId)).limit(1);
+    let electorateGender = { masculino: 0, feminino: 0 };
+    
+    if (candidato) {
+      const genderStats = await db.execute(sql`
+        SELECT ds_genero as label, SUM(qt_eleitores) as value
+        FROM tse_perfil_eleitorado
+        WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+        GROUP BY 1
+      `);
+
+      genderStats.rows.forEach((row: any) => {
+        if (row.label.toUpperCase() === 'MASCULINO') electorateGender.masculino = Number(row.value);
+        if (row.label.toUpperCase() === 'FEMININO') electorateGender.feminino = Number(row.value);
+      });
+    }
+
     res.json({
       summary: { 
         total: summary?.total || 0, 
@@ -48,7 +66,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         birthdaysToday: municipeSummary?.birthdaysToday || 0,
         uniqueBairros: municipeSummary?.uniqueBairros || 0,
         dailyTokenLimit: tenant?.dailyTokenLimit || 0,
-        tokenUsageTotal: tenant?.tokenUsageTotal || 0
+        tokenUsageTotal: tenant?.tokenUsageTotal || 0,
+        electorateGender // Adicionado
       },
       categoryStats: categoryStats.map(c => ({ ...c, value: Number(c.value) })),
       dailyStats: last7Days.map(d => ({ date: d.date, count: Number(d.count) }))
