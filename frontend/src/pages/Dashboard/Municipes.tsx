@@ -419,14 +419,27 @@ export default function Municipes() {
     if (!editingMunicipe) return;
     setSaving(true);
     try {
+      const birthDateISO = parseDateToISO(editForm.birthDate);
       const payload = {
         ...editForm,
-        birthDate: parseDateToISO(editForm.birthDate)
+        birthDate: birthDateISO
       };
+      
       await api.patch(`/demands/municipe/${editingMunicipe.id}`, payload);
-      loadMunicipes();
+      
+      // Atualização otimista: muda na tela NA HORA
+      setMunicipes(prev => prev.map(m => 
+        m.id === editingMunicipe.id 
+          ? { ...m, ...editForm, birthDate: birthDateISO ? `${birthDateISO}T00:00:00.000Z` : null } 
+          : m
+      ));
+
       setEditingMunicipe(null);
       alert('Dados atualizados com sucesso!');
+      
+      // Recarrega do servidor para garantir sincronia total e atualizar bairros
+      loadMunicipes();
+      loadAllBairros();
     } catch (err) {
       alert('Falha ao atualizar dados.');
     } finally {
