@@ -29,6 +29,7 @@ router.use(checkTenant);
 // Rotas de Atendimento (WhatsApp/IA)
 router.get('/atendimentos', listAtendimentos);
 router.patch('/atendimentos/:id', updateAtendimento);
+router.delete('/atendimentos/:id', deleteAtendimento);
 
 // Rotas de Demandas Oficiais
 router.get('/', listDemands);

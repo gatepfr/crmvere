@@ -15,7 +15,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Phone,
-  ClipboardList
+  ClipboardList,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -24,6 +26,8 @@ interface Atendimento {
   atendimentos: {
     id: string;
     resumoIa: string;
+    categoria?: string | null;
+    prioridade?: string | null;
     precisaRetorno: boolean;
     createdAt: string;
     updatedAt: string;
@@ -70,8 +74,6 @@ export default function Demands() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterByAttention, setFilterByAttention] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('date');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   const fetchAtendimentos = useCallback(() => {
     setLoading(true);
@@ -90,6 +92,10 @@ export default function Demands() {
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, [pagination.page, pagination.limit, searchTerm, filterByAttention]);
+
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchTerm, filterByAttention]);
 
   useEffect(() => {
     fetchAtendimentos();
@@ -114,6 +120,16 @@ export default function Demands() {
     ]);
     autoTable(doc, { head: [['Munícipe', 'WhatsApp', 'Última Interação']], body: tableData });
     doc.save(`atendimentos.pdf`);
+  };
+
+  const handleDeleteAtendimento = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este histórico de atendimento?')) return;
+    try {
+      await api.delete(`/demands/atendimentos/${id}`);
+      fetchAtendimentos();
+    } catch (err) {
+      alert('Falha ao excluir atendimento.');
+    }
   };
 
   return (
@@ -148,7 +164,6 @@ export default function Demands() {
         <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={() => setFilterByAttention(!filterByAttention)}
-
             className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
               filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
             }`}
@@ -199,13 +214,29 @@ export default function Demands() {
                     <span className="text-xs text-slate-400 font-medium">{new Date(a.atendimentos.updatedAt).toLocaleString('pt-BR')}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSelectedAtendimento(a); }}
-                      className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                      title="Transformar em Demanda Oficial"
-                    >
-                      <ClipboardList size={16} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedAtendimento(a); }}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        title="Ver Detalhes / Editar"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedAtendimento(a); }}
+                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                        title="Transformar em Demanda Oficial"
+                      >
+                        <ClipboardList size={16} />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteAtendimento(a.atendimentos.id); }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="Excluir Atendimento"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

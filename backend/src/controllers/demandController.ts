@@ -131,11 +131,51 @@ export const listAtendimentos = async (req: Request, res: Response) => {
     const conditions = [eq(atendimentos.tenantId, tenantId)];
     if (attention) conditions.push(eq(atendimentos.precisaRetorno, true));
     if (search) {
-      conditions.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`)) as any);
+      conditions.push(or(
+        ilike(municipes.name, `%${search}%`), 
+        ilike(municipes.phone, `%${search}%`),
+        ilike(municipes.bairro, `%${search}%`)
+      ) as any);
     }
     const [totalCount] = await db.select({ count: count() }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions));
     const results = await db.select({ atendimentos: atendimentos, municipes: municipes }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions)).orderBy(desc(atendimentos.updatedAt)).limit(limit).offset(offset);
     res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / limit) } });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed' });
+  }
+};
+
+export const updateAtendimento = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { precisaRetorno, status, categoria, prioridade } = req.body;
+  const tenantId = req.user?.tenantId;
+  
+  try {
+    const updateData: any = { updatedAt: new Date() };
+    if (status === 'concluida') {
+      updateData.precisaRetorno = false;
+    } else if (precisaRetorno !== undefined) {
+      updateData.precisaRetorno = precisaRetorno;
+    }
+    if (categoria) updateData.categoria = categoria;
+    if (prioridade) updateData.prioridade = prioridade;
+
+    await db.update(atendimentos)
+      .set(updateData)
+      .where(and(eq(atendimentos.id, id), eq(atendimentos.tenantId, tenantId!)));
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed' });
+  }
+};
+
+export const deleteAtendimento = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  try {
+    await db.delete(atendimentos).where(and(eq(atendimentos.id, id), eq(atendimentos.tenantId, tenantId!)));
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
   }
@@ -156,7 +196,11 @@ export const listDemands = async (req: Request, res: Response) => {
     if (category) conditions.push(eq(demandas.categoria, category));
     if (status) conditions.push(eq(demandas.status, status as any));
     if (search) {
-      conditions.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`)) as any);
+      conditions.push(or(
+        ilike(municipes.name, `%${search}%`), 
+        ilike(municipes.phone, `%${search}%`),
+        ilike(municipes.bairro, `%${search}%`)
+      ) as any);
     }
     const [totalCount] = await db.select({ count: count() }).from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id)).where(and(...conditions));
     const results = await db.select({ demandas: demandas, municipes: municipes }).from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id)).where(and(...conditions)).orderBy(desc(demandas.createdAt)).limit(limit).offset(offset);
@@ -213,52 +257,15 @@ export const listCategories = async (req: Request, res: Response) => {
 
   try {
     const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
-    
     if (cats.length === 0) {
-      // Tenta criar em background, mas já retorna os padrões para não travar a UI
       for (const c of defs) {
-        db.insert(demandCategories).values({ name: c.name, color: c.color, tenantId }).onConflictDoNothing()
-          .catch(e => console.error('Silent seed error', e));
+        await db.insert(demandCategories).values({ name: c.name, color: c.color, tenantId }).onConflictDoNothing();
       }
       return res.json(defs);
     }
-    
     res.json(cats);
   } catch (error) {
-    console.error('[LIST CATEGORIES ERROR]', error);
-    res.json(defs); // Retorna padrões em caso de erro crítico no banco
-  }
-};
-
-export const updateAtendimento = async (req: Request, res: Response) => {
-  const { id } = req.params as { id: string };
-  const { precisaRetorno, status, categoria, prioridade } = req.body;
-  const tenantId = req.user?.tenantId;
-  
-  try {
-    const updateData: any = { updatedAt: new Date() };
-    
-    // Se mandou status 'concluida', desmarca a atenção humana
-    if (status === 'concluida') {
-      updateData.precisaRetorno = false;
-    } else if (precisaRetorno !== undefined) {
-      updateData.precisaRetorno = precisaRetorno;
-    }
-
-    if (categoria) updateData.categoria = categoria;
-    if (prioridade) updateData.prioridade = prioridade;
-
-    await db.update(atendimentos)
-      .set(updateData)
-      .where(and(
-        eq(atendimentos.id, id), 
-        eq(atendimentos.tenantId, tenantId!)
-      ));
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[UPDATE ATENDIMENTO ERROR]', error);
-    res.status(500).json({ error: 'Failed' });
+    res.json(defs);
   }
 };
 
@@ -267,14 +274,9 @@ export const createCategory = async (req: Request, res: Response) => {
   const { name, color, icon } = req.body;
   if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   try {
-    const [nc] = await db.insert(demandCategories)
-      .values({ tenantId, name: name.toUpperCase().trim(), color, icon })
-      .onConflictDoNothing()
-      .returning();
+    const [nc] = await db.insert(demandCategories).values({ tenantId, name: name.toUpperCase().trim(), color, icon }).onConflictDoNothing().returning();
     res.status(201).json(nc);
-  } catch (error) { 
-    res.status(500).json({ error: 'Failed' }); 
-  }
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
 export const deleteCategory = async (req: Request, res: Response) => {
@@ -282,12 +284,9 @@ export const deleteCategory = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   try {
-    await db.delete(demandCategories)
-      .where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId)));
+    await db.delete(demandCategories).where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId)));
     res.json({ success: true });
-  } catch (error) { 
-    res.status(500).json({ error: 'Failed' }); 
-  }
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
 export const seedCategories = async (req: Request, res: Response) => {
@@ -302,15 +301,10 @@ export const seedCategories = async (req: Request, res: Response) => {
     { name: 'OUTRO', color: '#4b5563' }
   ];
   try {
-    for (const c of defs) {
-      await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
-    }
+    for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
     const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
     res.json(cats);
-  } catch (error) {
-    console.error('[SEED CATEGORIES ERROR]', error);
-    res.status(500).json({ error: 'Failed' });
-  }
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
 export const updateMunicipe = async (req: Request, res: Response) => {
@@ -341,51 +335,14 @@ export const listMunicipes = async (req: Request, res: Response) => {
   try {
     const conds = [eq(municipes.tenantId, tenantId!)];
     if (search) {
-      conds.push(or(
-        ilike(municipes.name, `%${search}%`), 
-        ilike(municipes.phone, `%${search}%`),
-        ilike(municipes.bairro, `%${search}%`)
-      ) as any);
+      conds.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`), ilike(municipes.bairro, `%${search}%`)) as any);
     }
-
     if (birthday) {
-      // Filtro de aniversário para Postgres (dia e mês coincidem com hoje no fuso de Brasília)
       conds.push(sql`EXTRACT(DAY FROM ${municipes.birthDate}) = EXTRACT(DAY FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
       conds.push(sql`EXTRACT(MONTH FROM ${municipes.birthDate}) = EXTRACT(MONTH FROM CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo')`);
     }
-
-    const [totalCount] = await db.select({ count: count() })
-      .from(municipes)
-      .where(and(...conds));
-
-    const results = await db.select({ 
-      id: municipes.id, 
-      name: municipes.name, 
-      phone: municipes.phone, 
-      bairro: municipes.bairro, 
-      birthDate: municipes.birthDate,
-      createdAt: municipes.createdAt, 
-      demandCount: sql<number>`count(${demandas.id})::int` 
-    })
-    .from(municipes)
-    .leftJoin(demandas, eq(municipes.id, demandas.municipeId))
-    .where(and(...conds))
-    .groupBy(municipes.id)
-    .orderBy(municipes.name)
-    .limit(limit)
-    .offset(offset);
-
-    res.json({ 
-      data: results,
-      pagination: {
-        page,
-        limit,
-        total: Number(totalCount?.count || 0),
-        totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit === 10000 ? 1 : limit))
-      }
-    });
-  } catch (error: any) { 
-    console.error('[LIST MUNICIPES ERROR]', error.message);
-    res.status(500).json({ error: 'Failed' }); 
-  }
+    const [totalCount] = await db.select({ count: count() }).from(municipes).where(and(...conds));
+    const results = await db.select({ id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro, birthDate: municipes.birthDate, createdAt: municipes.createdAt, demandCount: sql<number>`count(${demandas.id})::int` }).from(municipes).leftJoin(demandas, eq(municipes.id, demandas.municipeId)).where(and(...conds)).groupBy(municipes.id).orderBy(municipes.name).limit(limit).offset(offset);
+    res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit === 10000 ? 1 : limit)) } });
+  } catch (error: any) { res.status(500).json({ error: 'Failed' }); }
 };
