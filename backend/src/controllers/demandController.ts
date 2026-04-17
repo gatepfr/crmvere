@@ -200,15 +200,16 @@ export const listCategories = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   const defs = [
-    { name: 'SAÚDE', color: '#db2777' }, { name: 'INFRAESTRUTURA', color: '#2563eb' },
-    { name: 'SEGURANÇA', color: '#dc2626' }, { name: 'EDUCAÇÃO', color: '#7c3aed' },
-    { name: 'ESPORTE', color: '#059669' }, { name: 'OUTRO', color: '#4b5563' }
+    { id: '1', name: 'SAÚDE', color: '#db2777' }, { id: '2', name: 'INFRAESTRUTURA', color: '#2563eb' },
+    { id: '3', name: 'SEGURANÇA', color: '#dc2626' }, { id: '4', name: 'EDUCAÇÃO', color: '#7c3aed' },
+    { id: '5', name: 'ESPORTE', color: '#059669' }, { id: '6', name: 'OUTRO', color: '#4b5563' }
   ];
   try {
     const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
     if (cats.length === 0) {
-      for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
-      return res.json(await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId)));
+      for (const c of defs) await db.insert(demandCategories).values({ name: c.name, color: c.color, tenantId }).onConflictDoNothing();
+      const newCats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+      return res.json(newCats);
     }
     res.json(cats);
   } catch (error) { res.json(defs); }
@@ -217,8 +218,9 @@ export const listCategories = async (req: Request, res: Response) => {
 export const createCategory = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const { name, color } = req.body;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   try {
-    const [nc] = await db.insert(demandCategories).values({ tenantId: tenantId!, name: name.toUpperCase().trim(), color }).returning();
+    const [nc] = await db.insert(demandCategories).values({ tenantId, name: name.toUpperCase().trim(), color: color || '#2563eb' }).onConflictDoNothing().returning();
     res.status(201).json(nc);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
@@ -226,8 +228,9 @@ export const createCategory = async (req: Request, res: Response) => {
 export const deleteCategory = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
   try {
-    await db.delete(demandCategories).where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId!)));
+    await db.delete(demandCategories).where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId)));
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
@@ -242,7 +245,8 @@ export const seedCategories = async (req: Request, res: Response) => {
   ];
   try {
     for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
-    res.json(await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId)));
+    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    res.json(cats);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
