@@ -160,9 +160,6 @@ export default function Municipes() {
       return false;
     }
   };
-      return false;
-    }
-  };
 
   const handleSort = (key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount') => {
     let direction: 'asc' | 'desc' = 'asc';
