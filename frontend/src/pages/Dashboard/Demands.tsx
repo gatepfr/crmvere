@@ -106,9 +106,21 @@ export default function Demands() {
   const formatPhone = (phone: string) => {
     if (!phone) return '';
     let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length >= 12 && cleaned.startsWith('55')) cleaned = cleaned.slice(2);
-    if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    
+    // Remove o 55 se existir
+    if (cleaned.startsWith('55') && cleaned.length >= 12) {
+      cleaned = cleaned.slice(2);
+    }
+    
+    // Se tiver 10 dígitos (DDD + 8), adiciona o 9 para a máscara
+    if (cleaned.length === 10) {
+      cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
+    }
+    
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    
     return phone;
   };
 
