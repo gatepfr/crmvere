@@ -421,14 +421,26 @@ export default function Legislativo() {
                         {d.isLegislativo ? `Indicação ${d.numeroIndicacao || 'S/N'}` : 'Não protocolada'}
                       </button>
                       
-                      {d.isLegislativo && (
+                      <div className="flex items-center gap-3">
                         <button 
-                          onClick={() => sendToWhatsApp(d)}
-                          className="flex items-center gap-1.5 text-blue-500 hover:text-blue-700 font-bold text-[10px] uppercase transition-colors"
+                          onClick={() => updateDocUrl(d)}
+                          className={`flex items-center gap-1.5 font-bold text-[10px] uppercase transition-colors ${
+                            d.documentUrl ? 'text-emerald-600 hover:text-emerald-700' : 'text-slate-400 hover:text-blue-600'
+                          }`}
+                          title="Anexar Link PDF"
                         >
-                          <Send size={12} /> Avisar no WhatsApp
+                          <FileText size={12} /> {d.documentUrl ? 'Editar Link' : 'Link PDF'}
                         </button>
-                      )}
+
+                        {d.isLegislativo && (
+                          <button 
+                            onClick={() => sendToWhatsApp(d)}
+                            className="flex items-center gap-1.5 text-blue-500 hover:text-blue-700 font-bold text-[10px] uppercase transition-colors"
+                          >
+                            <Send size={12} /> Avisar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-5">
@@ -439,13 +451,6 @@ export default function Legislativo() {
                         title="Editar Detalhes"
                       >
                         <Edit2 size={18} />
-                      </button>
-                      <button 
-                        onClick={() => updateDocUrl(d)}
-                        className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
-                        title="Anexar Link PDF"
-                      >
-                        <FileText size={18} />
                       </button>
                       <button 
                         onClick={() => handleDelete(d.id)}
