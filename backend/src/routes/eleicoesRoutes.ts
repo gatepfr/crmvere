@@ -68,13 +68,20 @@ router.get('/resumo', async (req, res) => {
     if (!candidato) return res.json({ setup_required: true });
 
     // Consulta robusta: Tenta somar votos filtrando por município e ano do candidato
+    // Usamos uma subquery DISTINCT para evitar que um local de votação duplicado no mapeamento multiplique os votos
     const stats = await db.execute(sql`
+      WITH locais_unicos AS (
+        SELECT DISTINCT ON (nr_zona, nr_local_votacao, cd_municipio, ano_eleicao)
+          nr_zona, nr_local_votacao, cd_municipio, ano_eleicao, nm_bairro
+        FROM tse_locais_votacao
+      )
       SELECT 
           COALESCE(NULLIF(l.nm_bairro, ''), 'NÃO MAPEADO') as nm_bairro,
           SUM(v.qt_votos) as total_votos
       FROM tse_votos_secao v
-      LEFT JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+      LEFT JOIN locais_unicos l ON v.nr_local_votacao = l.nr_local_votacao 
         AND v.nr_zona = l.nr_zona
+        AND v.cd_municipio::int = l.cd_municipio::int
         AND v.ano_eleicao = l.ano_eleicao
       WHERE v.nr_candidato = ${candidato.nrCandidato}
         AND v.cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')}
@@ -95,32 +102,33 @@ router.get('/resumo', async (req, res) => {
 
     const totalVotos = Number(totalVotosResult.rows[0]?.total || 0);
 
-    // Se achou o candidato mas não achou votos, pode ser erro de importação
-    if (totalVotos == 0 && candidato) {
-        console.warn(`[ELEICOES] Candidato ${candidato.nmCandidato} sem votos no banco.`);
-    }
-
     // Busca os pontos do mapa de calor (votos por local com coordenadas)
     const mapaCalor = await db.execute(sql`
+      WITH locais_coords AS (
+        SELECT DISTINCT ON (nr_zona, nr_local_votacao, cd_municipio, ano_eleicao)
+          nr_zona, nr_local_votacao, cd_municipio, ano_eleicao, nm_local_votacao, latitude, longitude
+        FROM tse_locais_votacao
+        WHERE latitude IS NOT NULL
+      )
       SELECT 
           l.nm_local_votacao,
           l.latitude,
           l.longitude,
           SUM(v.qt_votos) as total_votos
       FROM tse_votos_secao v
-      JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+      JOIN locais_coords l ON v.nr_local_votacao = l.nr_local_votacao 
         AND v.nr_zona = l.nr_zona
+        AND v.cd_municipio::int = l.cd_municipio::int
         AND v.ano_eleicao = l.ano_eleicao
       WHERE v.nr_candidato = ${candidato.nrCandidato}
         AND v.cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')}
         AND v.ano_eleicao = ${candidato.anoEleicao}
-        AND l.latitude IS NOT NULL
       GROUP BY 1, 2, 3
     `);
 
-    // Busca Perfil: Gênero
+    // Busca Perfil: Gênero (Reforçado)
     const perfilGenero = await db.execute(sql`
-      SELECT ds_genero as label, SUM(qt_eleitores) as value
+      SELECT UPPER(ds_genero) as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')} AND ano_eleicao = ${candidato.anoEleicao}
       GROUP BY 1 ORDER BY value DESC

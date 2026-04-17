@@ -45,15 +45,15 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     
     if (candidato) {
       const genderStats = await db.execute(sql`
-        SELECT ds_genero as label, SUM(qt_eleitores) as value
+        SELECT UPPER(ds_genero) as label, SUM(qt_eleitores) as value
         FROM tse_perfil_eleitorado
-        WHERE cd_municipio = ${candidato.cdMunicipio} AND ano_eleicao = ${candidato.anoEleicao}
+        WHERE cd_municipio::int = ${parseInt(candidato.cdMunicipio || '0')} AND ano_eleicao = ${candidato.anoEleicao}
         GROUP BY 1
       `);
 
       genderStats.rows.forEach((row: any) => {
-        if (row.label.toUpperCase() === 'MASCULINO') electorateGender.masculino = Number(row.value);
-        if (row.label.toUpperCase() === 'FEMININO') electorateGender.feminino = Number(row.value);
+        if (row.label === 'MASCULINO') electorateGender.masculino = Number(row.value);
+        if (row.label === 'FEMININO') electorateGender.feminino = Number(row.value);
       });
     }
 
