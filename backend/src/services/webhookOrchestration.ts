@@ -106,25 +106,29 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     console.log(`[ORCHESTRATOR] Resposta da IA recebida. Usuário receberá: ${aiResult?.resposta_usuario?.substring(0, 50)}...`);
     const updatedHistory = `${promptContext}${aiResult?.resposta_usuario ? `\nAI: ${aiResult.resposta_usuario}` : ''}`;
 
-    if (existingAtendimento) {
-      console.log(`[ORCHESTRATOR] Atualizando atendimento existente ${existingAtendimento.id}`);
-      await db.update(atendimentos).set({
-        resumoIa: updatedHistory,
-        categoria: aiResult?.categoria || existingAtendimento.categoria,
-        prioridade: aiResult?.prioridade || existingAtendimento.prioridade,
-        precisaRetorno: aiResult?.precisa_retorno || existingAtendimento.precisaRetorno,
-        updatedAt: new Date(),
-      }).where(eq(atendimentos.id, existingAtendimento.id));
-    } else {
-      console.log(`[ORCHESTRATOR] Criando novo atendimento`);
-      await db.insert(atendimentos).values({
-        tenantId,
-        municipeId: municipe.id,
-        resumoIa: updatedHistory,
-        categoria: aiResult?.categoria,
-        prioridade: aiResult?.prioridade,
-        precisaRetorno: aiResult?.precisa_retorno || false
-      });
+    try {
+      if (existingAtendimento) {
+        console.log(`[ORCHESTRATOR] Atualizando atendimento existente ${existingAtendimento.id}`);
+        await db.update(atendimentos).set({
+          resumoIa: updatedHistory,
+          categoria: aiResult?.categoria || existingAtendimento.categoria,
+          prioridade: aiResult?.prioridade || existingAtendimento.prioridade,
+          precisaRetorno: aiResult?.precisa_retorno || existingAtendimento.precisaRetorno,
+          updatedAt: new Date(),
+        }).where(eq(atendimentos.id, existingAtendimento.id));
+      } else {
+        console.log(`[ORCHESTRATOR] Criando novo atendimento`);
+        await db.insert(atendimentos).values({
+          tenantId,
+          municipeId: municipe.id,
+          resumoIa: updatedHistory,
+          categoria: aiResult?.categoria,
+          prioridade: aiResult?.prioridade,
+          precisaRetorno: aiResult?.precisa_retorno || false
+        });
+      }
+    } catch (dbError: any) {
+      console.error(`[ORCHESTRATOR DB ERROR] Falha ao salvar no banco, mas prosseguindo com WhatsApp:`, dbError.message);
     }
 
     // 8. Fluxo de Envio de WhatsApp
