@@ -5,6 +5,7 @@ import {
   listDemands, 
   listAtendimentos,
   updateAtendimento,
+  deleteAtendimento,
   getDemand, 
   updateDemand, 
   updateMunicipe, 
