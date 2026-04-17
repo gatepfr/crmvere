@@ -92,7 +92,7 @@ def geocode_address(nome, endereco, bairro, cidade, uf):
     return None, None
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
-    print(f"--- INICIANDO IMPORTAÇÃO TSE V4 (ESTADO: {uf}) ---")
+    print(f"--- INICIANDO IMPORTAÇÃO TSE V5 (ESTADO: {uf}) ---")
     tmp_dir = f"/tmp/tse_import_{tenant_id}"
     if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
     os.makedirs(tmp_dir, exist_ok=True)
@@ -122,35 +122,50 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         cd_municipio_real = None
         for file in state_files:
             print(f"Analisando: {file}")
-            # Tenta múltiplos encodings
             for enc in ['latin1', 'utf-8', 'iso-8859-1']:
                 try:
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding=enc, dtype=str, on_bad_lines='skip', chunksize=5000)
                     for df in chunks:
                         df.columns = [c.upper() for c in df.columns]
-                        city_col = find_column(df.columns, ['NM_UE']) or find_column(df.columns, ['NM_MUNICIPIO'])
-                        cd_mun_col = find_column(df.columns, ['CD_UE']) or find_column(df.columns, ['CD_MUNICIPIO'])
-                        num_col = find_column(df.columns, ['NR_CANDIDATO'])
+                        
+                        if cd_municipio_real is None:
+                            print(f"Colunas detectadas em {file}: {list(df.columns)[:15]}...")
+
+                        city_col = find_column(df.columns, ['NM', 'UE']) or find_column(df.columns, ['NM', 'MUNICIPIO'])
+                        cd_mun_col = find_column(df.columns, ['CD', 'UE']) or find_column(df.columns, ['CD', 'MUNICIPIO'])
+                        num_col = find_column(df.columns, ['NR', 'CANDIDATO'])
                         
                         if not city_col or not num_col: continue
 
                         df['CITY_NORM'] = df[city_col].apply(normalize_text)
                         cand = df[(df['CITY_NORM'] == municipio_norm) & (df[num_col] == nr_cand_str)]
+                        
                         if not cand.empty:
                             c = cand.iloc[0]
                             cd_municipio_real = normalize_code(c[cd_mun_col])
+                            sit_col = find_column(df.columns, ['DS_SITUACAO_TOT']) or find_column(df.columns, ['DS_SITUACAO']) or num_col
+                            nm_cand_col = find_column(df.columns, ['NM_CANDIDATO']) or num_col
+                            sg_part_col = find_column(df.columns, ['SG_PARTIDO']) or num_col
+
                             cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, ano))
                             cur.execute("""
                                 INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao)
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                            """, (tenant_id, ano, c[find_column(df.columns, ['NM_CANDIDATO'])], c[num_col], c[find_column(df.columns, ['SG_PARTIDO'])], cd_municipio_real, c[city_col], c[find_column(df.columns, ['DS_SITUACAO_TOT_TURNO'])]))
+                            """, (tenant_id, ano, c[nm_cand_col], c[num_col], c[sg_part_col], cd_municipio_real, c[city_col], c[sit_col]))
                             break
+                        
+                        # Debug se a cidade existe mas o número não
+                        if cd_municipio_real is None:
+                            same_city = df[df['CITY_NORM'] == municipio_norm]
+                            if not same_city.empty:
+                                print(f"Cidade {municipio_norm} encontrada. Exemplos de números lidos: {list(same_city[num_col].unique()[:10])}")
+                                
                     if cd_municipio_real: break
                 except: continue
             if cd_municipio_real: break
 
         if not cd_municipio_real:
-            raise Exception(f"Candidato {nr_cand_str} não encontrado no arquivo do TSE para {municipio_nome}-{uf}. Verifique os dados.")
+            raise Exception(f"Candidato {nr_cand_str} não encontrado em {municipio_nome}-{uf}. Verifique se o número está correto.")
 
         # LIMPEZA PREVENTIVA
         cur.execute("DELETE FROM tse_locais_votacao WHERE cd_municipio = %s AND ano_eleicao = %s", (cd_municipio_real, ano))
@@ -166,7 +181,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                 try:
                     df_l = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', dtype=str)
                     df_l.columns = [c.upper() for c in df_l.columns]
-                    cd_mun_l = find_column(df_l.columns, ['CD_MUNICIPIO'])
+                    cd_mun_l = find_column(df_l.columns, ['CD', 'MUNICIPIO'])
                     locais = df_l[df_l[cd_mun_l].apply(normalize_code) == cd_municipio_real].drop_duplicates(subset=['NR_ZONA', 'NR_LOCAL_VOTACAO'])
                     for _, r in locais.iterrows():
                         lat, lng = geocode_address(r['NM_LOCAL_VOTACAO'], r['DS_ENDERECO'], r['NM_BAIRRO'], municipio_nome, uf)
@@ -183,8 +198,8 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=20000, dtype=str)
                     for chunk in chunks:
                         chunk.columns = [c.upper() for c in chunk.columns]
-                        c_cand = find_column(chunk.columns, ['NR_VOTAVEL']) or find_column(chunk.columns, ['NR_CANDIDATO'])
-                        c_mun = find_column(chunk.columns, ['CD_MUNICIPIO'])
+                        c_cand = find_column(chunk.columns, ['NR', 'VOTAVEL']) or find_column(chunk.columns, ['NR', 'CANDIDATO'])
+                        c_mun = find_column(chunk.columns, ['CD', 'MUNICIPIO'])
                         filtered = chunk[(chunk[c_mun].apply(normalize_code) == cd_municipio_real) & (chunk[c_cand] == nr_cand_str)]
                         if not filtered.empty:
                             v_data = [(ano, cd_municipio_real, safe_int(r['NR_ZONA']), safe_int(r['NR_SECAO']), safe_int(r['NR_LOCAL_VOTACAO']), nr_cand_str, safe_int(r['QT_VOTOS'])) for _, r in filtered.iterrows()]
@@ -201,7 +216,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                     chunks = pd.read_csv(os.path.join(tmp_dir, file), sep=';', encoding='latin1', chunksize=20000, dtype=str)
                     for chunk in chunks:
                         chunk.columns = [c.upper() for c in chunk.columns]
-                        c_mun = find_column(chunk.columns, ['CD_MUNICIPIO'])
+                        c_mun = find_column(chunk.columns, ['CD', 'MUNICIPIO'])
                         f_perf = chunk[chunk[c_mun].apply(normalize_code) == cd_municipio_real]
                         if not f_perf.empty:
                             p_data = [(ano, cd_municipio_real, r.get('NM_BAIRRO', 'NÃO INFORMADO'), r.get('DS_GENERO', 'NÃO INFORMADO'), r.get('DS_FAIXA_ETARIA', 'NÃO INFORMADO'), r.get('DS_GRAU_ESCOLARIDADE', 'NÃO INFORMADO'), safe_int(r.get('QT_ELEITORES_PERFIL', 0))) for _, r in f_perf.iterrows()]
