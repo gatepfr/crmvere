@@ -70,8 +70,11 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     }
 
     // 5. Verifica se o atendimento já está aguardando retorno humano
-    if (existingAtendimento?.precisaRetorno) {
-      console.log(`[ORCHESTRATOR] Atendimento de ${municipe.name} já aguarda retorno humano. Ignorando resposta da IA.`);
+    // AJUSTE: Se a última mensagem foi há mais de 2 horas, permitimos que a IA tente responder novamente
+    // para não deixar o munícipe no vácuo se a equipe esqueceu de desmarcar o "precisa retorno".
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    if (existingAtendimento?.precisaRetorno && existingAtendimento.updatedAt > twoHoursAgo) {
+      console.log(`[ORCHESTRATOR] Atendimento de ${municipe.name} aguardando retorno humano recente. Ignorando IA.`);
       return { status: 'waiting_human' };
     }
 
