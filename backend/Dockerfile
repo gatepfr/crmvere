@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     netcat-openbsd \
+    libpq-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia dependências do Python e instala
