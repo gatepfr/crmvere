@@ -59,6 +59,7 @@ type SortOrder = 'asc' | 'desc';
 export default function Legislativo() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cabinetConfig, setCabinetConfig] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -76,6 +77,11 @@ export default function Legislativo() {
   const loadDemands = useCallback(async () => {
     setLoading(true);
     try {
+      if (!cabinetConfig) {
+        const configRes = await api.get('/config/me');
+        setCabinetConfig(configRes.data);
+      }
+
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
@@ -149,8 +155,14 @@ export default function Legislativo() {
       alert('Adicione o link da indicação primeiro!');
       return;
     }
-    const msg = `Olá ${d.municipes.name}! Gostaria de informar que sua solicitação sobre *${d.categoria.toUpperCase()}* virou a Indicação oficial nº *${d.numeroIndicacao}*. Você pode acompanhar por aqui: ${d.documentUrl}`;
+    const defaultMsg = `Olá ${d.municipes.name}! Gostaria de informar que sua solicitação sobre *${d.categoria.toUpperCase()}* virou a Indicação oficial nº *${d.numeroIndicacao}*. Você pode acompanhar por aqui: ${d.documentUrl}`;
     
+    let msg = cabinetConfig?.legislativeMessage || defaultMsg;
+    msg = msg.replace(/{nome}/g, d.municipes.name)
+             .replace(/{assunto}/g, d.categoria.toUpperCase())
+             .replace(/{numero}/g, d.numeroIndicacao || '')
+             .replace(/{link}/g, d.documentUrl);
+
     try {
       await api.post('/whatsapp/send-direct', {
         phone: d.municipes.phone,

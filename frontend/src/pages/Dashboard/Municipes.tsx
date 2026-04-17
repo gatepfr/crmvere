@@ -55,6 +55,7 @@ export default function Municipes() {
   const { user } = useAuth();
   const [municipes, setMunicipes] = useState<Municipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cabinetConfig, setCabinetConfig] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
   const [onlyEngaged, setOnlyEngaged] = useState(false);
@@ -102,6 +103,12 @@ export default function Municipes() {
   const loadMunicipes = useCallback(async () => {
     setLoading(true);
     try {
+      // Load config if not loaded
+      if (!cabinetConfig) {
+        const configRes = await api.get('/config/me');
+        setCabinetConfig(configRes.data);
+      }
+
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
@@ -252,7 +259,10 @@ export default function Municipes() {
   };
 
   const handleSendBirthdayMessage = async (m: Municipe) => {
-    const msg = `Olá ${m.name}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈`;
+    const defaultMsg = `Olá ${m.name}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈`;
+    let msg = cabinetConfig?.birthdayMessage || defaultMsg;
+    msg = msg.replace(/{nome}/g, m.name);
+
     try {
       await api.post('/whatsapp/send-direct', {
         phone: m.phone,
