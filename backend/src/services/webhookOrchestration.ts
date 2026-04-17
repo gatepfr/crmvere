@@ -81,13 +81,11 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
         tenantId,
         municipeId: municipe.id,
         resumoIa: updatedHistoryWithCitizen,
-        status: 'nova',
         createdAt: new Date(),
         updatedAt: new Date(),
       }).returning();
       existingAtendimento = newAtendimento;
     }
-
     // Se humano respondeu nos últimos 10min, a IA fica em silêncio e o fluxo termina aqui
     if (isHumanActive) {
       console.log(`[ORCHESTRATOR] IA em standby para ${municipe.name} (Humano ativo)`);
