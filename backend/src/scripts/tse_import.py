@@ -47,12 +47,14 @@ def download_file(url, target_file):
     except: return False
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
-    print(f"--- IMPORTAÇÃO LEVE TSE V19 (ESTADO: {uf}) ---")
+    print(f"--- IMPORTAÇÃO LEVE TSE V20 (ESTADO: {uf}) ---")
     work_dir = f"/app/tse_data_{tenant_id}"
+    if os.path.exists(work_dir): shutil.rmtree(work_dir)
     os.makedirs(work_dir, exist_ok=True)
     
     municipio_norm = normalize_text(municipio_nome)
     nr_cand_norm = normalize_code(nr_candidato)
+    party_prefix = nr_cand_norm[:2]
     
     conn = None
     try:
@@ -65,34 +67,58 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
         url_cand = f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}_{uf}.zip"
         zip_path = os.path.join(work_dir, "cand.zip")
         
-        if download_file(url_cand, zip_path):
+        if not download_file(url_cand, zip_path):
+            download_file(f"https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_{ano}.zip", zip_path)
+
+        cd_municipio_real = None
+        found_party_candidates = []
+
+        if os.path.exists(zip_path):
             with zipfile.ZipFile(zip_path) as z:
                 for filename in z.namelist():
-                    if filename.upper().endswith('.CSV'):
+                    if filename.upper().endswith('.CSV') and 'CONSULTA_CAND' in filename.upper():
+                        print(f"Analisando arquivo: {filename}")
                         with z.open(filename) as f:
-                            # Lê linha por linha (Modo Leve)
-                            reader = csv.DictReader(io.TextIOWrapper(f, encoding='latin1'), delimiter=';')
+                            # Tenta detectar colunas e limpar nomes
+                            wrapper = io.TextIOWrapper(f, encoding='latin1')
+                            reader = csv.DictReader(wrapper, delimiter=';')
+                            
                             for row in reader:
-                                row = {k.upper(): v for k, v in row.items()}
-                                city = normalize_text(row.get('NM_UE') or row.get('NM_MUNICIPIO', ''))
-                                num = normalize_code(row.get('NR_CANDIDATO', ''))
+                                # Limpa nomes das colunas (remove espaços e aspas)
+                                row = {k.strip().upper().replace('"', ''): v for k, v in row.items() if k}
                                 
-                                if city == municipio_norm and num == nr_cand_norm:
-                                    cd_mun = normalize_code(row.get('SG_UE') or row.get('CD_MUNICIPIO', ''))
-                                    name = row.get('NM_URNA_CANDIDATO') or row.get('NM_CANDIDATO', 'CANDIDATO')
-                                    partido = row.get('SG_PARTIDO', '---')
-                                    situacao = row.get('DS_SITUACAO_TOT_TURNO') or row.get('DS_SITUACAO_TOT', '---')
-                                    
-                                    cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, int(ano)))
-                                    cur.execute("INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
-                                               (tenant_id, int(ano), name, num, partido, cd_mun, row.get('NM_UE'), situacao))
-                                    conn.commit()
-                                    
-                                    # INÍCIO DO PROCESSAMENTO DETALHADO
-                                    process_details(cur, conn, tenant_id, int(ano), uf, cd_mun, nr_cand_norm, work_dir)
-                                    report_progress(tenant_id, "Inteligência Gerada com Sucesso!", 100)
-                                    return
+                                city = normalize_text(row.get('NM_UE') or row.get('NM_MUNICIPIO') or '')
+                                num = normalize_code(row.get('NR_CANDIDATO') or '')
+                                
+                                if city == municipio_norm:
+                                    if num.startswith(party_prefix):
+                                        name_cand = row.get('NM_URNA_CANDIDATO') or row.get('NM_CANDIDATO')
+                                        found_party_candidates.append(f"{num} - {name_cand}")
 
+                                    if num == nr_cand_norm:
+                                        cd_mun = normalize_code(row.get('SG_UE') or row.get('CD_MUNICIPIO') or row.get('CD_UE') or '')
+                                        name = row.get('NM_URNA_CANDIDATO') or row.get('NM_CANDIDATO') or 'CANDIDATO'
+                                        partido = row.get('SG_PARTIDO') or '---'
+                                        situacao = row.get('DS_SITUACAO_TOT_TURNO') or row.get('DS_SITUACAO_TOT') or '---'
+                                        
+                                        cur.execute("DELETE FROM tse_candidatos WHERE tenant_id = %s AND ano_eleicao = %s", (tenant_id, int(ano)))
+                                        cur.execute("INSERT INTO tse_candidatos (tenant_id, ano_eleicao, nm_candidato, nr_candidato, sg_partido, cd_municipio, nm_municipio, ds_situacao) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
+                                                   (tenant_id, int(ano), name, num, partido, cd_mun, row.get('NM_UE'), situacao))
+                                        conn.commit()
+                                        cd_municipio_real = cd_mun
+                                        break
+                        if cd_municipio_real: break
+
+        if cd_municipio_real:
+            print(f"Candidato localizado! Código Município: {cd_municipio_real}")
+            process_details(cur, conn, tenant_id, int(ano), uf, cd_municipio_real, nr_cand_norm, work_dir)
+            report_progress(tenant_id, "Inteligência Gerada com Sucesso!", 100)
+            return
+
+        # Se não achou, mostra quem achou do partido para ajudar
+        if found_party_candidates:
+            print(f"Candidatos do partido {party_prefix} em {municipio_norm}: {list(set(found_party_candidates))}")
+        
         raise Exception(f"Candidato {nr_candidato} não encontrado em {municipio_nome}. Verifique os dados.")
 
     except Exception as e:
@@ -117,8 +143,8 @@ def process_details(cur, conn, tenant_id, ano, uf, cd_mun, nr_candidato, work_di
                         reader = csv.DictReader(io.TextIOWrapper(f, encoding='latin1'), delimiter=';')
                         l_data = []
                         for row in reader:
-                            row = {k.upper(): v for k, v in row.items()}
-                            if normalize_code(row.get('CD_MUNICIPIO') or row.get('SG_UE')) == cd_mun:
+                            row = {k.strip().upper().replace('"', ''): v for k, v in row.items() if k}
+                            if normalize_code(row.get('CD_MUNICIPIO') or row.get('SG_UE') or row.get('CD_UE')) == cd_mun:
                                 l_data.append((ano, cd_mun, int(row.get('NR_ZONA', 0)), int(row.get('NR_LOCAL_VOTACAO', 0)), row.get('NM_LOCAL_VOTACAO'), row.get('DS_ENDERECO'), row.get('NM_BAIRRO', 'CENTRO')))
                                 if len(l_data) >= 500:
                                     execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro) VALUES %s", l_data)
@@ -139,8 +165,8 @@ def process_details(cur, conn, tenant_id, ano, uf, cd_mun, nr_candidato, work_di
                         reader = csv.DictReader(io.TextIOWrapper(f, encoding='latin1'), delimiter=';')
                         v_data = []
                         for row in reader:
-                            row = {k.upper(): v for k, v in row.items()}
-                            c_mun = normalize_code(row.get('CD_MUNICIPIO') or row.get('SG_UE'))
+                            row = {k.strip().upper().replace('"', ''): v for k, v in row.items() if k}
+                            c_mun = normalize_code(row.get('CD_MUNICIPIO') or row.get('SG_UE') or row.get('CD_UE'))
                             c_num = normalize_code(row.get('NR_VOTAVEL') or row.get('NR_CANDIDATO'))
                             if c_mun == cd_mun and c_num == nr_candidato:
                                 v_data.append((ano, cd_mun, int(row.get('NR_ZONA', 0)), int(row.get('NR_SECAO', 0)), int(row.get('NR_LOCAL_VOTACAO', 0)), nr_candidato, int(row.get('QT_VOTOS', 0))))
@@ -163,8 +189,8 @@ def process_details(cur, conn, tenant_id, ano, uf, cd_mun, nr_candidato, work_di
                         reader = csv.DictReader(io.TextIOWrapper(f, encoding='latin1'), delimiter=';')
                         p_data = []
                         for row in reader:
-                            row = {k.upper(): v for k, v in row.items()}
-                            if normalize_code(row.get('CD_MUNICIPIO') or row.get('CD_MUN_ESTATISTICO')) == cd_mun:
+                            row = {k.strip().upper().replace('"', ''): v for k, v in row.items() if k}
+                            if normalize_code(row.get('CD_MUNICIPIO') or row.get('CD_MUN_ESTATISTICO') or row.get('CD_UE')) == cd_mun:
                                 qt = int(row.get('QT_ELEITORES_PERFIL') or row.get('QT_ELEITORES', 0))
                                 p_data.append((ano, cd_mun, row.get('NM_BAIRRO', 'CENTRO'), row.get('DS_GENERO', 'NÃO INFORMADO'), row.get('DS_FAIXA_ETARIA', 'NÃO INFORMADO'), row.get('DS_GRAU_ESCOLARIDADE', 'NÃO INFORMADO'), qt))
                                 if len(p_data) >= 1000:
