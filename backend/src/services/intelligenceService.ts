@@ -58,7 +58,9 @@ export const getInfluentialMunicipes = async (tenantId: string, bairro: string) 
 export const identifyStrategicVacuums = async (tenantId: string) => {
   try {
     // 1. Busca o candidato configurado para este tenant
-    const [candidato] = await db.execute(sql`SELECT * FROM tse_candidatos WHERE tenant_id = ${tenantId} LIMIT 1`);
+    const candidatoResult = await db.execute(sql`SELECT * FROM tse_candidatos WHERE tenant_id = ${tenantId} LIMIT 1`);
+    const candidato = candidatoResult.rows[0] as any;
+    
     if (!candidato) return [];
 
     const stats = await db.execute(sql`
