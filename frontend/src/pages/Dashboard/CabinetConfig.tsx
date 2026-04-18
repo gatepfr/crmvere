@@ -15,6 +15,7 @@ export default function CabinetConfig() {
     fotoUrl: '',
     calendarUrl: '',
     birthdayMessage: '',
+    birthdayAutomated: false,
     legislativeMessage: ''
   });
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,7 @@ export default function CabinetConfig() {
           fotoUrl: res.data.fotoUrl || '',
           calendarUrl: res.data.calendarUrl || '',
           birthdayMessage: res.data.birthdayMessage || DEFAULT_BIRTHDAY,
+          birthdayAutomated: res.data.birthdayAutomated || false,
           legislativeMessage: res.data.legislativeMessage || DEFAULT_LEGISLATIVE
         });
       })
@@ -192,7 +194,23 @@ export default function CabinetConfig() {
           <div className="p-8 space-y-6">
             <div className="p-5 bg-pink-50 rounded-2xl border border-pink-100 space-y-4">
               <div className="flex justify-between items-center">
-                <label className="block text-sm font-black text-pink-700 uppercase tracking-tight">🎈 Mensagem de Aniversário</label>
+                <div className="flex items-center gap-4">
+                  <label className="block text-sm font-black text-pink-700 uppercase tracking-tight">🎈 Mensagem de Aniversário</label>
+                  
+                  {/* Toggle Automático */}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer"
+                      checked={config.birthdayAutomated}
+                      onChange={e => setConfig({...config, birthdayAutomated: e.target.checked})}
+                    />
+                    <div className="w-11 h-6 bg-pink-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                    <span className="ms-3 text-xs font-black text-pink-700 uppercase tracking-widest">
+                      {config.birthdayAutomated ? 'Auto (08:00h)' : 'Manual'}
+                    </span>
+                  </label>
+                </div>
                 <span className="text-[10px] font-black text-pink-400 bg-white px-2 py-0.5 rounded border border-pink-100 uppercase">Variável: {'{nome}'}</span>
               </div>
               <textarea 

@@ -39,6 +39,7 @@ export const tenants = pgTable("tenants", {
   tokenUsageTotal: integer("token_usage_total").default(0).notNull(),
   blocked: boolean("blocked").default(false).notNull(),
   birthdayMessage: varchar("birthday_message", { length: 2000 }),
+  birthdayAutomated: boolean("birthday_automated").default(false).notNull(),
   legislativeMessage: varchar("legislative_message", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -18,6 +18,7 @@ import billingRoutes from './routes/billingRoutes';
 import eleicoesRoutes from './routes/eleicoesRoutes';
 import intelligenceRoutes from './routes/intelligenceRoutes';
 import { authenticate } from './middleware/auth';
+import { initAutomations } from './services/automationService';
 import { checkTenant } from './middleware/tenant';
 import { checkSubscription } from './middleware/subscription';
 
@@ -25,6 +26,9 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Inicializa Automações (Cron Jobs)
+initAutomations();
 
 app.use(cors({
   origin: '*', // Permite qualquer origem em desenvolvimento, mas o ideal é listar os domínios
