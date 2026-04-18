@@ -12,12 +12,13 @@ import iconv from 'iconv-lite';
  */
 export const createMunicipe = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  const { name, phone, cep, bairro, birthDate } = req.body;
+  const { name, phone, cep, bairro, birthDate, isLideranca } = req.body;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   try {
     const [newMunicipe] = await db.insert(municipes).values({
       tenantId, name, phone: normalizePhone(phone), cep, bairro,
-      birthDate: birthDate ? new Date(birthDate) : null
+      birthDate: birthDate ? new Date(birthDate) : null,
+      isLideranca: isLideranca || false
     }).returning();
     res.status(201).json(newMunicipe);
   } catch (error: any) {
@@ -45,7 +46,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
     const [totalCount] = await db.select({ count: count() }).from(municipes).where(and(...conds));
     const results = await db.select({ 
       id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro, 
-      birthDate: municipes.birthDate, createdAt: municipes.createdAt, 
+      birthDate: municipes.birthDate, createdAt: municipes.createdAt, isLideranca: municipes.isLideranca,
       demandCount: sql<number>`count(${demandas.id})::int` 
     }).from(municipes).leftJoin(demandas, eq(municipes.id, demandas.municipeId)).where(and(...conds)).groupBy(municipes.id).orderBy(municipes.name).limit(limit).offset(offset);
     
@@ -55,11 +56,12 @@ export const listMunicipes = async (req: Request, res: Response) => {
 
 export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, phone, cep, bairro, birthDate } = req.body;
+  const { name, phone, cep, bairro, birthDate, isLideranca } = req.body;
   try {
     const [u] = await db.update(municipes).set({ 
       name, phone: normalizePhone(phone), cep, bairro, 
-      birthDate: birthDate ? new Date(birthDate) : null 
+      birthDate: birthDate ? new Date(birthDate) : null,
+      isLideranca
     }).where(eq(municipes.id, id)).returning();
     res.json(u);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }

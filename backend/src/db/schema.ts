@@ -67,6 +67,7 @@ export const municipes = pgTable("municipes", {
   cep: varchar("cep", { length: 20 }),
   bairro: varchar("bairro", { length: 255 }),
   birthDate: timestamp("birth_date"),
+  isLideranca: boolean("is_lideranca").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
