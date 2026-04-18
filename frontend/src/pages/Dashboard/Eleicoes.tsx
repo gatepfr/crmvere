@@ -4,30 +4,11 @@ import {
   Zap, 
   BarChart3, 
   MapPin, 
-  Users, 
   Loader2, 
   RefreshCw,
   TrendingUp,
-  School,
-  Map as MapIcon,
-  PieChart as PieIcon,
-  Activity
+  School
 } from 'lucide-react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
-} from 'recharts';
-
-const COLORS = ['#2563eb', '#db2777', '#059669', '#d97706', '#7c3aed', '#4b5563'];
-
-// Componente para ajustar o zoom do mapa quando os dados carregarem
-function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
-  const map = useMap();
-  map.setView(center, zoom);
-  return null;
-}
 
 interface ElectionConfig {
   ano: string;
@@ -245,7 +226,7 @@ export default function Eleicoes() {
       </header>
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-2">
           <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
             <BarChart3 size={20} />
@@ -259,80 +240,6 @@ export default function Eleicoes() {
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase">Principal Bairro</p>
           <h4 className="text-xl font-black text-slate-900 truncate">{data?.bairros?.[0]?.nm_bairro || '---'}</h4>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-2">
-          <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
-            <Users size={20} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase">Situação TSE</p>
-          <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">{data?.candidato?.dsSituacao || 'PENDENTE'}</h4>
-        </div>
-      </div>
-
-      {/* Mapa de Redutos */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">
-            <MapIcon size={16} className="text-blue-600" />
-            Mapa de Redutos (Calor)
-          </h3>
-          <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-            Intensidade por Votos
-          </span>
-        </div>
-        <div className="h-[400px] w-full relative">
-          {data?.mapa?.length > 0 ? (
-            <MapContainer 
-              center={[parseFloat(data.mapa[0].latitude), parseFloat(data.mapa[0].longitude)]} 
-              zoom={13} 
-              style={{ height: '100%', width: '100%' }}
-              scrollWheelZoom={false}
-            >
-              <ChangeView 
-                center={[parseFloat(data.mapa[0].latitude), parseFloat(data.mapa[0].longitude)]} 
-                zoom={13} 
-              />
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              {data.mapa.map((ponto: any, idx: number) => {
-                const lat = parseFloat(ponto.latitude);
-                const lng = parseFloat(ponto.longitude);
-                if (isNaN(lat) || isNaN(lng)) return null;
-
-                // Calcula o raio com base nos votos (mínimo 5, máximo 30)
-                const radius = Math.min(Math.max((ponto.total_votos / data.candidato.qtVotosTotal) * 300, 8), 40);
-
-                return (
-                  <CircleMarker
-                    key={idx}
-                    center={[lat, lng]}
-                    radius={radius}
-                    pathOptions={{
-                      fillColor: '#2563eb',
-                      color: '#1d4ed8',
-                      weight: 1,
-                      opacity: 0.8,
-                      fillOpacity: 0.4
-                    }}
-                  >
-                    <Popup>
-                      <div className="p-1">
-                        <p className="text-xs font-black text-slate-900 uppercase">{ponto.nm_local_votacao}</p>
-                        <p className="text-lg font-black text-blue-600">{ponto.total_votos} votos</p>
-                      </div>
-                    </Popup>
-                  </CircleMarker>
-                );
-              })}
-            </MapContainer>
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/50 gap-3">
-              <MapPin size={32} className="text-slate-300" />
-              <p className="text-slate-400 font-bold text-sm">Aguardando coordenadas para gerar mapa...</p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -373,79 +280,6 @@ export default function Eleicoes() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Perfil Demográfico */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gênero e Escolaridade */}
-        <div className="space-y-6">
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2 mb-6">
-              <PieIcon size={16} className="text-pink-500" />
-              Distribuição por Gênero
-            </h3>
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data?.perfil?.genero}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    nameKey="label"
-                    label
-                  >
-                    {data?.perfil?.genero?.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2 mb-6">
-              <Activity size={16} className="text-emerald-500" />
-              Nível de Escolaridade
-            </h3>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data?.perfil?.escolaridade?.slice(0, 6)} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="label" type="category" width={150} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                  <Tooltip cursor={{ fill: '#f8fafc' }} />
-                  <Bar dataKey="value" fill="#059669" radius={[0, 4, 4, 0]} barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Faixa Etária */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-          <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2 mb-6">
-            <TrendingUp size={16} className="text-blue-600" />
-            Perfil por Faixa Etária
-          </h3>
-          <div className="h-[600px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data?.perfil?.idade} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="label" type="category" width={120} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} />
-                <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} barSize={15} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
         </div>
       </div>
     </div>
