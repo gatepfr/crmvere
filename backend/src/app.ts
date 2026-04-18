@@ -16,6 +16,7 @@ import mapRoutes from './routes/mapRoutes';
 import aiRoutes from './routes/aiRoutes';
 import billingRoutes from './routes/billingRoutes';
 import eleicoesRoutes from './routes/eleicoesRoutes';
+import intelligenceRoutes from './routes/intelligenceRoutes';
 import { authenticate } from './middleware/auth';
 import { checkTenant } from './middleware/tenant';
 import { checkSubscription } from './middleware/subscription';
@@ -64,6 +65,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/eleicoes', eleicoesRoutes);
+app.use('/api/intelligence', intelligenceRoutes);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
