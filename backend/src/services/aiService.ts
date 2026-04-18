@@ -286,20 +286,30 @@ export async function generateStrategicContent(
   config: AIConfig
 ): Promise<{ reels: string, post: string }> {
   const prompt = `
-    Você é um estrategista de marketing político digital para um vereador.
-    Sua tarefa é criar conteúdo para o bairro: ${bairro}.
-    A principal demanda/conquista nessa região é: ${demandaPrincipal}.
+    Você é um estrategista de marketing político digital sênior, especialista em campanhas para vereadores.
+    Sua tarefa é criar um conteúdo de ALTO IMPACTO para o bairro: ${bairro}.
+    O foco central é: ${demandaPrincipal}.
 
-    Gere:
-    1. Um roteiro curto (30-60s) para um Reels/TikTok.
-    2. Uma legenda para post de Instagram/WhatsApp.
+    DIRETRIZES PARA O ROTEIRO DE REELS (VÍDEO CURTO):
+    - Gancho (0-3s): Comece com uma pergunta ou afirmação forte sobre o bairro ${bairro}.
+    - Meio (3-20s): Fale sobre como o gabinete está trabalhando na demanda de ${demandaPrincipal}. Use "nós", "juntos", "resultado".
+    - Encerramento (20-30s): Chamada para ação direta (ex: "comente aqui o que você acha", "compartilhe com seu vizinho").
+    - Tom: Energético, presente e resolutivo.
 
-    Responda em formato JSON:
+    DIRETRIZES PARA A LEGENDA DO POST:
+    - Headline impactante com emoji.
+    - Texto que gere sentimento de pertencimento ao bairro ${bairro}.
+    - Use bullet points para listar os benefícios ou o que foi feito.
+    - Termine pedindo a opinião do seguidor.
+    - Use hashtags estratégicas.
+
+    Responda EXCLUSIVAMENTE em formato JSON puro (sem markdown):
     {
-      "reels": "texto do roteiro",
-      "post": "texto da legenda"
+      "reels": "Texto detalhado do roteiro com indicações de cena entre colchetes",
+      "post": "Texto completo da legenda formatado para Instagram"
     }
   `;
+
 
   let responseText = "";
 
