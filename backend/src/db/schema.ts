@@ -176,7 +176,31 @@ export const systemConfigs = pgTable("system_configs", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// --- MÓDULO DE INTELIGÊNCIA ELEITORAL (TSE) ---
+// --- MÓDULO DE INTELIGÊNCIA ELEITORAL v3 (ESTRATÉGIA TERRITORIAL) ---
+
+export const territorialGoals = pgTable("territorial_goals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  ano: integer("ano").notNull(),
+  nmBairro: varchar("nm_bairro", { length: 255 }).notNull(),
+  metaVotos: integer("meta_votos").default(0),
+  metaContatos: integer("meta_contatos").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const intelligenceActionTypeEnum = pgEnum("intelligence_action_type", ["vacuo", "meta_nao_batida"]);
+export const intelligenceActionStatusEnum = pgEnum("intelligence_action_status", ["pendente", "executada"]);
+
+export const territorialIntelligenceActions = pgTable("territorial_intelligence_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  nmBairro: varchar("nm_bairro", { length: 255 }).notNull(),
+  tipoAcao: intelligenceActionTypeEnum("tipo_acao").notNull(),
+  status: intelligenceActionStatusEnum("status").default("pendente").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// --- MÓDULO DE INTELIGÊNCIA ELEITORAL (TSE - HISTÓRICO) ---
 
 export const tseCandidatos = pgTable("tse_candidatos", {
   id: uuid("id").primaryKey().defaultRandom(),
