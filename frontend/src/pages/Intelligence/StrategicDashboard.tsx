@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Target, TrendingUp, ShieldCheck, Map as MapIcon, AlertTriangle, Zap, X, Copy, Phone, UserCheck, CheckSquare, Square, MessageCircle } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Target, TrendingUp, ShieldCheck, Map as MapIcon, AlertTriangle, Zap, X, Copy, Phone, UserCheck, CheckSquare, Square, MessageCircle, ArrowUpDown } from 'lucide-react';
 import api from '../../api/client';
 
 interface StrategicItem {
@@ -17,6 +17,8 @@ interface ActionPlanResult {
   aiSuggestion: { reels: string; post: string };
 }
 
+type SortField = 'bairro' | 'total_votos' | 'total_contatos' | 'conversion_rate';
+
 export default function StrategicDashboard() {
   const [data, setData] = useState<StrategicItem[]>([]);
   const [stats, setStats] = useState({ vacuums: 0, potential: 0, consolidated: 0 });
@@ -24,6 +26,8 @@ export default function StrategicDashboard() {
   const [activePlan, setActivePlan] = useState<ActionPlanResult | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [selectedAliados, setSelectedAliados] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<SortField>('total_votos');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     fetchData();
@@ -41,12 +45,30 @@ export default function StrategicDashboard() {
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      const modifier = sortDirection === 'asc' ? 1 : -1;
+      if (a[sortField] < b[sortField]) return -1 * modifier;
+      if (a[sortField] > b[sortField]) return 1 * modifier;
+      return 0;
+    });
+  }, [data, sortField, sortDirection]);
+
   const executePlan = async (bairro: string) => {
     setExecuting(bairro);
     try {
       const response = await api.post('/intelligence/action/execute', { bairro });
       setActivePlan(response.data);
-      setSelectedAliados([]); // Reset selection
+      setSelectedAliados([]);
     } catch (error) {
       alert('Erro ao ativar plano de expansão.');
     } finally {
@@ -87,12 +109,11 @@ export default function StrategicDashboard() {
   const sendBulkWhatsApp = () => {
     if (selectedAliados.length === 0) return;
     const message = encodeURIComponent(activePlan?.aiSuggestion.post || "");
-    // Para múltiplos, abrimos um por um ou geramos link de API (o ideal é um por um para não bloquear)
     selectedAliados.forEach((phone, index) => {
       const cleanPhone = phone.replace(/\D/g, '');
       setTimeout(() => {
         window.open(`https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55'+cleanPhone}?text=${message}`, '_blank');
-      }, index * 500); // Delay pequeno para evitar bloqueio de popup
+      }, index * 500);
     });
   };
 
@@ -155,21 +176,29 @@ export default function StrategicDashboard() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="p-6">Território</th>
-                <th className="p-6 text-center">Votos Urna</th>
-                <th className="p-6 text-center">Contatos CRM</th>
-                <th className="p-6 text-center">Conversão</th>
+                <th className="p-6 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('bairro')}>
+                  <div className="flex items-center gap-2">Território <ArrowUpDown size={12} /></div>
+                </th>
+                <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('total_votos')}>
+                  <div className="flex items-center justify-center gap-2">Votos Urna <ArrowUpDown size={12} /></div>
+                </th>
+                <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('total_contatos')}>
+                  <div className="flex items-center justify-center gap-2">Contatos CRM <ArrowUpDown size={12} /></div>
+                </th>
+                <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('conversion_rate')}>
+                  <div className="flex items-center justify-center gap-2">Conversão <ArrowUpDown size={12} /></div>
+                </th>
                 <th className="p-6 text-right">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {data.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-20 text-center text-slate-300 font-black text-xs uppercase tracking-widest">
                     Aguardando dados do TSE...
                   </td>
                 </tr>
-              ) : data.map((item) => (
+              ) : sortedData.map((item) => (
                 <tr key={item.bairro} className={`group hover:bg-blue-50/30 transition-all ${item.category === 'VACUO' ? 'bg-red-50/20' : ''}`}>
                   <td className="p-6">
                     <div className="font-black text-slate-900 text-base">{item.bairro}</div>
