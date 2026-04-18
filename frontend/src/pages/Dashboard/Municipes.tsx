@@ -25,7 +25,8 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-  Check
+  Check,
+  Calendar
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -68,12 +69,6 @@ export default function Municipes() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
   const [displayCreatePhone, setDisplayCreatePhone] = useState('');
-
-  // Import Modal State
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [mapping, setMapping] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
 
   // Edit Modal State
   const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
@@ -181,8 +176,8 @@ export default function Municipes() {
   const applyDateMask = (value: string) => {
     const raw = value.replace(/\D/g, '').slice(0, 8);
     let masked = raw;
-    if (raw.length > 2) masked = `${raw.slice(0, 2)}/${raw.slice(2)}`;
-    if (raw.length > 4) masked = `${raw.slice(0, 2)}/${raw.slice(2, 4)}/${raw.slice(4)}`;
+    if (raw.length > 2) masked = `${raw.slice(0, 2)}/${raw.slice(2, 4)}`;
+    if (raw.length > 4) masked = `${raw.slice(0, 2)}/${raw.slice(2, 4)}/${raw.slice(4, 8)}`;
     return masked;
   };
 
@@ -193,7 +188,7 @@ export default function Municipes() {
   };
 
   const applyPhoneMask = (value: string, type: 'create' | 'edit') => {
-    const raw = value.replace(/\D/g, '');
+    const raw = value.replace(/\D/g, '').slice(0, 11);
     let masked = raw;
     if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
     if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
@@ -203,6 +198,34 @@ export default function Municipes() {
     } else {
       setDisplayEditPhone(masked);
       setEditForm(prev => ({ ...prev, phone: raw.startsWith('55') ? raw : `55${raw}` }));
+    }
+  };
+
+  const handleCepChange = async (value: string, type: 'create' | 'edit') => {
+    const raw = value.replace(/\D/g, '').substring(0, 8);
+    let masked = raw;
+    if (raw.length > 5) masked = `${raw.slice(0, 5)}-${raw.slice(5)}`;
+    
+    if (type === 'create') {
+      setCreateForm(prev => ({ ...prev, cep: masked }));
+    } else {
+      setEditForm(prev => ({ ...prev, cep: masked }));
+    }
+
+    if (raw.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
+        const data = await response.json();
+        if (!data.erro && data.bairro) {
+          if (type === 'create') {
+            setCreateForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
+          } else {
+            setEditForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao buscar CEP:', err);
+      }
     }
   };
 
@@ -312,15 +335,29 @@ export default function Municipes() {
             </div>
             
             <form onSubmit={editingMunicipe ? (e) => { e.preventDefault(); handleSaveEdit(); } : handleCreateMunicipe} className="p-8 space-y-5">
+              {/* Nome */}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
                 <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? editForm.name : createForm.name} onChange={e => editingMunicipe ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})} />
               </div>
 
+              {/* WhatsApp e Nascimento */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
                   <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? displayEditPhone : displayCreatePhone} onChange={e => applyPhoneMask(e.target.value, editingMunicipe ? 'edit' : 'create')} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nascimento</label>
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/AAAA" value={editingMunicipe ? editForm.birthDate : createForm.birthDate} onChange={e => editingMunicipe ? setEditForm({...editForm, birthDate: applyDateMask(e.target.value)}) : setCreateForm({...createForm, birthDate: applyDateMask(e.target.value)})} maxLength={10} />
+                </div>
+              </div>
+
+              {/* CEP e Bairro */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">CEP</label>
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="00000-000" value={editingMunicipe ? editForm.cep : createForm.cep} onChange={e => handleCepChange(e.target.value, editingMunicipe ? 'edit' : 'create')} maxLength={9} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
@@ -328,8 +365,8 @@ export default function Municipes() {
                 </div>
               </div>
 
-              {/* Liderança Checkbox na parte inferior */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+              {/* Liderança Checkbox */}
+              <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-100 rounded-2xl mt-2">
                 <div className="flex items-center gap-3">
                   <Star className={`${(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? 'text-amber-500' : 'text-slate-300'}`} size={20} fill={(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? "currentColor" : "none"} />
                   <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Marcar como Liderança</span>
