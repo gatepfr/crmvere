@@ -205,9 +205,9 @@ export default function StrategicDashboard() {
                       <div className="font-black text-slate-900 text-base">{item.bairro}</div>
                       <div className="flex gap-2 mt-1">
                         <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase ${
-                          item.category === 'VACUO' ? 'bg-red-500 text-white' :
-                          item.category === 'POTENCIAL' ? 'bg-blue-500 text-white' :
-                          'bg-slate-800 text-white'
+                          item.category === 'VACUO' ? 'bg-red-100 text-red-700' :
+                          item.category === 'POTENCIAL' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-green-100 text-green-700'
                         }`}>
                           {item.category}
                         </span>
@@ -219,7 +219,7 @@ export default function StrategicDashboard() {
                       <div className="flex flex-col items-center gap-1">
                         <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
                           <div 
-                            className={`h-full rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-blue-600'}`} 
+                            className={`h-full rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-green-500'}`} 
                             style={{ width: `${Math.min(item.conversion_rate * 100, 100)}%` }}
                           ></div>
                         </div>
