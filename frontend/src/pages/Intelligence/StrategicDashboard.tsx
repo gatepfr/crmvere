@@ -122,18 +122,18 @@ export default function StrategicDashboard() {
     alert('Copiado para a área de transferência!');
   };
 
-  if (loading) return <div className="p-10 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest text-xs">Carregando inteligência estratégica...</div>;
+  if (loading) return <div className="p-10 font-bold text-slate-400 animate-pulse uppercase tracking-widest text-xs">Carregando inteligência estratégica...</div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto animate-in fade-in duration-700">
-      <div className="mb-8 text-center lg:text-left">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight flex flex-col lg:flex-row items-center gap-3">
+    <div className="p-6 max-w-7xl animate-in fade-in duration-700">
+      <div className="mb-8 text-left">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
           <div className="bg-blue-600 p-2 rounded-2xl shadow-lg shadow-blue-200">
             <Target className="text-white" size={32} />
           </div>
           Estratégia Territorial
         </h1>
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Inteligência de Expansão de Mandato</p>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">Inteligência de Expansão de Mandato</p>
       </div>
 
       {/* Stats Grid */}
@@ -166,87 +166,116 @@ export default function StrategicDashboard() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-[2rem] overflow-hidden shadow-xl shadow-slate-100/50">
-        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-          <div className="font-black text-[10px] uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <MapIcon size={14} className="text-blue-500" /> Ranking de Prioridade Territorial
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2rem] overflow-hidden shadow-xl shadow-slate-100/50">
+          <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
+            <div className="font-black text-[10px] uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <MapIcon size={14} className="text-blue-500" /> Ranking de Prioridade Territorial
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                <tr>
+                  <th className="p-6 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('bairro')}>
+                    <div className="flex items-center gap-2">Território <ArrowUpDown size={12} /></div>
+                  </th>
+                  <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('total_votos')}>
+                    <div className="flex items-center justify-center gap-2">Votos Urna <ArrowUpDown size={12} /></div>
+                  </th>
+                  <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('total_contatos')}>
+                    <div className="flex items-center justify-center gap-2">Contatos CRM <ArrowUpDown size={12} /></div>
+                  </th>
+                  <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('conversion_rate')}>
+                    <div className="flex items-center justify-center gap-2">Conversão <ArrowUpDown size={12} /></div>
+                  </th>
+                  <th className="p-6 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {sortedData.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-20 text-center text-slate-300 font-black text-xs uppercase tracking-widest">
+                      Aguardando dados do TSE...
+                    </td>
+                  </tr>
+                ) : sortedData.map((item) => (
+                  <tr key={item.bairro} className={`group hover:bg-blue-50/30 transition-all ${item.category === 'VACUO' ? 'bg-red-50/20' : ''}`}>
+                    <td className="p-6">
+                      <div className="font-black text-slate-900 text-base">{item.bairro}</div>
+                      <div className="flex gap-2 mt-1">
+                        <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase ${
+                          item.category === 'VACUO' ? 'bg-red-500 text-white' :
+                          item.category === 'POTENCIAL' ? 'bg-blue-500 text-white' :
+                          'bg-slate-800 text-white'
+                        }`}>
+                          {item.category}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-6 text-center font-black text-slate-600">{item.total_votos.toLocaleString()}</td>
+                    <td className="p-6 text-center font-black text-slate-600">{item.total_contatos.toLocaleString()}</td>
+                    <td className="p-6 text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-blue-600'}`} 
+                            style={{ width: `${Math.min(item.conversion_rate * 100, 100)}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400">{(item.conversion_rate * 100).toFixed(1)}%</span>
+                      </div>
+                    </td>
+                    <td className="p-6 text-right">
+                      <button 
+                        onClick={() => executePlan(item.bairro)}
+                        disabled={!!executing}
+                        className={`p-4 rounded-2xl transition-all shadow-lg ${
+                          executing === item.bairro 
+                            ? 'bg-slate-100 text-slate-300' 
+                            : 'bg-slate-900 text-white hover:bg-blue-600 hover:scale-105 active:scale-95 shadow-slate-200'
+                        }`}
+                      >
+                        <Zap size={20} fill={executing === item.bairro ? 'transparent' : 'currentColor'} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-              <tr>
-                <th className="p-6 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('bairro')}>
-                  <div className="flex items-center gap-2">Território <ArrowUpDown size={12} /></div>
-                </th>
-                <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('total_votos')}>
-                  <div className="flex items-center justify-center gap-2">Votos Urna <ArrowUpDown size={12} /></div>
-                </th>
-                <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('total_contatos')}>
-                  <div className="flex items-center justify-center gap-2">Contatos CRM <ArrowUpDown size={12} /></div>
-                </th>
-                <th className="p-6 text-center cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('conversion_rate')}>
-                  <div className="flex items-center justify-center gap-2">Conversão <ArrowUpDown size={12} /></div>
-                </th>
-                <th className="p-6 text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {sortedData.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-20 text-center text-slate-300 font-black text-xs uppercase tracking-widest">
-                    Aguardando dados do TSE...
-                  </td>
-                </tr>
-              ) : sortedData.map((item) => (
-                <tr key={item.bairro} className={`group hover:bg-blue-50/30 transition-all ${item.category === 'VACUO' ? 'bg-red-50/20' : ''}`}>
-                  <td className="p-6">
-                    <div className="font-black text-slate-900 text-base">{item.bairro}</div>
-                    <div className="flex gap-2 mt-1">
-                      <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase ${
-                        item.category === 'VACUO' ? 'bg-red-500 text-white' :
-                        item.category === 'POTENCIAL' ? 'bg-blue-500 text-white' :
-                        'bg-slate-800 text-white'
-                      }`}>
-                        {item.category}
-                      </span>
-                      {item.priority === 'URGENTE' && (
-                        <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase bg-orange-100 text-orange-600 animate-pulse">
-                          Ação Imediata
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-6 text-center font-black text-slate-600">{item.total_votos.toLocaleString()}</td>
-                  <td className="p-6 text-center font-black text-slate-600">{item.total_contatos.toLocaleString()}</td>
-                  <td className="p-6 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-blue-600'}`} 
-                          style={{ width: `${Math.min(item.conversion_rate * 100, 100)}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-[10px] font-black text-slate-400">{(item.conversion_rate * 100).toFixed(1)}%</span>
-                    </div>
-                  </td>
-                  <td className="p-6 text-right">
-                    <button 
-                      onClick={() => executePlan(item.bairro)}
-                      disabled={!!executing}
-                      className={`p-4 rounded-2xl transition-all shadow-lg ${
-                        executing === item.bairro 
-                          ? 'bg-slate-100 text-slate-300' 
-                          : 'bg-slate-900 text-white hover:bg-blue-600 hover:scale-105 active:scale-95 shadow-slate-200'
-                      }`}
-                    >
-                      <Zap size={20} fill={executing === item.bairro ? 'transparent' : 'currentColor'} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        {/* Lateral: Explicação Combo D */}
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+              <Zap size={100} />
+            </div>
+            
+            <h4 className="font-black text-xl mb-4 flex items-center gap-2 relative z-10 uppercase tracking-tighter">
+              O que é o <br/>Combo D?
+            </h4>
+            
+            <p className="text-blue-100 text-sm mb-6 font-bold leading-relaxed relative z-10">
+              Uma orquestração automática que prepara o terreno no bairro:
+            </p>
+            
+            <ul className="text-xs space-y-5 relative z-10">
+              <li className="flex gap-4">
+                <span className="bg-white/20 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0">1</span>
+                <span className="leading-tight"><strong>Mailing VIP:</strong> Seleciona as lideranças para contato imediato via WhatsApp.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="bg-white/20 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0">2</span>
+                <span className="leading-tight"><strong>Equipe:</strong> Cria tarefa de visita territorial no Kanban para os assessores.</span>
+              </li>
+              <li className="flex gap-4">
+                <span className="bg-white/20 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0">3</span>
+                <span className="leading-tight"><strong>IA Criativa:</strong> Gera roteiros de conteúdo específicos para o bairro.</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -265,7 +294,6 @@ export default function StrategicDashboard() {
             </header>
 
             <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Coluna 1: Conteúdo Estratégico */}
               <div className="space-y-8">
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                   <Zap size={18} className="text-blue-600" />
@@ -295,7 +323,6 @@ export default function StrategicDashboard() {
                 </div>
               </div>
 
-              {/* Coluna 2: Lideranças */}
               <div className="space-y-8">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
