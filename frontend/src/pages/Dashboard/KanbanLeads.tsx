@@ -372,6 +372,28 @@ export default function KanbanLeads() {
     }
   };
 
+  const handleDeleteCampaign = async () => {
+    if (!selectedCampaignId) return;
+    const campaign = campaigns.find(c => c.id === selectedCampaignId);
+    if (!campaign) return;
+
+    if (!confirm(`Deseja excluir permanentemente o quadro "${campaign.name}" e todas as suas colunas e leads?`)) return;
+
+    try {
+      await api.delete(`/kanban/campaigns/${selectedCampaignId}`);
+      const remainingCampaigns = campaigns.filter(c => c.id !== selectedCampaignId);
+      setCampaigns(remainingCampaigns);
+      if (remainingCampaigns.length > 0) {
+        setSelectedCampaignId(remainingCampaigns[0].id);
+      } else {
+        setSelectedCampaignId('');
+      }
+      alert('Quadro excluído com sucesso');
+    } catch (err) {
+      alert('Falha ao excluir quadro');
+    }
+  };
+
   if (loading && campaigns.length > 0) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-blue-600" size={40} /></div>;
 
   return (
@@ -403,6 +425,15 @@ export default function KanbanLeads() {
           >
             {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          {selectedCampaignId && (
+            <button 
+              onClick={handleDeleteCampaign}
+              className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-sm"
+              title="Excluir Quadro"
+            >
+              <Trash2 size={20} />
+            </button>
+          )}
           <button 
             onClick={handleCreateCampaign}
             className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 shadow-sm"

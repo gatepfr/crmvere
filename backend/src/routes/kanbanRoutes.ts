@@ -216,4 +216,27 @@ router.delete('/leads/:id', async (req, res) => {
   }
 });
 
+// Delete Campaign
+router.delete('/campaigns/:id', async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  const { id } = req.params;
+  
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  try {
+    // Delete campaign (columns and leads will be deleted via cascade or manually if not set)
+    // Checking first if it belongs to tenant
+    const [campaign] = await db.select().from(campaigns).where(and(eq(campaigns.id, id), eq(campaigns.tenantId, tenantId)));
+    
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+
+    await db.delete(campaigns).where(eq(campaigns.id, id));
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting campaign:', error);
+    res.status(500).json({ error: 'Failed to delete campaign' });
+  }
+});
+
 export default router;
