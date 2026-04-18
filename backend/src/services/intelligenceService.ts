@@ -1,6 +1,7 @@
 import { db } from '../db';
-import { atendimentos, municipes } from '../db/schema';
-import { eq, sql, count, and } from 'drizzle-orm';
+import { atendimentos, municipes, tenants, campaigns, campaignColumns, leads, demandas } from '../db/schema';
+import { eq, sql, count, and, desc } from 'drizzle-orm';
+import { generateStrategicContent } from './aiService';
 
 /**
  * Lógica central de pontuação de influência de um munícipe.
@@ -44,7 +45,7 @@ export const getInfluentialMunicipes = async (tenantId: string, bairro: string) 
     return results.rows.map((row: any) => ({
       ...row,
       influence_score: calculateInfluenceScore(row.atendimentos_concluidos, row.is_lideranca)
-    })).sort((a, b) => b.influence_score - a.influence_score);
+    })).sort((a: any, b: any) => b.influence_score - a.influence_score);
   } catch (error) {
     console.error('[INTELLIGENCE SERVICE] Error fetching influential municipes:', error);
     return [];
@@ -127,29 +128,64 @@ export const identifyStrategicVacuums = async (tenantId: string) => {
 };
 
 /**
- * Orquestra o "Combo D": Plano de Ação Completo.
+ * Orquestra o "Combo D": Plano de Ação Completo Real.
  */
 export const executeExpansionPlan = async (tenantId: string, bairro: string) => {
   try {
-    // 1. Identificar Aliados influentes no bairro
+    // 1. Buscar Configurações de IA do Tenant
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+    
+    // 2. Identificar a principal demanda do bairro para contextualizar a IA
+    const topDemanda = await db.execute(sql`
+      SELECT categoria, COUNT(*) as qtd 
+      FROM demandas 
+      WHERE tenant_id = ${tenantId} AND UPPER(descricao) LIKE ${'%' + bairro.toUpperCase() + '%'}
+      GROUP BY 1 ORDER BY 2 DESC LIMIT 1
+    `);
+    const demandaPrincipal = topDemanda.rows[0]?.categoria || "Melhorias Gerais";
+
+    // 3. Chamar a IA Real para gerar conteúdo
+    let aiContent = { reels: "", post: "" };
+    if (tenant?.aiApiKey) {
+      aiContent = await generateStrategicContent(bairro, demandaPrincipal, {
+        provider: tenant.aiProvider as any,
+        apiKey: tenant.aiApiKey,
+        model: tenant.aiModel || 'gemini-1.5-flash',
+        systemPrompt: tenant.systemPrompt || ''
+      });
+    }
+
+    // 4. Criar Campanha e Tarefa no Kanban (Funil de Leads)
+    let [campanha] = await db.select().from(campaigns).where(and(eq(campaigns.tenantId, tenantId), eq(campaigns.name, 'Estratégia Territorial'))).limit(1);
+    if (!campanha) {
+      [campanha] = await db.insert(campaigns).values({ tenantId, name: 'Estratégia Territorial' }).returning();
+      const cols = ['Planejamento', 'Em Visita', 'Concluído'];
+      for (let i = 0; i < cols.length; i++) {
+        await db.insert(campaignColumns).values({ campaignId: campanha.id, name: cols[i], order: i });
+      }
+    }
+
+    const [coluna] = await db.select().from(campaignColumns).where(eq(campaignColumns.campaignId, campanha.id)).orderBy(campaignColumns.order).limit(1);
+    
+    await db.insert(leads).values({
+      tenantId,
+      campaignId: campanha.id,
+      columnId: coluna.id,
+      name: `VISITA: ${bairro.toUpperCase()}`,
+      notes: `Plano de Expansão gerado via Inteligência Eleitoral.\n\nDemanda Foco: ${demandaPrincipal}\n\nROTEIRO IA:\n${aiContent.reels}\n\nLEGENDA IA:\n${aiContent.post}`
+    });
+
+    // 5. Buscar os Aliados VIPs para o retorno
     const aliados = await getInfluentialMunicipes(tenantId, bairro);
-
-    // 2. Simular criação de tarefa no Kanban (ideal seria injetar o KanbanService)
-    console.log(`[INTELLIGENCE] Criando tarefa no Kanban para visita em ${bairro}`);
-
-    // 3. Gerar sugestão de conteúdo via IA
-    // Em produção: chamar o aiService passando as categorias de demandas do bairro
-    const aiSuggestion = {
-      roteiro_reels: `Roteiro: Falar sobre as melhorias em ${bairro} e pedir apoio aos lideres locais.`,
-      post_whatsapp: `Olá vizinhos de ${bairro}, o gabinete está atuando firme na região...`
-    };
 
     return {
       status: 'success',
       bairro,
-      aliados: aliados.length,
-      tasks: 1,
-      aiSuggestion
+      aliados: aliados.map((a: any) => ({ name: a.name, phone: a.phone, score: a.influence_score })),
+      aiSuggestion: {
+        reels: aiContent.reels,
+        post: aiContent.post
+      }
     };
   } catch (error) {
     console.error('[INTELLIGENCE SERVICE] Error executing expansion plan:', error);

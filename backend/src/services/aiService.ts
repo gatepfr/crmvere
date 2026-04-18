@@ -276,3 +276,59 @@ try {
     throw error;
   }
 }
+
+/**
+ * Gera roteiros de marketing político (Reels/Posts) baseados no bairro e demandas locais.
+ */
+export async function generateStrategicContent(
+  bairro: string,
+  demandaPrincipal: string,
+  config: AIConfig
+): Promise<{ reels: string, post: string }> {
+  const prompt = `
+    Você é um estrategista de marketing político digital para um vereador.
+    Sua tarefa é criar conteúdo para o bairro: ${bairro}.
+    A principal demanda/conquista nessa região é: ${demandaPrincipal}.
+
+    Gere:
+    1. Um roteiro curto (30-60s) para um Reels/TikTok.
+    2. Uma legenda para post de Instagram/WhatsApp.
+
+    Responda em formato JSON:
+    {
+      "reels": "texto do roteiro",
+      "post": "texto da legenda"
+    }
+  `;
+
+  let responseText = "";
+
+  try {
+    if (config.provider === 'gemini') {
+      const genAI = new GoogleGenerativeAI(config.apiKey);
+      const model = genAI.getGenerativeModel({ model: config.model || "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      responseText = response.text();
+    } else {
+      const openai = new OpenAI({ apiKey: config.apiKey, baseURL: config.aiBaseUrl || undefined });
+      const completion = await openai.chat.completions.create({
+        model: config.model || "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+      });
+      responseText = completion.choices[0]?.message.content || "";
+    }
+
+    // Extração simples de JSON
+    const firstBrace = responseText.indexOf('{');
+    const lastBrace = responseText.lastIndexOf('}');
+    const cleanJson = responseText.substring(firstBrace, lastBrace + 1);
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error('[AI SERVICE] Error generating strategic content:', error);
+    return { 
+      reels: `Fale sobre as melhorias em ${bairro}.`, 
+      post: `Estamos atuando firme no bairro ${bairro}!` 
+    };
+  }
+}
