@@ -142,7 +142,8 @@ export const executeExpansionPlan = async (tenantId: string, bairro: string) => 
       WHERE tenant_id = ${tenantId} AND UPPER(descricao) LIKE ${'%' + bairro.toUpperCase() + '%'}
       GROUP BY 1 ORDER BY 2 DESC LIMIT 1
     `);
-    const demandaPrincipal = topDemanda.rows[0]?.categoria || "Melhorias Gerais";
+    const row = topDemanda.rows[0] as any;
+    const demandaPrincipal = (row?.categoria as string) || "Melhorias Gerais";
 
     // 3. Chamar a IA Real para gerar conteúdo
     let aiContent = { reels: "", post: "" };
