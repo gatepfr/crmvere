@@ -282,6 +282,9 @@ export default function Municipes() {
           <button onClick={() => setOnlyLideranca(!onlyLideranca)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyLideranca ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
             Lideranças
           </button>
+          <button onClick={() => setOnlyBirthdays(!onlyBirthdays)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyBirthdays ? 'bg-pink-500 border-pink-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
+            🎂 Hoje
+          </button>
         </div>
       </div>
 
@@ -335,13 +338,11 @@ export default function Municipes() {
             </div>
             
             <form onSubmit={editingMunicipe ? (e) => { e.preventDefault(); handleSaveEdit(); } : handleCreateMunicipe} className="p-8 space-y-5">
-              {/* Nome */}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
                 <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? editForm.name : createForm.name} onChange={e => editingMunicipe ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})} />
               </div>
 
-              {/* WhatsApp e Nascimento */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
@@ -353,7 +354,6 @@ export default function Municipes() {
                 </div>
               </div>
 
-              {/* CEP e Bairro */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">CEP</label>
@@ -365,7 +365,6 @@ export default function Municipes() {
                 </div>
               </div>
 
-              {/* Liderança Checkbox */}
               <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-100 rounded-2xl mt-2">
                 <div className="flex items-center gap-3">
                   <Star className={`${(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? 'text-amber-500' : 'text-slate-300'}`} size={20} fill={(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? "currentColor" : "none"} />
@@ -382,7 +381,7 @@ export default function Municipes() {
                 </label>
               </div>
 
-              <button type="submit" disabled={saving} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg disabled:opacity-50">
+              <button type="submit" disabled={saving} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg disabled:opacity-50">
                 {saving ? 'Salvando...' : (editingMunicipe ? 'Salvar Alterações' : 'Cadastrar Munícipe')}
               </button>
             </form>
