@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Target, TrendingUp, ShieldCheck, Map as MapIcon, AlertTriangle, Zap, X, Copy, Phone, UserCheck } from 'lucide-react';
+import { Target, TrendingUp, ShieldCheck, Map as MapIcon, AlertTriangle, Zap, X, Copy, Phone, UserCheck, CheckSquare, Square, MessageCircle } from 'lucide-react';
 import api from '../../api/client';
 
 interface StrategicItem {
@@ -23,6 +23,7 @@ export default function StrategicDashboard() {
   const [loading, setLoading] = useState(true);
   const [activePlan, setActivePlan] = useState<ActionPlanResult | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
+  const [selectedAliados, setSelectedAliados] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -45,11 +46,54 @@ export default function StrategicDashboard() {
     try {
       const response = await api.post('/intelligence/action/execute', { bairro });
       setActivePlan(response.data);
+      setSelectedAliados([]); // Reset selection
     } catch (error) {
       alert('Erro ao ativar plano de expansão.');
     } finally {
       setExecuting(null);
     }
+  };
+
+  const formatPhone = (phone: string) => {
+    if (!phone) return '';
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('55') && cleaned.length >= 12) {
+      cleaned = cleaned.slice(2);
+    }
+    if (cleaned.length === 10) {
+      cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
+    }
+    if (cleaned.length === 11) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    }
+    return phone;
+  };
+
+  const toggleAliado = (phone: string) => {
+    setSelectedAliados(prev => 
+      prev.includes(phone) ? prev.filter(p => p !== phone) : [...prev, phone]
+    );
+  };
+
+  const selectAllAliados = () => {
+    if (!activePlan) return;
+    if (selectedAliados.length === activePlan.aliados.length) {
+      setSelectedAliados([]);
+    } else {
+      setSelectedAliados(activePlan.aliados.map(a => a.phone));
+    }
+  };
+
+  const sendBulkWhatsApp = () => {
+    if (selectedAliados.length === 0) return;
+    const message = encodeURIComponent(activePlan?.aiSuggestion.post || "");
+    // Para múltiplos, abrimos um por um ou geramos link de API (o ideal é um por um para não bloquear)
+    selectedAliados.forEach((phone, index) => {
+      const cleanPhone = phone.replace(/\D/g, '');
+      setTimeout(() => {
+        window.open(`https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55'+cleanPhone}?text=${message}`, '_blank');
+      }, index * 500); // Delay pequeno para evitar bloqueio de popup
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -61,202 +105,229 @@ export default function StrategicDashboard() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto animate-in fade-in duration-700">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-          <Target className="text-blue-600" size={32} />
+      <div className="mb-8 text-center lg:text-left">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight flex flex-col lg:flex-row items-center gap-3">
+          <div className="bg-blue-600 p-2 rounded-2xl shadow-lg shadow-blue-200">
+            <Target className="text-white" size={32} />
+          </div>
           Estratégia Territorial
         </h1>
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Cruzamento de Votos (TSE) vs Engajamento (CRM)</p>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-2">Inteligência de Expansão de Mandato</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-red-100 p-6 rounded-2xl shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-red-600 text-[10px] font-black uppercase tracking-widest">Vácuos Críticos</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-1">{stats.vacuums} Bairros</h3>
-            </div>
-            <div className="bg-red-50 p-2 rounded-xl">
-              <AlertTriangle className="text-red-500" size={20} />
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="bg-white border-2 border-red-50 p-8 rounded-[2rem] shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
+            <AlertTriangle size={80} />
           </div>
-          <p className="mt-2 text-slate-500 text-xs font-bold">Alto volume de votos, baixo CRM.</p>
+          <p className="text-red-600 text-[10px] font-black uppercase tracking-widest mb-1">Vácuos Críticos</p>
+          <h3 className="text-4xl font-black text-slate-900">{stats.vacuums}</h3>
+          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Alto potencial nas urnas</p>
         </div>
 
-        <div className="bg-white border border-blue-100 p-6 rounded-2xl shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-blue-600 text-[10px] font-black uppercase tracking-widest">Potencial</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-1">{stats.potential} Bairros</h3>
-            </div>
-            <div className="bg-blue-50 p-2 rounded-xl">
-              <TrendingUp className="text-blue-500" size={20} />
-            </div>
+        <div className="bg-white border-2 border-blue-50 p-8 rounded-[2rem] shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
+            <TrendingUp size={80} />
           </div>
-          <p className="mt-2 text-slate-500 text-xs font-bold">Crescimento moderado detectado.</p>
+          <p className="text-blue-600 text-[10px] font-black uppercase tracking-widest mb-1">Potencial</p>
+          <h3 className="text-4xl font-black text-slate-900">{stats.potential}</h3>
+          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Crescimento moderado</p>
         </div>
 
-        <div className="bg-white border border-green-100 p-6 rounded-2xl shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-green-600 text-[10px] font-black uppercase tracking-widest">Consolidados</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-1">{stats.consolidated} Bairros</h3>
-            </div>
-            <div className="bg-green-50 p-2 rounded-xl">
-              <ShieldCheck className="text-green-500" size={20} />
-            </div>
+        <div className="bg-white border-2 border-green-50 p-8 rounded-[2rem] shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
+            <ShieldCheck size={80} />
           </div>
-          <p className="mt-2 text-slate-500 text-xs font-bold">Base sólida de apoiadores.</p>
+          <p className="text-green-600 text-[10px] font-black uppercase tracking-widest mb-1">Consolidados</p>
+          <h3 className="text-4xl font-black text-slate-900">{stats.consolidated}</h3>
+          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Base sólida ativa</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-5 border-b border-slate-50 bg-slate-50/50 font-black text-[10px] uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <MapIcon size={14} /> Ranking de Prioridade Territorial
+      <div className="bg-white border border-slate-100 rounded-[2rem] overflow-hidden shadow-xl shadow-slate-100/50">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
+          <div className="font-black text-[10px] uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <MapIcon size={14} className="text-blue-500" /> Ranking de Prioridade Territorial
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50/30 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-50">
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+              <tr>
+                <th className="p-6">Território</th>
+                <th className="p-6 text-center">Votos Urna</th>
+                <th className="p-6 text-center">Contatos CRM</th>
+                <th className="p-6 text-center">Conversão</th>
+                <th className="p-6 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {data.length === 0 ? (
                 <tr>
-                  <th className="p-5">Bairro</th>
-                  <th className="p-5 text-center">Votos (TSE)</th>
-                  <th className="p-5 text-center">Contatos (CRM)</th>
-                  <th className="p-5 text-center">Conversão</th>
-                  <th className="p-5 text-right">Ação</th>
+                  <td colSpan={5} className="p-20 text-center text-slate-300 font-black text-xs uppercase tracking-widest">
+                    Aguardando dados do TSE...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {data.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-10 text-center text-slate-400 font-bold text-sm">
-                      Nenhum dado estratégico disponível.
-                    </td>
-                  </tr>
-                ) : data.map((item) => (
-                  <tr key={item.bairro} className={`group hover:bg-slate-50/50 transition-all ${item.category === 'VACUO' ? 'bg-red-50/20' : ''}`}>
-                    <td className="p-5">
-                      <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.bairro}</div>
-                      <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter ${
-                        item.category === 'VACUO' ? 'bg-red-100 text-red-700' :
-                        item.category === 'POTENCIAL' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
+              ) : data.map((item) => (
+                <tr key={item.bairro} className={`group hover:bg-blue-50/30 transition-all ${item.category === 'VACUO' ? 'bg-red-50/20' : ''}`}>
+                  <td className="p-6">
+                    <div className="font-black text-slate-900 text-base">{item.bairro}</div>
+                    <div className="flex gap-2 mt-1">
+                      <span className={`text-[8px] px-2 py-0.5 rounded-full font-black uppercase ${
+                        item.category === 'VACUO' ? 'bg-red-500 text-white' :
+                        item.category === 'POTENCIAL' ? 'bg-blue-500 text-white' :
+                        'bg-slate-800 text-white'
                       }`}>
                         {item.category}
                       </span>
-                    </td>
-                    <td className="p-5 text-center font-bold text-slate-600 text-sm">{item.total_votos.toLocaleString()}</td>
-                    <td className="p-5 text-center font-bold text-slate-600 text-sm">{item.total_contatos.toLocaleString()}</td>
-                    <td className="p-5 text-center">
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 max-w-[80px] mx-auto overflow-hidden">
+                      {item.priority === 'URGENTE' && (
+                        <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase bg-orange-100 text-orange-600 animate-pulse">
+                          Ação Imediata
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-6 text-center font-black text-slate-600">{item.total_votos.toLocaleString()}</td>
+                  <td className="p-6 text-center font-black text-slate-600">{item.total_contatos.toLocaleString()}</td>
+                  <td className="p-6 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
                         <div 
-                          className={`h-1.5 rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-green-500'}`} 
+                          className={`h-full rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-blue-600'}`} 
                           style={{ width: `${Math.min(item.conversion_rate * 100, 100)}%` }}
                         ></div>
                       </div>
                       <span className="text-[10px] font-black text-slate-400">{(item.conversion_rate * 100).toFixed(1)}%</span>
-                    </td>
-                    <td className="p-5 text-right">
-                      <button 
-                        onClick={() => executePlan(item.bairro)}
-                        disabled={!!executing}
-                        className={`p-2.5 rounded-xl transition-all shadow-lg ${
-                          executing === item.bairro 
-                            ? 'bg-slate-200 text-slate-400 animate-pulse' 
-                            : 'bg-slate-900 text-white hover:bg-blue-600 shadow-slate-200 hover:shadow-blue-200'
-                        }`}
-                      >
-                        <Zap size={16} className={executing === item.bairro ? 'animate-bounce' : ''} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-6 text-slate-400 text-xs font-bold uppercase tracking-widest leading-loose">
-          Escolha um bairro e clique no raio para que a Inteligência gere um plano de ação completo com roteiros de IA e aliados estratégicos.
+                    </div>
+                  </td>
+                  <td className="p-6 text-right">
+                    <button 
+                      onClick={() => executePlan(item.bairro)}
+                      disabled={!!executing}
+                      className={`p-4 rounded-2xl transition-all shadow-lg ${
+                        executing === item.bairro 
+                          ? 'bg-slate-100 text-slate-300' 
+                          : 'bg-slate-900 text-white hover:bg-blue-600 hover:scale-105 active:scale-95 shadow-slate-200'
+                      }`}
+                    >
+                      <Zap size={20} fill={executing === item.bairro ? 'transparent' : 'currentColor'} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Modal de Plano de Ação Ativo */}
       {activePlan && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in duration-300">
-            <header className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[2000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3rem] w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in slide-in-from-bottom-10 duration-500">
+            <header className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Plano de Expansão: {activePlan.bairro}</h2>
-                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Estratégia gerada com sucesso</p>
+                <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Inteligência v3</span>
+                <h2 className="text-3xl font-black text-slate-900 mt-2">Plano Territorial: {activePlan.bairro}</h2>
               </div>
-              <button onClick={() => setActivePlan(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <X size={24} className="text-slate-400" />
+              <button onClick={() => setActivePlan(null)} className="p-3 bg-slate-100 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all">
+                <X size={24} />
               </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Coluna 1: IA Content */}
-              <div className="space-y-6">
-                <h3 className="font-black text-slate-900 flex items-center gap-2">
+            <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* Coluna 1: Conteúdo Estratégico */}
+              <div className="space-y-8">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                   <Zap size={18} className="text-blue-600" />
-                  Roteiros de IA
+                  Sugestões da IA para {activePlan.bairro}
                 </h3>
                 
-                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 relative group">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Roteiro Reels/TikTok</span>
-                    <button onClick={() => copyToClipboard(activePlan.aiSuggestion.reels)} className="p-1.5 hover:bg-blue-100 rounded text-blue-600 transition-colors">
-                      <Copy size={14} />
-                    </button>
+                <div className="space-y-4">
+                  <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 group relative">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Roteiro para Vídeo</span>
+                      <button onClick={() => copyToClipboard(activePlan.aiSuggestion.reels)} className="p-2 bg-white shadow-sm rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all">
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                    <p className="text-sm text-slate-700 font-bold leading-relaxed italic">"{activePlan.aiSuggestion.reels}"</p>
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed italic">"{activePlan.aiSuggestion.reels}"</p>
-                </div>
 
-                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 relative group">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Post WhatsApp/Instagram</span>
-                    <button onClick={() => copyToClipboard(activePlan.aiSuggestion.post)} className="p-1.5 hover:bg-blue-100 rounded text-blue-600 transition-colors">
-                      <Copy size={14} />
-                    </button>
+                  <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 group relative">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Legenda para Post</span>
+                      <button onClick={() => copyToClipboard(activePlan.aiSuggestion.post)} className="p-2 bg-white shadow-sm rounded-xl text-blue-600 hover:bg-blue-600 hover:text-white transition-all">
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                    <p className="text-sm text-slate-700 font-bold leading-relaxed">"{activePlan.aiSuggestion.post}"</p>
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed">"{activePlan.aiSuggestion.post}"</p>
                 </div>
               </div>
 
-              {/* Coluna 2: Aliados */}
-              <div className="space-y-6">
-                <h3 className="font-black text-slate-900 flex items-center gap-2">
-                  <UserCheck size={18} className="text-green-600" />
-                  Aliados Influentes ({activePlan.aliados.length})
-                </h3>
-                <div className="space-y-3">
-                  {activePlan.aliados.length === 0 ? (
-                    <div className="text-center p-10 text-slate-400 font-bold text-xs uppercase">Nenhuma liderança mapeada ainda.</div>
-                  ) : activePlan.aliados.map(aliado => (
-                    <div key={aliado.phone} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm hover:border-green-200 transition-colors">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{aliado.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400">{aliado.phone}</p>
+              {/* Coluna 2: Lideranças */}
+              <div className="space-y-8">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                    <UserCheck size={18} className="text-green-600" />
+                    Lideranças Locais ({activePlan.aliados.length})
+                  </h3>
+                  <button 
+                    onClick={selectAllAliados}
+                    className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                  >
+                    {selectedAliados.length === activePlan.aliados.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {activePlan.aliados.map(aliado => (
+                    <div 
+                      key={aliado.phone} 
+                      onClick={() => toggleAliado(aliado.phone)}
+                      className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                        selectedAliados.includes(aliado.phone) ? 'border-blue-600 bg-blue-50/50' : 'border-slate-50 bg-white hover:border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="text-blue-600">
+                          {selectedAliados.includes(aliado.phone) ? <CheckSquare size={20} /> : <Square size={20} className="text-slate-200" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{aliado.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">{formatPhone(aliado.phone)}</p>
+                        </div>
                       </div>
                       <a 
-                        href={`https://wa.me/${aliado.phone.replace(/\D/g, '')}`} 
+                        href={`https://wa.me/${aliado.phone.replace(/\D/g, '').startsWith('55') ? aliado.phone.replace(/\D/g, '') : '55'+aliado.phone.replace(/\D/g, '')}`} 
                         target="_blank" 
                         rel="noreferrer"
-                        className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 shadow-md shadow-green-100"
                       >
                         <Phone size={14} />
                       </a>
                     </div>
                   ))}
                 </div>
+
+                {selectedAliados.length > 0 && (
+                  <button 
+                    onClick={sendBulkWhatsApp}
+                    className="w-full py-4 bg-green-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-green-100 hover:bg-green-700 hover:scale-[1.02] transition-all"
+                  >
+                    <MessageCircle size={18} />
+                    Enviar para {selectedAliados.length} selecionados
+                  </button>
+                )}
               </div>
             </div>
 
-            <footer className="p-6 bg-slate-50 border-t border-slate-100 text-center">
-              <p className="text-xs font-bold text-slate-400 uppercase">
-                O card de visita foi criado no seu Kanban em "Estratégia Territorial"
+            <footer className="p-8 bg-slate-900 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-blue-600 opacity-10 blur-3xl translate-y-10"></div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">
+                Mandato Digital: Ação territorial em andamento
               </p>
             </footer>
           </div>
