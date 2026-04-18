@@ -17,7 +17,8 @@ import {
   Sparkles,
   Zap,
   ClipboardList,
-  Settings
+  Settings,
+  Target
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,6 +30,7 @@ export default function Sidebar() {
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda' },
     { name: 'Inteligência Eleitoral', icon: Zap, path: '/dashboard/eleicoes' },
+    { name: 'Estratégia Territorial', icon: Target, path: '/dashboard/strategic-intelligence' },
     { name: 'Atendimento On Line', icon: MessageSquare, path: '/dashboard/demands' },
     { name: 'Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
     { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },

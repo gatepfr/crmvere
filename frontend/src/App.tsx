@@ -20,6 +20,7 @@ import Agenda from './pages/Dashboard/Agenda';
 import Municipes from './pages/Dashboard/Municipes';
 import IALab from './pages/Dashboard/IALab';
 import Eleicoes from './pages/Dashboard/Eleicoes';
+import StrategicIntelligence from './pages/Intelligence/StrategicDashboard';
 import Billing from './pages/Billing';
 import Sidebar from './components/Sidebar';
 
@@ -86,6 +87,7 @@ function AppContent() {
             <Route path="agenda" element={<Agenda />} />
             <Route path="municipes" element={<Municipes />} />
             <Route path="eleicoes" element={<Eleicoes />} />
+            <Route path="strategic-intelligence" element={<StrategicIntelligence />} />
             <Route path="ai-lab" element={<IALab />} />
             <Route path="demands" element={<Demands />} />
             <Route path="legislativo" element={<Legislativo />} />
