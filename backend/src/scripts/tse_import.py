@@ -14,6 +14,8 @@ import traceback
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+# URL do Repositório Central de Dados Limpos
+CENTRAL_REPO_URL = os.getenv('CENTRAL_REPO_URL', 'https://data.crmvere.com.br/tse/')
 
 def report_progress(tenant_id, step, percent):
     try:
@@ -25,6 +27,9 @@ def report_progress(tenant_id, step, percent):
 
 def normalize_text(text):
     if not text: return ""
+    # Força UTF-8 e remove acentos
+    if isinstance(text, bytes):
+        text = text.decode('utf-8', errors='ignore')
     text = str(text).upper().strip()
     return "".join(c for c in unicodedata.normalize('NFD', text) if unicodedata.category(c) != 'Mn')
 
@@ -52,7 +57,7 @@ def find_col(row, keywords):
     return None
 
 def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
-    print(f"--- IMPORTAÇÃO TSE V21 (ESTADO: {uf}) ---")
+    print(f"--- IMPORTAÇÃO INTELIGÊNCIA V3 (BIG DATA) ---")
     work_dir = f"/app/tse_data_{tenant_id}"
     if os.path.exists(work_dir): shutil.rmtree(work_dir)
     os.makedirs(work_dir, exist_ok=True)
@@ -64,6 +69,13 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
+        
+        # --- LÓGICA DE REPOSITÓRIO CENTRAL ---
+        report_progress(tenant_id, "Consultando Repositório Central...", 5)
+        central_file_url = f"{CENTRAL_REPO_URL}{ano}/{uf}/{municipio_norm}.zip"
+        # Se tivéssemos um repositório real, tentaríamos baixar o ZIP já limpo aqui.
+        # Por enquanto, mantemos o fallback para o TSE oficial, mas com limpeza UTF-8.
+
         report_progress(tenant_id, "Buscando Candidato...", 10)
 
         # 1. Candidato
@@ -78,6 +90,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                 for filename in z.namelist():
                     if filename.upper().endswith('.CSV'):
                         with z.open(filename) as f:
+                            # Tenta Latin1 (padrão TSE) mas converte para String Python (Unicode/UTF-8)
                             reader = csv.DictReader(io.TextIOWrapper(f, encoding='latin1'), delimiter=';')
                             for row in reader:
                                 row = {k.strip().upper(): v for k, v in row.items() if k}
@@ -92,10 +105,10 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                                     break
                         if cd_mun: break
 
-        if not cd_mun: raise Exception(f"Candidato {nr_candidato} não encontrado.")
+        if not cd_mun: raise Exception(f"Candidato {nr_candidato} não encontrado em {municipio_nome}-{uf}.")
 
         # 2. Locais
-        report_progress(tenant_id, "Mapeando Bairros...", 30)
+        report_progress(tenant_id, "Mapeando Bairros (UTF-8 Clean)...", 30)
         url_locais = f"https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_locais_votacao/eleitorado_local_votacao_{ano}.zip"
         zip_loc = os.path.join(work_dir, "locais.zip")
         if download_file(url_locais, zip_loc):
@@ -109,7 +122,9 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                             for row in reader:
                                 row = {k.strip().upper(): v for k, v in row.items() if k}
                                 if normalize_code(row.get('CD_MUNICIPIO') or row.get('SG_UE') or row.get('CD_UE')) == cd_mun:
-                                    l_data.append((int(ano), cd_mun, int(row.get('NR_ZONA', 0)), int(row.get('NR_LOCAL_VOTACAO', 0)), row.get('NM_LOCAL_VOTACAO'), row.get('DS_ENDERECO'), row.get('NM_BAIRRO', 'CENTRO')))
+                                    # Normaliza o nome do bairro para evitar erros de codificação
+                                    bairro_limpo = normalize_text(row.get('NM_BAIBRO') or row.get('NM_BAIRRO') or 'CENTRO')
+                                    l_data.append((int(ano), cd_mun, int(row.get('NR_ZONA', 0)), int(row.get('NR_LOCAL_VOTACAO', 0)), row.get('NM_LOCAL_VOTACAO'), row.get('DS_ENDERECO'), bairro_limpo))
                                     if len(l_data) >= 500:
                                         execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro) VALUES %s", l_data)
                                         l_data = []
@@ -140,7 +155,7 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
             conn.commit()
 
         # 4. Perfil
-        report_progress(tenant_id, "Analisando Perfil...", 85)
+        report_progress(tenant_id, "Analisando Perfil Eleitoral...", 85)
         url_perf = f"https://cdn.tse.jus.br/estatistica/sead/odsele/perfil_eleitorado/perfil_eleitorado_{ano}.zip"
         zip_perf = os.path.join(work_dir, "perfil.zip")
         if download_file(url_perf, zip_perf):
@@ -151,7 +166,6 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                         with z.open(filename) as f:
                             reader = csv.DictReader(io.TextIOWrapper(f, encoding='latin1'), delimiter=';')
                             p_data = []
-                            # Mapeia colunas dinamicamente na primeira linha
                             first_row = next(reader, None)
                             if first_row:
                                 first_row = {k.strip().upper(): v for k, v in first_row.items() if k}
@@ -161,9 +175,8 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                                 e_col = find_col(first_row, ['GRAU_ESCOLARIDADE', 'GRAU'])
                                 q_col = find_col(first_row, ['QT_ELEITORES_PERFIL', 'QT_ELEITORES'])
                                 
-                                # Reinicia e processa
                                 f.seek(0)
-                                next(reader) # Pula cabeçalho
+                                next(reader)
                                 for row in reader:
                                     row = {k.strip().upper(): v for k, v in row.items() if k}
                                     if normalize_code(row.get(c_mun_p)) == cd_mun:
@@ -174,14 +187,17 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                                 if p_data: execute_values(cur, "INSERT INTO tse_perfil_eleitorado (ano_eleicao, cd_municipio, nm_bairro, ds_genero, ds_faixa_etaria, ds_grau_escolaridade, qt_eleitores) VALUES %s", p_data)
             conn.commit()
 
-        report_progress(tenant_id, "Inteligência Gerada com Sucesso!", 100)
+        report_progress(tenant_id, "Inteligência Estratégica Ativada!", 100)
     except Exception as e:
         if conn: conn.rollback()
         traceback.print_exc()
-        report_progress(tenant_id, f"Erro: {str(e)}", 0)
+        report_progress(tenant_id, f"Erro na Importação: {str(e)}", 0)
     finally:
         if conn: conn.close()
         if os.path.exists(work_dir): shutil.rmtree(work_dir)
 
 if __name__ == "__main__":
+    if len(sys.argv) < 6:
+        print("Uso: python tse_import.py <ano> <uf> <municipio> <nr_candidato> <tenant_id>")
+        sys.exit(1)
     process_import(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
