@@ -20,7 +20,9 @@ import {
   Filter,
   MessageSquare,
   Edit2,
-  Trash2
+  Trash2,
+  X,
+  Users
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -64,14 +66,20 @@ export default function Demands() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterByAttention, setFilterByAttention] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const fetchAtendimentos = useCallback(() => {
-    setLoading(true);
+  const fetchAtendimentos = useCallback((isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    
     const params = new URLSearchParams({
       page: pagination.page.toString(),
       limit: pagination.limit.toString(),
       search: searchTerm,
-      attention: filterByAttention.toString()
+      attention: filterByAttention.toString(),
+      sortBy: sortConfig.key,
+      sortOrder: sortConfig.direction
     });
 
     api.get(`/demands/atendimentos?${params.toString()}`)
@@ -80,18 +88,27 @@ export default function Demands() {
         setPagination(res.data.pagination || { page: 1, limit: 25, total: 0, totalPages: 0 });
       })
       .catch(err => console.error(err))
-      .finally(() => setLoading(false));
-  }, [pagination.page, pagination.limit, searchTerm, filterByAttention]);
+      .finally(() => {
+        if (!isBackground) setLoading(false);
+      });
+  }, [pagination.page, pagination.limit, searchTerm, filterByAttention, sortConfig]);
 
   useEffect(() => {
     fetchAtendimentos();
     const interval = setInterval(() => {
-      api.get(`/demands/atendimentos?page=1&limit=25&search=${searchTerm}&attention=${filterByAttention}`)
-        .then(res => setAtendimentos(res.data.data || []))
-        .catch(() => {});
+      fetchAtendimentos(true);
     }, 15000);
     return () => clearInterval(interval);
-  }, [fetchAtendimentos, searchTerm, filterByAttention]);
+  }, [fetchAtendimentos]);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -106,22 +123,55 @@ export default function Demands() {
   const formatPhone = (phone: string) => {
     if (!phone) return '';
     let cleaned = phone.replace(/\D/g, '');
-    
-    // Remove o 55 se existir
-    if (cleaned.startsWith('55') && cleaned.length >= 12) {
-      cleaned = cleaned.slice(2);
-    }
-    
-    // Se tiver 10 dígitos (DDD + 8), adiciona o 9 para a máscara
-    if (cleaned.length === 10) {
-      cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-    }
-    
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    }
-    
+    if (cleaned.startsWith('55') && cleaned.length >= 12) cleaned = cleaned.slice(2);
+    if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
+    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
     return phone;
+  };
+
+  const exportToPDF = async (mode: 'page' | 'all') => {
+    setExporting(true);
+    try {
+      let dataToExport = atendimentos;
+      if (mode === 'all') {
+        const res = await api.get(`/demands/atendimentos?limit=1000&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`);
+        dataToExport = res.data.data;
+      }
+
+      const doc = new jsPDF();
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RELATÓRIO DE ATENDIMENTOS', 14, 20);
+      doc.setFontSize(10);
+      doc.text('CRM DO VERÊ - GESTÃO DE GABINETE', 14, 28);
+      doc.text(`GERADO EM: ${new Date().toLocaleString('pt-BR')}`, 140, 28);
+
+      const tableData = dataToExport.map(a => [
+        a.municipes.name,
+        formatPhone(a.municipes.phone),
+        a.atendimentos.categoria || 'OUTRO',
+        a.atendimentos.prioridade || 'baixa',
+        new Date(a.atendimentos.updatedAt).toLocaleDateString('pt-BR')
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['NOME', 'WHATSAPP', 'CATEGORIA', 'PRIORIDADE', 'DATA']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] }
+      });
+
+      doc.save(`atendimentos-${new Date().getTime()}.pdf`);
+      setIsExportModalOpen(false);
+    } catch (err) {
+      alert('Erro ao exportar PDF');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -134,12 +184,20 @@ export default function Demands() {
           </h1>
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Histórico WhatsApp e IA</p>
         </div>
-        <button onClick={() => setIsNewDemandModalOpen(true)} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
-          <Plus size={18} /> ADICIONAR
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setIsNewDemandModalOpen(true)} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+            <Plus size={18} /> ADICIONAR
+          </button>
+          <button 
+            onClick={() => setIsExportModalOpen(true)}
+            className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+          >
+            <FileDown size={20} />
+          </button>
+        </div>
       </header>
 
-      <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex gap-3">
+      <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col md:flex-row gap-3">
         <div className="relative flex-1 group">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
           <input 
@@ -147,34 +205,57 @@ export default function Demands() {
             placeholder="Buscar por munícipe ou telefone..."
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-blue-200 transition-all font-bold text-sm"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => { setSearchTerm(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}
           />
         </div>
-        <button 
-          onClick={() => setFilterByAttention(!filterByAttention)}
-          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
-            filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
-          }`}
-        >
-          Atenção
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setFilterByAttention(!filterByAttention)}
+            className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+              filterByAttention ? 'bg-red-500 border-red-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            Atenção
+          </button>
+          <select 
+            className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
+            value={pagination.limit}
+            onChange={e => setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }))}
+          >
+            <option value="25">25 / pág</option>
+            <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
+          </select>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[300px]">
         {loading && <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={32} /></div>}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="pl-6 py-4">Munícipe</th>
+                <th className="pl-6 py-4 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('municipes.name')}>
+                  <div className="flex items-center gap-1">Munícipe <ArrowUpDown size={12} /></div>
+                </th>
                 <th className="px-4 py-4">WhatsApp</th>
-                <th className="px-4 py-4">Categoria</th>
-                <th className="px-4 py-4">Prioridade</th>
-                <th className="px-6 py-4 text-right">Data</th>
+                <th className="px-4 py-4 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('atendimentos.categoria')}>
+                  <div className="flex items-center gap-1">Categoria <ArrowUpDown size={12} /></div>
+                </th>
+                <th className="px-4 py-4 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('atendimentos.prioridade')}>
+                  <div className="flex items-center gap-1">Prioridade <ArrowUpDown size={12} /></div>
+                </th>
+                <th className="px-6 py-4 text-right cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleSort('atendimentos.updatedAt')}>
+                  <div className="flex items-center justify-end gap-1">Data <ArrowUpDown size={12} /></div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {atendimentos.map(a => (
+              {atendimentos.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={5} className="p-20 text-center text-slate-300 font-black text-xs uppercase tracking-widest">Nenhum atendimento encontrado</td>
+                </tr>
+              ) : atendimentos.map(a => (
                 <tr 
                   key={a.atendimentos.id} 
                   className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${a.atendimentos.precisaRetorno ? 'bg-red-50/30' : ''}`}
@@ -205,7 +286,70 @@ export default function Demands() {
             </tbody>
           </table>
         </div>
+
+        {/* Rodapé com Paginação */}
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            {pagination.total} ATENDIMENTOS • PÁGINA {pagination.page} DE {pagination.totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            <button 
+              disabled={pagination.page === 1 || loading}
+              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button 
+              disabled={pagination.page === pagination.totalPages || loading}
+              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Modal de Exportação */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">Exportar Atendimentos</h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              <button 
+                onClick={() => exportToPDF('page')}
+                disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm"><FileDown size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Página Atual</p>
+                    <p className="text-xs text-slate-500">Exportar os {atendimentos.length} desta página</p>
+                  </div>
+                </div>
+              </button>
+              <button 
+                onClick={() => exportToPDF('all')}
+                disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm"><Users size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Histórico Completo</p>
+                    <p className="text-xs text-slate-500">Exportar todos os {pagination.total} registros</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedAtendimento && (
         <DemandModal 
