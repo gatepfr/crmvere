@@ -54,6 +54,7 @@ router.patch('/update', async (req, res) => {
     fotoUrl,
     calendarUrl,
     birthdayMessage,
+    birthdayAutomated,
     legislativeMessage
   } = req.body;
 
@@ -72,6 +73,7 @@ router.patch('/update', async (req, res) => {
       fotoUrl,
       calendarUrl,
       birthdayMessage,
+      birthdayAutomated,
       legislativeMessage
     })
     .where(eq(tenants.id, tenantId));

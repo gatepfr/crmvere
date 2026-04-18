@@ -253,7 +253,7 @@ export default function StrategicDashboard() {
               <Zap size={100} />
             </div>
             
-            <h4 className="font-black text-xl mb-4 flex items-center gap-2 relative z-10 uppercase tracking-tighter">
+            <h4 className="font-black text-xl mb-4 flex items-center gap-2 relative z-10 uppercase tracking-tighter text-yellow-400">
               O que é o <br/>Combo D?
             </h4>
             
@@ -263,16 +263,16 @@ export default function StrategicDashboard() {
             
             <ul className="text-xs space-y-5 relative z-10">
               <li className="flex gap-4">
-                <span className="bg-white/20 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0">1</span>
-                <span className="leading-tight"><strong>Mailing VIP:</strong> Seleciona as lideranças para contato imediato via WhatsApp.</span>
+                <span className="bg-lime-400 text-blue-900 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0 shadow-lg">1</span>
+                <span className="leading-tight font-bold"><strong>Mailing VIP:</strong> Seleciona as lideranças para contato imediato via WhatsApp.</span>
               </li>
               <li className="flex gap-4">
-                <span className="bg-white/20 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0">2</span>
-                <span className="leading-tight"><strong>Equipe:</strong> Cria tarefa de visita territorial no Kanban para os assessores.</span>
+                <span className="bg-yellow-400 text-blue-900 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0 shadow-lg">2</span>
+                <span className="leading-tight font-bold"><strong>Equipe:</strong> Cria tarefa de visita territorial no Kanban para os assessores.</span>
               </li>
               <li className="flex gap-4">
-                <span className="bg-white/20 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0">3</span>
-                <span className="leading-tight"><strong>IA Criativa:</strong> Gera roteiros de conteúdo específicos para o bairro.</span>
+                <span className="bg-lime-400 text-blue-900 w-8 h-8 flex items-center justify-center rounded-xl font-black shrink-0 shadow-lg">3</span>
+                <span className="leading-tight font-bold"><strong>IA Criativa:</strong> Gera roteiros de conteúdo específicos para o bairro.</span>
               </li>
             </ul>
           </div>
