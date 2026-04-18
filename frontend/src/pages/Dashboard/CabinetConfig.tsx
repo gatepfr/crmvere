@@ -261,7 +261,9 @@ export default function CabinetConfig() {
                 )}
               </div>
               
-              <h4 className="text-3xl font-black tracking-tighter text-yellow-400 drop-shadow-sm">{config.name || 'Seu Nome Aqui'}</h4>
+              <h4 className="text-3xl font-black tracking-tighter drop-shadow-md" style={{ color: '#a3e635' }}>
+                {config.name || 'Seu Nome Aqui'}
+              </h4>
               <p className="text-blue-300 text-[11px] font-black uppercase tracking-[0.2em] mt-2">{config.partido || 'Seu Partido'}</p>
               
               <div className="w-full h-px bg-white/10 my-6"></div>
