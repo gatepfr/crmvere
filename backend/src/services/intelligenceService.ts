@@ -14,32 +14,37 @@ export const calculateInfluenceScore = (atendimentosCount: number, isLideranca: 
 
 /**
  * Busca munícipes influentes em um determinado bairro para um tenant.
+ * Prioriza quem tem maior score de influência.
  */
 export const getInfluentialMunicipes = async (tenantId: string, bairro: string) => {
   try {
     const results = await db.execute(sql`
-      SELECT 
-        m.id, 
-        m.name, 
-        m.phone, 
-        COUNT(a.id)::int as atendimentos_concluidos,
-        EXISTS(
-          SELECT 1 FROM demand_categories dc 
-          WHERE dc.tenant_id = ${tenantId} AND dc.name ILIKE '%Liderança%'
-        ) as is_lideranca -- Simplificação para exemplo, ideal seria join com tags
-      FROM municipes m
-      LEFT JOIN atendimentos a ON a.municipe_id = m.id AND a.tenant_id = m.tenant_id
-      WHERE m.tenant_id = ${tenantId} 
-        AND m.bairro ILIKE ${bairro}
-      GROUP BY m.id
-      ORDER BY atendimentos_concluidos DESC
-      LIMIT 10
+      WITH engajamento AS (
+        SELECT 
+          m.id, 
+          m.name, 
+          m.phone, 
+          m.bairro,
+          COUNT(a.id)::int as atendimentos_concluidos,
+          EXISTS(
+            SELECT 1 FROM demand_categories dc 
+            WHERE dc.tenant_id = ${tenantId} AND dc.name ILIKE '%Liderança%'
+          ) as is_lideranca
+        FROM municipes m
+        LEFT JOIN atendimentos a ON a.municipe_id = m.id AND a.tenant_id = m.tenant_id
+        WHERE m.tenant_id = ${tenantId} 
+          AND UPPER(m.bairro) = UPPER(${bairro})
+        GROUP BY m.id
+      )
+      SELECT * FROM engajamento
+      ORDER BY atendimentos_concluidos DESC, is_lideranca DESC
+      LIMIT 20
     `);
 
     return results.rows.map((row: any) => ({
       ...row,
       influence_score: calculateInfluenceScore(row.atendimentos_concluidos, row.is_lideranca)
-    }));
+    })).sort((a, b) => b.influence_score - a.influence_score);
   } catch (error) {
     console.error('[INTELLIGENCE SERVICE] Error fetching influential municipes:', error);
     return [];
@@ -47,11 +52,11 @@ export const getInfluentialMunicipes = async (tenantId: string, bairro: string) 
 };
 
 /**
- * Identifica "Vácuos Eleitorais" comparando votos TSE vs contatos CRM.
+ * Identifica "Vácuos Eleitorais Críticos" comparando votos TSE vs contatos CRM.
+ * Critério: Votos > 500 E Conversão < 10%.
  */
-export const identifyTerritorialVacuums = async (tenantId: string) => {
+export const identifyStrategicVacuums = async (tenantId: string) => {
   try {
-    // Busca dados consolidados por bairro
     const stats = await db.execute(sql`
       WITH votos_tse AS (
         SELECT 
@@ -80,19 +85,20 @@ export const identifyTerritorialVacuums = async (tenantId: string) => {
         (COALESCE(c.contatos, 0)::float / NULLIF(v.votos, 0)) as conversion_rate
       FROM votos_tse v
       LEFT JOIN contatos_crm c ON v.bairro = c.bairro
-      WHERE v.votos > 500 -- Limite de volume eleitoral
+      WHERE v.votos > 500
       ORDER BY conversion_rate ASC
-      LIMIT 10
     `);
 
-    // Um bairro é vácuo se a conversão for menor que 10%
-    return stats.rows.map((row: any) => ({
-      ...row,
-      is_vacuum: row.conversion_rate < 0.10,
-      priority: row.conversion_rate < 0.05 ? 'URGENTE' : 'EXPANDIR'
-    }));
+    return stats.rows.map((row: any) => {
+      const isVacuum = row.conversion_rate < 0.10;
+      return {
+        ...row,
+        category: isVacuum ? 'VACUO' : (row.conversion_rate < 0.30 ? 'POTENCIAL' : 'CONSOLIDADO'),
+        priority: row.conversion_rate < 0.05 ? 'URGENTE' : (isVacuum ? 'ALTA' : 'NORMAL')
+      };
+    });
   } catch (error) {
-    console.error('[INTELLIGENCE SERVICE] Error identifying vacuums:', error);
+    console.error('[INTELLIGENCE SERVICE] Error identifying strategic vacuums:', error);
     return [];
   }
 };
