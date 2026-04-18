@@ -26,11 +26,8 @@ export const getInfluentialMunicipes = async (tenantId: string, bairro: string) 
           m.name, 
           m.phone, 
           m.bairro,
-          COUNT(a.id)::int as atendimentos_concluidos,
-          EXISTS(
-            SELECT 1 FROM demand_categories dc 
-            WHERE dc.tenant_id = ${tenantId} AND dc.name ILIKE '%Liderança%'
-          ) as is_lideranca
+          m.is_lideranca,
+          COUNT(a.id)::int as atendimentos_concluidos
         FROM municipes m
         LEFT JOIN atendimentos a ON a.municipe_id = m.id AND a.tenant_id = m.tenant_id
         WHERE m.tenant_id = ${tenantId} 
@@ -38,7 +35,7 @@ export const getInfluentialMunicipes = async (tenantId: string, bairro: string) 
         GROUP BY m.id
       )
       SELECT * FROM engajamento
-      ORDER BY atendimentos_concluidos DESC, is_lideranca DESC
+      ORDER BY is_lideranca DESC, atendimentos_concluidos DESC
       LIMIT 20
     `);
 
