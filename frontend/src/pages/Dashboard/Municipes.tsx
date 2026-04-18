@@ -13,6 +13,7 @@ import {
   Square,
   Send,
   X,
+  CheckCircle2,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -25,6 +26,7 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
+  Filter,
   Check,
   Calendar
 } from 'lucide-react';
@@ -65,10 +67,22 @@ export default function Municipes() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [allBairros, setAllBairros] = useState<string[]>([]);
   
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
+
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
   const [displayCreatePhone, setDisplayCreatePhone] = useState('');
+
+  // Import Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
 
   // Edit Modal State
   const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
@@ -140,6 +154,15 @@ export default function Municipes() {
     setSortConfig({ key, direction });
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedSelectedMunicipes(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedMunicipes.length === municipes.length) setSelectedSelectedMunicipes([]);
+    else setSelectedSelectedMunicipes(municipes.map(m => m.id));
+  };
+
   const handleCreateMunicipe = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -153,6 +176,60 @@ export default function Municipes() {
       alert('Munícipe cadastrado com sucesso!');
     } catch (err: any) { alert(err.response?.data?.error || 'Erro ao cadastrar munícipe.'); }
     finally { setSaving(false); }
+  };
+
+  const handleImportCSV = async () => {
+    if (!csvFile || !mapping.name || !mapping.phone) {
+      alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
+      return;
+    }
+    setSaving(true);
+    const formData = new FormData();
+    formData.append('file', csvFile);
+    formData.append('mapping', JSON.stringify(mapping));
+    try {
+      const res = await api.post('/demands/municipes/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setIsImportModalOpen(false);
+      setCsvFile(null);
+      setCsvHeaders([]);
+      loadMunicipes();
+      alert(`Importação concluída! ${res.data.imported} contatos processados.`);
+    } catch (err: any) { alert('Falha ao importar CSV: ' + (err.response?.data?.error || 'Erro desconhecido')); }
+    finally { setSaving(false); }
+  };
+
+  const handleSendBirthdayMessage = async (m: Municipe) => {
+    const defaultMsg = `Olá ${m.name}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈`;
+    let msg = cabinetConfig?.birthdayMessage || defaultMsg;
+    msg = msg.replace(/{nome}/g, m.name);
+    try {
+      await api.post('/whatsapp/send-direct', { phone: m.phone, message: msg });
+      alert('Mensagem de aniversário enviada!');
+    } catch (err: any) { alert(`Falha ao enviar: ${err.response?.data?.error || 'Verifique a conexão'}`); }
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastMessage.trim()) return;
+    setSending(true);
+    setSendProgress({ current: 0, total: selectedMunicipes.length });
+    for (let i = 0; i < selectedMunicipes.length; i++) {
+      const municipe = (municipes || []).find(m => m.id === selectedMunicipes[i]);
+      if (municipe) {
+        try {
+          const personalizedMessage = broadcastMessage.replace(/{{nome}}/g, municipe.name);
+          await api.post('/whatsapp/send-direct', { phone: municipe.phone, message: personalizedMessage });
+        } catch (err) { console.error(`Erro ao enviar para ${municipe.name}:`, err); }
+      }
+      setSendProgress(prev => ({ ...prev, current: i + 1 }));
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    setSending(false);
+    setIsModalOpen(false);
+    setBroadcastMessage('');
+    setSelectedSelectedMunicipes([]);
+    alert('Mensagens enviadas com sucesso!');
   };
 
   const formatPhone = (phone: string) => {
@@ -205,27 +282,17 @@ export default function Municipes() {
     const raw = value.replace(/\D/g, '').substring(0, 8);
     let masked = raw;
     if (raw.length > 5) masked = `${raw.slice(0, 5)}-${raw.slice(5)}`;
-    
-    if (type === 'create') {
-      setCreateForm(prev => ({ ...prev, cep: masked }));
-    } else {
-      setEditForm(prev => ({ ...prev, cep: masked }));
-    }
-
+    if (type === 'create') setCreateForm(prev => ({ ...prev, cep: masked }));
+    else setEditForm(prev => ({ ...prev, cep: masked }));
     if (raw.length === 8) {
       try {
         const response = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
         const data = await response.json();
         if (!data.erro && data.bairro) {
-          if (type === 'create') {
-            setCreateForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
-          } else {
-            setEditForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
-          }
+          if (type === 'create') setCreateForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
+          else setEditForm(prev => ({ ...prev, bairro: data.bairro.toUpperCase() }));
         }
-      } catch (err) {
-        console.error('Erro ao buscar CEP:', err);
-      }
+      } catch (err) { console.error('Erro ao buscar CEP:', err); }
     }
   };
 
@@ -252,6 +319,45 @@ export default function Municipes() {
     finally { setSaving(false); }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este munícipe?')) return;
+    try {
+      await api.delete(`/demands/municipe/${id}`);
+      setMunicipes(prev => prev.filter(m => m.id !== id));
+      alert('Munícipe excluído com sucesso!');
+    } catch (err) { alert('Falha ao excluir munícipe.'); }
+  };
+
+  const exportToPDF = async (mode: 'page' | 'all') => {
+    setExporting(true);
+    try {
+      let dataToExport = municipes;
+      if (mode === 'all') {
+        const res = await api.get(`/demands/municipes/list?limit=all&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`);
+        dataToExport = res.data.data;
+      }
+      const doc = new jsPDF();
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RELATÓRIO DE MUNÍCIPES', 14, 20);
+      doc.setFontSize(10);
+      doc.text('CRM DO VERÊ - GESTÃO DE GABINETE', 14, 28);
+      doc.text(`GERADO EM: ${new Date().toLocaleString('pt-BR')}`, 140, 28);
+      const tableData = dataToExport.map(m => [m.name, formatPhone(m.phone), m.bairro || '---', formatDateDisplay(m.birthDate), m.demandCount.toString()]);
+      autoTable(doc, {
+        startY: 45, head: [['NOME COMPLETO', 'WHATSAPP', 'BAIRRO', 'NASCIMENTO', 'DEMANDAS']], body: tableData, theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
+        didDrawPage: (data) => { doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text("Página " + doc.getNumberOfPages(), 14, doc.internal.pageSize.height - 10); }
+      });
+      doc.save(`municipes-${mode}-${new Date().getTime()}.pdf`);
+      setIsExportModalOpen(false);
+    } catch (err) { alert('Erro ao exportar PDF'); }
+    finally { setExporting(false); }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -266,6 +372,12 @@ export default function Municipes() {
           <button onClick={() => setIsCreateModalOpen(true)} className="flex-1 lg:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
             <Plus size={18} /> ADICIONAR
           </button>
+          {(user?.role === 'admin' || user?.role === 'vereador') && (
+            <button onClick={() => setIsImportModalOpen(true)} className="flex-1 lg:flex-none px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-black text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm">
+              <Upload size={18} /> IMPORTAR
+            </button>
+          )}
+          <button onClick={() => setIsExportModalOpen(true)} className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm" title="Exportar PDF"><FileDown size={20} /></button>
         </div>
       </header>
 
@@ -279,54 +391,126 @@ export default function Municipes() {
             <option value="">Todos Bairros</option>
             {allBairros.sort().map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <button onClick={() => setOnlyLideranca(!onlyLideranca)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyLideranca ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
-            Lideranças
-          </button>
-          <button onClick={() => setOnlyBirthdays(!onlyBirthdays)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyBirthdays ? 'bg-pink-500 border-pink-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
-            🎂 Hoje
-          </button>
+          <button onClick={() => setOnlyLideranca(!onlyLideranca)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyLideranca ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>Lideranças</button>
+          <button onClick={() => setOnlyBirthdays(!onlyBirthdays)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyBirthdays ? 'bg-pink-500 border-pink-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>🎂 Hoje</button>
+          
+          <select className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs" value={pagination.limit === 10000 ? 'all' : pagination.limit} onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}>
+            <option value="25">25 / pág</option>
+            <option value="50">50 / pág</option>
+            <option value="100">100 / pág</option>
+            <option value="all">Ver Todos</option>
+          </select>
         </div>
       </div>
+
+      {selectedMunicipes.length > 0 && (
+        <div className="bg-blue-600 text-white p-4 rounded-2xl flex items-center justify-between shadow-xl animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-lg"><Check size={20} strokeWidth={3} /></div>
+            <div><p className="font-black text-sm uppercase tracking-tighter">{selectedMunicipes.length} Selecionados</p></div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setSelectedSelectedMunicipes([])} className="px-4 py-2 text-xs font-bold hover:bg-white/10 rounded-lg">Desmarcar</button>
+            <button onClick={() => setIsModalOpen(true)} className="bg-white text-blue-600 px-5 py-2 rounded-xl font-black text-xs hover:bg-blue-50 flex items-center gap-2 shadow-sm"><MessageSquare size={16} /> ENVIAR WHATSAPP</button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Munícipe</th>
-                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Bairro</th>
+                <th className="pl-6 py-4 w-12"><div onClick={toggleSelectAll} className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${selectedMunicipes.length === municipes.length && municipes.length > 0 ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'}`}>{selectedMunicipes.length === municipes.length && municipes.length > 0 && <Check size={12} strokeWidth={4} />}</div></th>
+                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('name')}>
+                  <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">Munícipe {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}</div>
+                </th>
+                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('bairro')}>
+                  <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">Bairro {sortConfig.key === 'bairro' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}</div>
+                </th>
                 <th className="px-4 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Nascimento</th>
                 <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {municipes.map(m => (
-                <tr key={m.id} className="hover:bg-slate-50/50 transition-all cursor-pointer" onClick={() => handleEdit(m)}>
-                  <td className="px-6 py-4">
+                <tr key={m.id} className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/50' : ''}`} onClick={() => toggleSelect(m.id)}>
+                  <td className="pl-6 py-4"><div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedMunicipes.includes(m.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200'}`}>{selectedMunicipes.includes(m.id) && <Check size={12} strokeWidth={4} />}</div></td>
+                  <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${m.isLideranca ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-slate-100 text-slate-400'}`}>
-                        {m.isLideranca ? <Star size={20} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}
-                      </div>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${m.isLideranca ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-slate-100 text-slate-400'}`}>{m.isLideranca ? <Star size={20} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}</div>
                       <div>
-                        <div className="font-bold text-slate-900 flex items-center gap-2">
-                          {m.name}
-                          {m.isLideranca && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">Liderança</span>}
-                        </div>
+                        <div className="font-bold text-slate-900 flex items-center gap-2">{m.name} {m.isLideranca && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">Liderança</span>}</div>
                         <p className="text-xs font-bold text-slate-500">{formatPhone(m.phone)}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 font-bold text-slate-500 text-xs uppercase">{m.bairro || '---'}</td>
+                  <td className="px-4 py-4 font-bold text-slate-500 text-xs uppercase text-center">{m.bairro || '---'}</td>
                   <td className="px-4 py-4 text-center text-xs text-slate-400">{formatDateDisplay(m.birthDate)}</td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Edit2 size={16} /></button>
+                    <div className="flex justify-end gap-1">
+                      {isTodayBirthday(m.birthDate) && <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="w-8 h-8 flex items-center justify-center bg-pink-50 hover:bg-pink-100 rounded-lg text-lg animate-pulse" title="Parabéns">🎈</button>}
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Edit2 size={16} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 rounded-lg"><Trash2 size={16} /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
+          <p className="text-[10px] font-black text-slate-400 uppercase">{pagination.total} MUNÍCIPES • PÁG {pagination.page}/{pagination.totalPages}</p>
+          <div className="flex gap-1">
+            <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"><ChevronLeft size={16} /></button>
+            <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"><ChevronRight size={16} /></button>
+          </div>
+        </div>
       </div>
+
+      {/* Broadcast Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-900">Disparo em Massa</h3>
+              <button onClick={() => !sending && setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100"><p className="text-sm text-blue-800">Enviando para <strong>{selectedMunicipes.length}</strong> contatos selecionados.</p></div>
+              <textarea className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none" rows={5} placeholder="Olá {{nome}}! ..." value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} disabled={sending} />
+              {sending && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest"><span>Enviando...</span><span>{sendProgress.current} / {sendProgress.total}</span></div>
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${(sendProgress.current / sendProgress.total) * 100}%` }}></div></div>
+                </div>
+              )}
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button onClick={() => setIsModalOpen(false)} disabled={sending} className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-200 rounded-xl">Cancelar</button>
+              <button onClick={handleSendBroadcast} disabled={sending || !broadcastMessage.trim()} className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center gap-2">{sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} {sending ? 'Processando...' : 'Iniciar Disparo'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center"><h3 className="text-lg font-bold text-slate-900">Exportar PDF</h3><button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={18} /></button></div>
+            <div className="p-6 space-y-3">
+              <button onClick={() => exportToPDF('page')} disabled={exporting} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                <div className="flex items-center gap-3"><div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm"><FileDown size={20} /></div><div><p className="font-bold text-slate-900">Página Atual</p><p className="text-xs text-slate-500">Exportar {municipes.length} registros visíveis</p></div></div>
+              </button>
+              <button onClick={() => exportToPDF('all')} disabled={exporting} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                <div className="flex items-center gap-3"><div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm"><Users size={20} /></div><div><p className="font-bold text-slate-900">Banco Completo</p><p className="text-xs text-slate-500">Exportar todos os {pagination.total} registros</p></div></div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       {(isCreateModalOpen || editingMunicipe) && (
@@ -336,13 +520,11 @@ export default function Municipes() {
               <h3 className="text-xl font-bold text-slate-900">{editingMunicipe ? 'Editar' : 'Novo'} Munícipe</h3>
               <button onClick={() => { setIsCreateModalOpen(false); setEditingMunicipe(null); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
             </div>
-            
             <form onSubmit={editingMunicipe ? (e) => { e.preventDefault(); handleSaveEdit(); } : handleCreateMunicipe} className="p-8 space-y-5">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
                 <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? editForm.name : createForm.name} onChange={e => editingMunicipe ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})} />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
@@ -353,7 +535,6 @@ export default function Municipes() {
                   <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="DD/MM/AAAA" value={editingMunicipe ? editForm.birthDate : createForm.birthDate} onChange={e => editingMunicipe ? setEditForm({...editForm, birthDate: applyDateMask(e.target.value)}) : setCreateForm({...createForm, birthDate: applyDateMask(e.target.value)})} maxLength={10} />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">CEP</label>
@@ -364,26 +545,17 @@ export default function Municipes() {
                   <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? editForm.bairro : createForm.bairro} onChange={e => editingMunicipe ? setEditForm({...editForm, bairro: e.target.value.toUpperCase()}) : setCreateForm({...createForm, bairro: e.target.value.toUpperCase()})} />
                 </div>
               </div>
-
               <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-100 rounded-2xl mt-2">
                 <div className="flex items-center gap-3">
                   <Star className={`${(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? 'text-amber-500' : 'text-slate-300'}`} size={20} fill={(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? "currentColor" : "none"} />
                   <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Marcar como Liderança</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    className="sr-only peer"
-                    checked={editingMunicipe ? editForm.isLideranca : createForm.isLideranca}
-                    onChange={e => editingMunicipe ? setEditForm({...editForm, isLideranca: e.target.checked}) : setCreateForm({...createForm, isLideranca: e.target.checked})}
-                  />
+                  <input type="checkbox" className="sr-only peer" checked={editingMunicipe ? editForm.isLideranca : createForm.isLideranca} onChange={e => editingMunicipe ? setEditForm({...editForm, isLideranca: e.target.checked}) : setCreateForm({...createForm, isLideranca: e.target.checked})} />
                   <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                 </label>
               </div>
-
-              <button type="submit" disabled={saving} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg disabled:opacity-50">
-                {saving ? 'Salvando...' : (editingMunicipe ? 'Salvar Alterações' : 'Cadastrar Munícipe')}
-              </button>
+              <button type="submit" disabled={saving} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg disabled:opacity-50">{saving ? 'Salvando...' : (editingMunicipe ? 'Salvar Alterações' : 'Cadastrar Munícipe')}</button>
             </form>
           </div>
         </div>
