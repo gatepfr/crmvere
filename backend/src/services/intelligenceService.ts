@@ -57,22 +57,43 @@ export const getInfluentialMunicipes = async (tenantId: string, bairro: string) 
  */
 export const identifyStrategicVacuums = async (tenantId: string) => {
   try {
+    // 1. Busca o candidato configurado para este tenant
+    const [candidato] = await db.execute(sql`SELECT * FROM tse_candidatos WHERE tenant_id = ${tenantId} LIMIT 1`);
+    if (!candidato) return [];
+
     const stats = await db.execute(sql`
-      WITH votos_tse AS (
+      WITH total_votos_local AS (
         SELECT 
-          UPPER(nm_bairro) as bairro, 
+          nr_zona, 
+          nr_local_votacao, 
           SUM(qt_votos) as votos
-        FROM tse_votos_secao v
-        JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
-          AND v.cd_municipio = l.cd_municipio
-        WHERE v.nr_candidato = (
-          SELECT nr_candidato FROM tse_candidatos WHERE tenant_id = ${tenantId} LIMIT 1
-        )
+        FROM tse_votos_secao
+        WHERE nr_candidato = ${candidato.nr_candidato}
+          AND cd_municipio = ${candidato.cd_municipio}
+          AND ano_eleicao = ${candidato.ano_eleicao}
+        GROUP BY 1, 2
+      ),
+      bairros_mapeados AS (
+        SELECT DISTINCT ON (nr_zona, nr_local_votacao)
+          nr_zona, 
+          nr_local_votacao, 
+          UPPER(COALESCE(NULLIF(nm_bairro, ''), 'CENTRO')) as bairro
+        FROM tse_locais_votacao
+        WHERE cd_municipio = ${candidato.cd_municipio}
+          AND ano_eleicao = ${candidato.ano_eleicao}
+      ),
+      votos_tse AS (
+        SELECT 
+          b.bairro,
+          SUM(v.votos) as votos
+        FROM total_votos_local v
+        JOIN bairros_mapeados b ON v.nr_local_votacao = b.nr_local_votacao 
+          AND v.nr_zona = b.nr_zona
         GROUP BY 1
       ),
       contatos_crm AS (
         SELECT 
-          UPPER(bairro) as bairro, 
+          UPPER(COALESCE(NULLIF(bairro, ''), 'CENTRO')) as bairro, 
           COUNT(id) as contatos
         FROM municipes
         WHERE tenant_id = ${tenantId}
@@ -85,8 +106,8 @@ export const identifyStrategicVacuums = async (tenantId: string) => {
         (COALESCE(c.contatos, 0)::float / NULLIF(v.votos, 0)) as conversion_rate
       FROM votos_tse v
       LEFT JOIN contatos_crm c ON v.bairro = c.bairro
-      WHERE v.votos > 500
-      ORDER BY conversion_rate ASC
+      WHERE v.votos > 10 -- Mostra até bairros pequenos, mas prioriza no ranking
+      ORDER BY total_votos DESC
     `);
 
     return stats.rows.map((row: any) => {
