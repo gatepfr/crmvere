@@ -9,15 +9,12 @@ import {
   MessageSquare, 
   CheckCircle2, 
   Clock, 
-  Layout, 
-  ChevronRight,
   Loader2,
   MapPin as MapIcon,
   Trash2,
   Edit2,
-  ClipboardList,
-  ExternalLink,
-  Plus
+  Plus,
+  Star
 } from 'lucide-react';
 
 interface DemandModalProps {
@@ -46,6 +43,7 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     name: demand.municipes.name,
     phone: demand.municipes.phone,
     bairro: demand.municipes.bairro || '',
+    isLideranca: demand.municipes.isLideranca || false,
     id: demand.municipes.id
   });
   const [displayPhone, setDisplayPhone] = useState('');
@@ -57,9 +55,9 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Novos estados legislativos
-  const [isLegislativo, setIsLegislativo] = useState(demand.demandas.isLegislativo);
-  const [numeroIndicacao, setNumeroIndicacao] = useState(demand.demandas.numeroIndicacao || '');
-  const [documentUrl, setDocumentUrl] = useState(demand.demandas.documentUrl || '');
+  const [isLegislativo] = useState(demand.demandas.isLegislativo);
+  const [numeroIndicacao] = useState(demand.demandas.numeroIndicacao || '');
+  const [documentUrl] = useState(demand.demandas.documentUrl || '');
 
   const formatPhone = (phone: string) => {
     if (!phone) return '';
@@ -112,21 +110,26 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
       onUpdate();
     } catch (err: any) {
       console.error(`Erro ao atualizar ${field}:`, err);
-      alert(`Erro: O banco de dados não pôde salvar esta alteração. Verifique se as migrações foram rodadas.`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateMunicipe = async () => {
+  const handleUpdateMunicipe = async (forceUpdate?: Partial<typeof municipe>) => {
     setLoading(true);
+    const dataToSave = forceUpdate ? { ...municipe, ...forceUpdate } : municipe;
     try {
-      await api.patch(`/demands/municipe/${demand.municipes.id}`, municipe);
+      await api.patch(`/demands/municipe/${municipe.id}`, dataToSave);
       setIsEditing(false);
       onUpdate();
-      alert('Dados do cidadão atualizados!');
+      if (forceUpdate?.isLideranca !== undefined) {
+        setMunicipe(prev => ({ ...prev, isLideranca: !!forceUpdate.isLideranca }));
+        alert(`Status de liderança atualizado!`);
+      } else {
+        alert('Dados do cidadão atualizados!');
+      }
     } catch (err) {
-      alert('Falha ao atualizar dados do munícipe.');
+      alert('Falha ao atualizar dados.');
     } finally {
       setLoading(false);
     }
@@ -136,7 +139,7 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     if (!confirm('Deseja realmente EXCLUIR este munícipe e TODAS as suas demandas? Esta ação é irreversível.')) return;
     setLoading(true);
     try {
-      await api.delete(`/demands/municipe/${demand.municipes.id}`);
+      await api.delete(`/demands/municipe/${municipe.id}`);
       onClose();
       onUpdate();
     } catch (err) {
@@ -198,13 +201,18 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
 
         <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
           
-          {/* SEÇÃO CIDADÃO COM BOTÕES DE EDITAR/EXCLUIR */}
+          {/* SEÇÃO CIDADÃO */}
           <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100 relative group">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg"><User size={24} /></div>
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-lg ${municipe.isLideranca ? 'bg-amber-500' : 'bg-blue-600'}`}>
+                  {municipe.isLideranca ? <Star size={24} fill="currentColor" /> : <User size={24} />}
+                </div>
                 <div>
-                  <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">Munícipe</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">Munícipe</p>
+                    {municipe.isLideranca && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Liderança</span>}
+                  </div>
                   {isEditing ? (
                     <input 
                       className="mt-1 px-3 py-1 bg-white border border-blue-200 rounded-lg text-sm font-bold w-full outline-none focus:ring-2 focus:ring-blue-500"
@@ -217,10 +225,9 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
                 </div>
               </div>
               
-              {/* BOTÕES DE AÇÃO DO CIDADÃO */}
               <div className="flex gap-2">
                 {isEditing ? (
-                  <button onClick={handleUpdateMunicipe} className="p-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-all"><CheckCircle2 size={16} /></button>
+                  <button onClick={() => handleUpdateMunicipe()} className="p-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-all"><CheckCircle2 size={16} /></button>
                 ) : (
                   <>
                     <button onClick={() => setIsEditing(true)} className="p-2 bg-white border border-slate-200 text-slate-400 rounded-lg hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm" title="Editar"><Edit2 size={16} /></button>
@@ -248,44 +255,50 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
                 )}
               </div>
             </div>
+
+            {/* ATALHO LIDERANÇA */}
+            <div className="mt-4 pt-4 border-t border-blue-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Star size={16} className={municipe.isLideranca ? 'text-amber-500' : 'text-slate-300'} fill={municipe.isLideranca ? "currentColor" : "none"} />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cidadão Influente / Liderança</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={municipe.isLideranca}
+                  onChange={e => handleUpdateMunicipe({ isLideranca: e.target.checked })}
+                />
+                <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+              </label>
+            </div>
           </div>
 
           {/* TRIAGEM (DROPDOWNS) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
-              <div className="relative">
-                <Clock size={14} className="absolute left-3 top-3.5 text-slate-400" />
-                <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={status} onChange={e => handleUpdateField('status', e.target.value)}>
-                  <option value="nova">Em Aberto</option>
-                  <option value="concluida">Concluída</option>
-                  <option value="cancelada">Cancelada</option>
-                </select>
-              </div>
+              <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all" value={status} onChange={e => handleUpdateField('status', e.target.value)}>
+                <option value="nova">Em Aberto</option>
+                <option value="concluida">Concluída</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
             </div>
-
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
-              <div className="relative">
-                <Tag size={14} className="absolute left-3 top-3.5 text-slate-400" />
-                <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={categoria} onChange={e => handleUpdateField('categoria', e.target.value)}>
-                  <option value="">Selecione...</option>
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
-              </div>
+              <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all" value={categoria} onChange={e => handleUpdateField('categoria', e.target.value)}>
+                <option value="">Selecione...</option>
+                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
             </div>
-
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prioridade</label>
-              <div className="relative">
-                <AlertCircle size={14} className="absolute left-3 top-3.5 text-slate-400" />
-                <select className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none" value={prioridade} onChange={e => handleUpdateField('prioridade', e.target.value)}>
-                  <option value="baixa">Baixa</option>
-                  <option value="media">Média</option>
-                  <option value="alta">Alta</option>
-                  <option value="urgente">Urgente</option>
-                </select>
-              </div>
+              <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all" value={prioridade} onChange={e => handleUpdateField('prioridade', e.target.value)}>
+                <option value="baixa">Baixa</option>
+                <option value="media">Média</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
             </div>
           </div>
 
@@ -304,13 +317,6 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
             <button disabled={sendingMessage || !manualMessage.trim()} onClick={handleSendMessage} className="w-full bg-green-600 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-green-100 hover:bg-green-700 flex items-center justify-center gap-2 transition-all">
               {sendingMessage ? <Loader2 size={18} className="animate-spin" /> : <MessageSquare size={18} />}
               ENVIAR AGORA
-            </button>
-          </div>
-
-          {/* CRIAR DEMANDA OFICIAL */}
-          <div className="pt-4 flex justify-center">
-            <button onClick={() => onOpenCreateDemand ? onOpenCreateDemand(demand.municipes) : handleUpdateLegislativo()} className="text-blue-600 font-black text-[10px] uppercase tracking-widest hover:underline flex items-center gap-1">
-              <Plus size={14} /> Transformar em Protocolo Oficial
             </button>
           </div>
 

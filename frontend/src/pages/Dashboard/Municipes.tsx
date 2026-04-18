@@ -25,8 +25,7 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
-  Check,
-  ShieldCheck
+  Check
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -65,12 +64,6 @@ export default function Municipes() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [allBairros, setAllBairros] = useState<string[]>([]);
   
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
-
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
@@ -127,27 +120,17 @@ export default function Municipes() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyLideranca, onlyBirthdays, sortConfig]);
+  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyLideranca, onlyBirthdays, sortConfig, cabinetConfig]);
 
-  useEffect(() => {
-    loadMunicipes();
-  }, [loadMunicipes]);
-
-  useEffect(() => {
-    loadAllBairros();
-  }, [loadAllBairros]);
-
-  useEffect(() => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-  }, [searchTerm, selectedBairro, onlyEngaged, onlyLideranca, onlyBirthdays]);
+  useEffect(() => { loadMunicipes(); }, [loadMunicipes]);
+  useEffect(() => { loadAllBairros(); }, [loadAllBairros]);
+  useEffect(() => { setPagination(prev => ({ ...prev, page: 1 })); }, [searchTerm, selectedBairro, onlyEngaged, onlyLideranca, onlyBirthdays]);
 
   const isTodayBirthday = (dateStr: string | null) => {
     if (!dateStr) return false;
     try {
       const today = new Date();
-      const brParts = new Intl.DateTimeFormat('pt-BR', {
-        timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit'
-      }).formatToParts(today);
+      const brParts = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }).formatToParts(today);
       const todayDay = brParts.find(p => p.type === 'day')?.value;
       const todayMonth = brParts.find(p => p.type === 'month')?.value;
       const datePart = dateStr.split('T')[0];
@@ -162,23 +145,11 @@ export default function Municipes() {
     setSortConfig({ key, direction });
   };
 
-  const toggleSelect = (id: string) => {
-    setSelectedSelectedMunicipes(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedMunicipes.length === municipes.length) setSelectedSelectedMunicipes([]);
-    else setSelectedSelectedMunicipes(municipes.map(m => m.id));
-  };
-
   const handleCreateMunicipe = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
-        ...createForm,
-        birthDate: parseDateToISO(createForm.birthDate)
-      };
+      const payload = { ...createForm, birthDate: parseDateToISO(createForm.birthDate) };
       await api.post('/demands/municipes', payload);
       setIsCreateModalOpen(false);
       setCreateForm({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
@@ -186,28 +157,6 @@ export default function Municipes() {
       loadMunicipes();
       alert('Munícipe cadastrado com sucesso!');
     } catch (err: any) { alert(err.response?.data?.error || 'Erro ao cadastrar munícipe.'); }
-    finally { setSaving(false); }
-  };
-
-  const handleImportCSV = async () => {
-    if (!csvFile || !mapping.name || !mapping.phone) {
-      alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
-      return;
-    }
-    setSaving(true);
-    const formData = new FormData();
-    formData.append('file', csvFile);
-    formData.append('mapping', JSON.stringify(mapping));
-    try {
-      const res = await api.post('/demands/municipes/import', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setIsImportModalOpen(false);
-      setCsvFile(null);
-      setCsvHeaders([]);
-      loadMunicipes();
-      alert(`Importação concluída! ${res.data.imported} contatos processados.`);
-    } catch (err: any) { alert('Falha ao importar CSV: ' + (err.response?.data?.error || 'Erro desconhecido')); }
     finally { setSaving(false); }
   };
 
@@ -260,10 +209,7 @@ export default function Municipes() {
   const handleEdit = (m: Municipe) => {
     setEditingMunicipe(m);
     setEditForm({ 
-      name: m.name, 
-      phone: m.phone, 
-      cep: m.cep || '',
-      bairro: m.bairro || '', 
+      name: m.name, phone: m.phone, cep: m.cep || '', bairro: m.bairro || '', 
       birthDate: m.birthDate ? formatDateDisplay(m.birthDate) : '',
       isLideranca: m.isLideranca
     });
@@ -275,8 +221,7 @@ export default function Municipes() {
     setSaving(true);
     try {
       const birthDateISO = parseDateToISO(editForm.birthDate);
-      const payload = { ...editForm, birthDate: birthDateISO };
-      await api.patch(`/demands/municipe/${editingMunicipe.id}`, payload);
+      await api.patch(`/demands/municipe/${editingMunicipe.id}`, { ...editForm, birthDate: birthDateISO });
       setEditingMunicipe(null);
       alert('Dados atualizados com sucesso!');
       loadMunicipes();
@@ -298,12 +243,6 @@ export default function Municipes() {
           <button onClick={() => setIsCreateModalOpen(true)} className="flex-1 lg:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
             <Plus size={18} /> ADICIONAR
           </button>
-          {(user?.role === 'admin' || user?.role === 'vereador') && (
-            <button onClick={() => setIsImportModalOpen(true)} className="flex-1 lg:flex-none px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-black text-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm">
-              <Upload size={18} /> IMPORTAR
-            </button>
-          )}
-          <button onClick={() => setIsExportModalOpen(true)} className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"><FileDown size={20} /></button>
         </div>
       </header>
 
@@ -319,9 +258,6 @@ export default function Municipes() {
           </select>
           <button onClick={() => setOnlyLideranca(!onlyLideranca)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyLideranca ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
             Lideranças
-          </button>
-          <button onClick={() => setOnlyBirthdays(!onlyBirthdays)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyBirthdays ? 'bg-pink-500 border-pink-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
-            🎂 Hoje
           </button>
         </div>
       </div>
@@ -342,7 +278,7 @@ export default function Municipes() {
                 <tr key={m.id} className="hover:bg-slate-50/50 transition-all cursor-pointer" onClick={() => handleEdit(m)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${m.isLideranca ? 'bg-amber-100 text-amber-600 shadow-sm border border-amber-200' : 'bg-slate-100 text-slate-400'}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${m.isLideranca ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-slate-100 text-slate-400'}`}>
                         {m.isLideranca ? <Star size={20} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -357,9 +293,7 @@ export default function Municipes() {
                   <td className="px-4 py-4 font-bold text-slate-500 text-xs uppercase">{m.bairro || '---'}</td>
                   <td className="px-4 py-4 text-center text-xs text-slate-400">{formatDateDisplay(m.birthDate)}</td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Edit2 size={16} /></button>
-                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Edit2 size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -368,19 +302,37 @@ export default function Municipes() {
         </div>
       </div>
 
-      {/* Create/Edit Modal Support for Liderança */}
+      {/* Create/Edit Modal */}
       {(isCreateModalOpen || editingMunicipe) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-xl font-bold text-slate-900">{editingMunicipe ? 'Editar' : 'Novo'} Munícipe</h3>
               <button onClick={() => { setIsCreateModalOpen(false); setEditingMunicipe(null); }} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
             </div>
+            
             <form onSubmit={editingMunicipe ? (e) => { e.preventDefault(); handleSaveEdit(); } : handleCreateMunicipe} className="p-8 space-y-5">
-              <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
+                <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? editForm.name : createForm.name} onChange={e => editingMunicipe ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
+                  <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? displayEditPhone : displayCreatePhone} onChange={e => applyPhoneMask(e.target.value, editingMunicipe ? 'edit' : 'create')} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editingMunicipe ? editForm.bairro : createForm.bairro} onChange={e => editingMunicipe ? setEditForm({...editForm, bairro: e.target.value.toUpperCase()}) : setCreateForm({...createForm, bairro: e.target.value.toUpperCase()})} />
+                </div>
+              </div>
+
+              {/* Liderança Checkbox na parte inferior */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center gap-3">
-                  <Star className="text-amber-500" size={20} />
-                  <span className="text-sm font-black text-amber-700 uppercase tracking-tighter">É uma liderança?</span>
+                  <Star className={`${(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? 'text-amber-500' : 'text-slate-300'}`} size={20} fill={(editingMunicipe ? editForm.isLideranca : createForm.isLideranca) ? "currentColor" : "none"} />
+                  <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Marcar como Liderança</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input 
@@ -389,28 +341,12 @@ export default function Municipes() {
                     checked={editingMunicipe ? editForm.isLideranca : createForm.isLideranca}
                     onChange={e => editingMunicipe ? setEditForm({...editForm, isLideranca: e.target.checked}) : setCreateForm({...createForm, isLideranca: e.target.checked})}
                   />
-                  <div className="w-11 h-6 bg-amber-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                  <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                 </label>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
-                <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" value={editingMunicipe ? editForm.name : createForm.name} onChange={e => editingMunicipe ? setEditForm({...editForm, name: e.target.value}) : setCreateForm({...createForm, name: e.target.value})} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">WhatsApp</label>
-                  <input required type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" value={editingMunicipe ? displayEditPhone : displayCreatePhone} onChange={e => applyPhoneMask(e.target.value, editingMunicipe ? 'edit' : 'create')} />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
-                  <input type="text" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" value={editingMunicipe ? editForm.bairro : createForm.bairro} onChange={e => editingMunicipe ? setEditForm({...editForm, bairro: e.target.value.toUpperCase()}) : setCreateForm({...createForm, bairro: e.target.value.toUpperCase()})} />
-                </div>
-              </div>
-
-              <button type="submit" disabled={saving} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50">
-                {saving ? 'Salvando...' : (editingMunicipe ? 'Salvar Alterações' : 'Cadastrar')}
+              <button type="submit" disabled={saving} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg disabled:opacity-50">
+                {saving ? 'Salvando...' : (editingMunicipe ? 'Salvar Alterações' : 'Cadastrar Munícipe')}
               </button>
             </form>
           </div>
