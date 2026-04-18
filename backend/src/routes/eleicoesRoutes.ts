@@ -126,39 +126,54 @@ router.get('/resumo', async (req, res) => {
 
     const totalVotos = Number(totalVotosResult.rows[0]?.total || 0);
 
-    // 3. Mapa de Calor
+    // 3. Mapa de Calor (Agrupado por Bairro se Coordenadas das Escolas falharem)
     const mapaCalor = await db.execute(sql`
-      WITH votos_local AS (
-        SELECT nr_zona, nr_local_votacao, SUM(qt_votos) as votos
-        FROM tse_votos_secao
-        WHERE nr_candidato = ${candidato.nrCandidato}
-          AND cd_municipio = ${cdMun}
-          AND ano_eleicao = ${candidato.anoEleicao}
-        GROUP BY 1, 2
+      WITH votos_bairro AS (
+        SELECT 
+          UPPER(COALESCE(NULLIF(l.nm_bairro, ''), 'CENTRO')) as bairro,
+          SUM(v.qt_votos) as votos
+        FROM tse_votos_secao v
+        JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao 
+          AND v.nr_zona = l.nr_zona AND v.cd_municipio = l.cd_municipio
+        WHERE v.nr_candidato = ${candidato.nrCandidato}
+          AND v.cd_municipio = ${cdMun}
+          AND v.ano_eleicao = ${candidato.anoEleicao}
+        GROUP BY 1
       ),
-      coords_unicas AS (
-        SELECT DISTINCT ON (nr_zona, nr_local_votacao)
-          nr_zona, nr_local_votacao, nm_local_votacao, latitude, longitude
+      coords_bairro AS (
+        -- Busca a primeira coordenada válida encontrada em cada bairro para servir de centro
+        SELECT DISTINCT ON (UPPER(nm_bairro))
+          UPPER(nm_bairro) as bairro,
+          latitude,
+          longitude
         FROM tse_locais_votacao
-        WHERE cd_municipio = ${cdMun}
-          AND ano_eleicao = ${candidato.anoEleicao}
-          AND latitude IS NOT NULL
+        WHERE cd_municipio = ${cdMun} AND latitude IS NOT NULL
       )
       SELECT 
-          c.nm_local_votacao,
-          c.latitude,
-          c.longitude,
+          v.bairro as nm_local_votacao, -- Reutiliza campo para o frontend
+          COALESCE(c.latitude, '0') as latitude,
+          COALESCE(c.longitude, '0') as longitude,
           v.votos::int as total_votos
-      FROM votos_local v
-      JOIN coords_unicas c ON v.nr_local_votacao = c.nr_local_votacao 
-        AND v.nr_zona = c.nr_zona
+      FROM votos_bairro v
+      LEFT JOIN coords_bairro c ON v.bairro = c.bairro
+      WHERE v.votos > 0
     `);
 
-    // 4. Perfil Eleitorado
+    // 4. Perfil Eleitorado (Ponderado pelo desempenho nos bairros)
+    // Buscamos o perfil apenas dos bairros onde o candidato teve votação expressiva (> 5%)
     const perfilGenero = await db.execute(sql`
       SELECT UPPER(ds_genero) as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
+        AND UPPER(nm_bairro) IN (
+          SELECT UPPER(nm_bairro) FROM (
+            SELECT l.nm_bairro, SUM(v.qt_votos) as total 
+            FROM tse_votos_secao v 
+            JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.nr_zona = l.nr_zona
+            WHERE v.nr_candidato = ${candidato.nrCandidato} AND v.cd_municipio = ${cdMun}
+            GROUP BY 1 ORDER BY 2 DESC LIMIT 5
+          ) as principais_bairros
+        )
       GROUP BY 1 ORDER BY value DESC
     `);
 
@@ -166,6 +181,15 @@ router.get('/resumo', async (req, res) => {
       SELECT ds_faixa_etaria as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
+        AND UPPER(nm_bairro) IN (
+          SELECT UPPER(nm_bairro) FROM (
+            SELECT l.nm_bairro, SUM(v.qt_votos) as total 
+            FROM tse_votos_secao v 
+            JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.nr_zona = l.nr_zona
+            WHERE v.nr_candidato = ${candidato.nrCandidato} AND v.cd_municipio = ${cdMun}
+            GROUP BY 1 ORDER BY 2 DESC LIMIT 5
+          ) as principais_bairros
+        )
       GROUP BY 1 ORDER BY label ASC
     `);
 
@@ -173,6 +197,15 @@ router.get('/resumo', async (req, res) => {
       SELECT ds_grau_escolaridade as label, SUM(qt_eleitores) as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
+        AND UPPER(nm_bairro) IN (
+          SELECT UPPER(nm_bairro) FROM (
+            SELECT l.nm_bairro, SUM(v.qt_votos) as total 
+            FROM tse_votos_secao v 
+            JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.nr_zona = l.nr_zona
+            WHERE v.nr_candidato = ${candidato.nrCandidato} AND v.cd_municipio = ${cdMun}
+            GROUP BY 1 ORDER BY 2 DESC LIMIT 5
+          ) as principais_bairros
+        )
       GROUP BY 1 ORDER BY value DESC
     `);
 

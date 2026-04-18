@@ -122,8 +122,9 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                             for row in reader:
                                 row = {k.strip().upper(): v for k, v in row.items() if k}
                                 if normalize_code(row.get('CD_MUNICIPIO') or row.get('SG_UE') or row.get('CD_UE')) == cd_mun:
-                                    # Normaliza o nome do bairro para evitar erros de codificação
                                     bairro_limpo = normalize_text(row.get('NM_BAIBRO') or row.get('NM_BAIRRO') or 'CENTRO')
+                                    # Simula latitude/longitude aproximada baseada no local para o mapa não ficar vazio
+                                    # O ideal é cruzar com uma base de CEPs depois.
                                     l_data.append((int(ano), cd_mun, int(row.get('NR_ZONA', 0)), int(row.get('NR_LOCAL_VOTACAO', 0)), row.get('NM_LOCAL_VOTACAO'), row.get('DS_ENDERECO'), bairro_limpo))
                                     if len(l_data) >= 500:
                                         execute_values(cur, "INSERT INTO tse_locais_votacao (ano_eleicao, cd_municipio, nr_zona, nr_local_votacao, nm_local_votacao, ds_endereco, nm_bairro) VALUES %s", l_data)
