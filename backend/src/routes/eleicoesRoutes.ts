@@ -159,53 +159,28 @@ router.get('/resumo', async (req, res) => {
       WHERE v.votos > 0
     `);
 
-    // 4. Perfil Eleitorado (Ponderado pelo desempenho nos bairros)
-    // Buscamos o perfil apenas dos bairros onde o candidato teve votação expressiva (> 5%)
+    // 4. Perfil Demográfico do Eleitorado do Município
     const perfilGenero = await db.execute(sql`
-      SELECT UPPER(ds_genero) as label, SUM(qt_eleitores) as value
+      SELECT UPPER(ds_genero) as label, SUM(qt_eleitores)::int as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
-        AND UPPER(nm_bairro) IN (
-          SELECT UPPER(nm_bairro) FROM (
-            SELECT l.nm_bairro, SUM(v.qt_votos) as total 
-            FROM tse_votos_secao v 
-            JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.nr_zona = l.nr_zona
-            WHERE v.nr_candidato = ${candidato.nrCandidato} AND v.cd_municipio = ${cdMun}
-            GROUP BY 1 ORDER BY 2 DESC LIMIT 5
-          ) as principais_bairros
-        )
+        AND ds_genero IS NOT NULL AND UPPER(ds_genero) != 'NAO INFORMADO'
       GROUP BY 1 ORDER BY value DESC
     `);
 
     const perfilIdade = await db.execute(sql`
-      SELECT ds_faixa_etaria as label, SUM(qt_eleitores) as value
+      SELECT ds_faixa_etaria as label, SUM(qt_eleitores)::int as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
-        AND UPPER(nm_bairro) IN (
-          SELECT UPPER(nm_bairro) FROM (
-            SELECT l.nm_bairro, SUM(v.qt_votos) as total 
-            FROM tse_votos_secao v 
-            JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.nr_zona = l.nr_zona
-            WHERE v.nr_candidato = ${candidato.nrCandidato} AND v.cd_municipio = ${cdMun}
-            GROUP BY 1 ORDER BY 2 DESC LIMIT 5
-          ) as principais_bairros
-        )
+        AND ds_faixa_etaria IS NOT NULL AND ds_faixa_etaria != '-1'
       GROUP BY 1 ORDER BY label ASC
     `);
 
     const perfilEscolaridade = await db.execute(sql`
-      SELECT ds_grau_escolaridade as label, SUM(qt_eleitores) as value
+      SELECT ds_grau_escolaridade as label, SUM(qt_eleitores)::int as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
-        AND UPPER(nm_bairro) IN (
-          SELECT UPPER(nm_bairro) FROM (
-            SELECT l.nm_bairro, SUM(v.qt_votos) as total 
-            FROM tse_votos_secao v 
-            JOIN tse_locais_votacao l ON v.nr_local_votacao = l.nr_local_votacao AND v.nr_zona = l.nr_zona
-            WHERE v.nr_candidato = ${candidato.nrCandidato} AND v.cd_municipio = ${cdMun}
-            GROUP BY 1 ORDER BY 2 DESC LIMIT 5
-          ) as principais_bairros
-        )
+        AND ds_grau_escolaridade IS NOT NULL AND ds_grau_escolaridade != '-1'
       GROUP BY 1 ORDER BY value DESC
     `);
 

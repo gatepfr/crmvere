@@ -299,7 +299,7 @@ export default function Eleicoes() {
               Perfil Demográfico do Eleitorado
             </h2>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Dados dos principais bairros de votação
+              Perfil completo do eleitorado do município
             </p>
           </header>
 
@@ -348,12 +348,13 @@ export default function Eleicoes() {
                   <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Faixa Etária</h3>
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={data.perfil.idade.map((d: any) => ({
-                    name: d.label?.replace(' a ', '-').replace(' anos', ''),
-                    value: Number(d.value)
-                  }))}>
+                  <BarChart data={data.perfil.idade.map((d: any) => {
+                    let label = (d.label || '').replace(/ anos/gi, '').replace(/ a /g, '-').replace(/Superior a /gi, '80+').trim();
+                    if (label === '-1' || !label) label = 'N/I';
+                    return { name: label, value: Number(d.value) };
+                  }).filter((d: any) => d.value > 0)}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700 }} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} interval={0} angle={-25} textAnchor="end" height={45} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
                     <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
                     <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
@@ -371,14 +372,29 @@ export default function Eleicoes() {
                   </div>
                   <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Escolaridade</h3>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart layout="vertical" data={data.perfil.escolaridade.map((d: any) => ({
-                    name: d.label?.replace('ENSINO ', '').replace('SUPERIOR ', 'SUP. '),
-                    value: Number(d.value)
-                  }))}>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart layout="vertical" data={data.perfil.escolaridade.map((d: any) => {
+                    const map: Record<string, string> = {
+                      'ANALFABETO': 'Analfabeto',
+                      'LE E ESCREVE': 'Lê e Escreve',
+                      'LÊ E ESCREVE': 'Lê e Escreve',
+                      'ENSINO FUNDAMENTAL INCOMPLETO': 'Fund. Incompl.',
+                      'ENSINO FUNDAMENTAL COMPLETO': 'Fund. Compl.',
+                      'ENSINO MEDIO INCOMPLETO': 'Médio Incompl.',
+                      'ENSINO MEDIO COMPLETO': 'Médio Compl.',
+                      'ENSINO MÉDIO INCOMPLETO': 'Médio Incompl.',
+                      'ENSINO MÉDIO COMPLETO': 'Médio Compl.',
+                      'SUPERIOR INCOMPLETO': 'Sup. Incompl.',
+                      'SUPERIOR COMPLETO': 'Sup. Compl.',
+                      'NAO INFORMADO': 'N/I',
+                      'NÃO INFORMADO': 'N/I',
+                    };
+                    const label = map[(d.label || '').toUpperCase()] || d.label;
+                    return { name: label, value: Number(d.value) };
+                  }).filter((d: any) => d.value > 0 && d.name !== 'N/I')}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} width={100} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} width={110} />
                     <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
                     <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]} />
                   </BarChart>
