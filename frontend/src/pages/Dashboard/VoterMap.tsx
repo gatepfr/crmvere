@@ -17,11 +17,16 @@ export default function VoterMap() {
   const [center, setCenter] = useState<[number, number]>([-23.5489, -46.6388]);
 
   useEffect(() => {
-    api.get('/map/data')
-      .then(res => {
-        setData(res.data.points || []);
-        if (res.data.center) {
-          setCenter([res.data.center.lat, res.data.center.lng]);
+    Promise.all([
+      api.get('/map/data'),
+      api.get('/config/me')
+    ])
+      .then(([mapRes, configRes]) => {
+        setData(mapRes.data.points || []);
+        if (mapRes.data.center) {
+          setCenter([mapRes.data.center.lat, mapRes.data.center.lng]);
+        } else if (configRes.data?.latitude && configRes.data?.longitude) {
+          setCenter([configRes.data.latitude, configRes.data.longitude]);
         }
       })
       .catch(err => console.error('Erro ao carregar mapa:', err))
@@ -38,10 +43,9 @@ export default function VoterMap() {
     );
   }
 
-  // Default center if no data (centered on a generic SP coordinate if first data point fails)
-  const defaultCenter: [number, number] = data.length > 0 
-    ? [data[0].lat, data[0].lng] 
-    : [-23.5489, -46.6388];
+  const defaultCenter: [number, number] = data.length > 0
+    ? [data[0].lat, data[0].lng]
+    : center;
 
   const maxCount = Math.max(...data.map(d => d.count), 1);
 

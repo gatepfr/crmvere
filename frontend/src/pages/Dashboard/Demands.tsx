@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatPhone } from '../../utils/formatPhone';
 
 interface Atendimento {
   atendimentos: {
@@ -118,15 +119,6 @@ export default function Demands() {
       case 'baixa': return 'text-emerald-600 bg-emerald-50';
       default: return 'text-slate-600 bg-slate-50';
     }
-  };
-
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('55') && cleaned.length >= 12) cleaned = cleaned.slice(2);
-    if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    return phone;
   };
 
   const exportToPDF = async (mode: 'page' | 'all') => {

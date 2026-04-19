@@ -19,12 +19,12 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { 
-  Plus, 
-  MoreHorizontal, 
-  Mail, 
-  Phone, 
-  Layout as KanbanIcon, 
+import {
+  Plus,
+  MoreHorizontal,
+  Mail,
+  Phone,
+  Layout as KanbanIcon,
   Loader2,
   ChevronRight,
   Trash2,
@@ -33,6 +33,7 @@ import {
   History,
   X
 } from 'lucide-react';
+import { formatPhone } from '../../utils/formatPhone';
 
 interface Lead {
   id: string;
@@ -64,26 +65,6 @@ interface PendingDemand {
   }
 }
 
-const formatPhone = (phone: string | null) => {
-  if (!phone) return '';
-  let cleaned = phone.replace(/\D/g, '');
-  
-  // Logic: if it starts with 55, remove it for easier handling
-  if (cleaned.length >= 12 && cleaned.startsWith('55')) {
-    cleaned = cleaned.slice(2);
-  }
-  
-  // Intelligent Fix: If it has 10 digits, it's missing the 9. Add it.
-  if (cleaned.length === 10) {
-    cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-  }
-  
-  // Final format (99) 99999-9999
-  if (cleaned.length === 11) {
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-  }
-  return phone;
-};
 
 function SortableLeadCard({ lead, onDelete }: { lead: Lead, onDelete: (id: string) => void }) {
   const {

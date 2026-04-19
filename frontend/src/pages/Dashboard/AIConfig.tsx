@@ -111,6 +111,11 @@ export default function AIConfig() {
                 onChange={e => setConfig({...config, systemPrompt: e.target.value})}
                 placeholder="Ex: Você é o assistente virtual do Vereador..."
               />
+              <div className="flex justify-end">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${config.systemPrompt.length > 4000 ? 'text-red-500' : 'text-slate-300'}`}>
+                  {config.systemPrompt.length} / 4000 caracteres
+                </span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100">
                   <h4 className="text-[10px] font-black text-blue-700 uppercase mb-3 flex items-center gap-2">
