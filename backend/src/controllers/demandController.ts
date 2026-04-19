@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { demandas, municipes, systemConfigs, tenants, demandCategories, atendimentos } from '../db/schema';
-import { eq, desc, and, sql, count, ilike, or } from 'drizzle-orm';
+import { eq, desc, asc, and, sql, count, ilike, or } from 'drizzle-orm';
 import { normalizePhone } from '../utils/phoneUtils';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
@@ -34,7 +34,20 @@ export const listMunicipes = async (req: Request, res: Response) => {
   const search = req.query.search as string;
   const birthday = req.query.birthday === 'true';
   const isLiderancaFilter = req.query.lideranca === 'true';
+  const bairroFilter = req.query.bairro as string;
+  const sortBy = (req.query.sortBy as string) || 'name';
+  const sortOrder = req.query.sortOrder === 'desc' ? 'desc' : 'asc';
   const offset = (page - 1) * limit;
+
+  const sortColumn: Record<string, any> = {
+    name: municipes.name,
+    phone: municipes.phone,
+    bairro: municipes.bairro,
+    createdAt: municipes.createdAt,
+    demandCount: sql`count(${demandas.id})::int`,
+  };
+  const orderCol = sortColumn[sortBy] ?? municipes.name;
+  const orderExpr = sortOrder === 'desc' ? desc(orderCol) : asc(orderCol);
 
   try {
     const conds = [eq(municipes.tenantId, tenantId!)];
@@ -47,13 +60,16 @@ export const listMunicipes = async (req: Request, res: Response) => {
     if (isLiderancaFilter) {
       conds.push(eq(municipes.isLideranca, true));
     }
+    if (bairroFilter) {
+      conds.push(eq(municipes.bairro, bairroFilter));
+    }
     const [totalCount] = await db.select({ count: count() }).from(municipes).where(and(...conds));
-    const results = await db.select({ 
-      id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro, 
+    const results = await db.select({
+      id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro,
       birthDate: municipes.birthDate, createdAt: municipes.createdAt, isLideranca: municipes.isLideranca,
-      demandCount: sql<number>`count(${demandas.id})::int` 
-    }).from(municipes).leftJoin(demandas, eq(municipes.id, demandas.municipeId)).where(and(...conds)).groupBy(municipes.id).orderBy(municipes.name).limit(limit).offset(offset);
-    
+      demandCount: sql<number>`count(${demandas.id})::int`
+    }).from(municipes).leftJoin(demandas, eq(municipes.id, demandas.municipeId)).where(and(...conds)).groupBy(municipes.id).orderBy(orderExpr).limit(limit).offset(offset);
+
     res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit === 10000 ? 1 : limit)) } });
   } catch (error: any) { res.status(500).json({ error: 'Failed' }); }
 };
