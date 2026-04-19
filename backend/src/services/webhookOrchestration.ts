@@ -111,7 +111,13 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       const cleanTeamNumber = tenant.whatsappNotificationNumber.replace(/\D/g, '');
       const teamJid = `${cleanTeamNumber.startsWith('55') ? cleanTeamNumber : '55' + cleanTeamNumber}@s.whatsapp.net`;
       
-      const teamMessage = `🚨 *ATENÇÃO NECESSÁRIA*\n\n👤 *${municipe.name}*\n📱 ${municipe.phone}\n\n📋 *Resumo:* ${aiRes.resumo_ia || 'Nova demanda identificada'}\n\n💬 *Última mensagem:*\n"${normalized.text}"\n\n🏷️ ${(aiRes.categoria || 'OUTRO').toUpperCase()} · Prioridade ${(aiRes.prioridade || 'MEDIA').toUpperCase()}\n\n⏳ _A IA está pausada por 30 min. Responda pelo WhatsApp ou pelo painel._`;
+      const rawPhone = municipe.phone.replace(/\D/g, '').replace(/^55/, '');
+      const maskedPhone = rawPhone.length === 11
+        ? `(${rawPhone.slice(0,2)}) ${rawPhone.slice(2,7)}-${rawPhone.slice(7)}`
+        : rawPhone.length === 10
+        ? `(${rawPhone.slice(0,2)}) ${rawPhone.slice(2,6)}-${rawPhone.slice(6)}`
+        : municipe.phone;
+      const teamMessage = `🚨 *ATENÇÃO NECESSÁRIA*\n\n👤 *${municipe.name}*\n📱 ${maskedPhone}\n\n📋 *Resumo:* ${aiRes.resumo_ia || 'Nova demanda identificada'}\n\n💬 *Última mensagem:*\n"${normalized.text}"\n\n🏷️ ${(aiRes.categoria || 'OUTRO').toUpperCase()} · Prioridade ${(aiRes.prioridade || 'MEDIA').toUpperCase()}\n\n⏳ _A IA está pausada por 30 min. Responda pelo WhatsApp ou pelo painel._`;
       
       await evolution.sendMessage(tenant.whatsappInstanceId, teamJid, teamMessage)
         .catch(err => console.error('[NOTIFICATION ERROR]', err.message));
