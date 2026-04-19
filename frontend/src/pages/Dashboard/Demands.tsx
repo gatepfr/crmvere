@@ -62,7 +62,7 @@ const formatName = (name: string) => {
 export default function Demands() {
   const [atendimentos, setAtendimentos] = useState<Atendimento[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedAtendimento, setSelectedAtendimento] = useState<any>(null);
+  const [selectedAtendimento, setSelectedAtendimento] = useState<Atendimento | null>(null);
   const [isNewDemandModalOpen, setIsNewDemandModalOpen] = useState(false);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [searchTerm, setSearchTerm] = useState('');
@@ -97,7 +97,9 @@ export default function Demands() {
   useEffect(() => {
     fetchAtendimentos();
     const interval = setInterval(() => {
-      fetchAtendimentos(true);
+      if (!document.hidden) {
+        fetchAtendimentos(true);
+      }
     }, 15000);
     return () => clearInterval(interval);
   }, [fetchAtendimentos]);

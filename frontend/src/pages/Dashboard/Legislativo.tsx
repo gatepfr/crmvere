@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
+import { formatPhone } from '../../utils/formatPhone';
 import NewDemandModal from '../../components/NewDemandModal';
 import DemandModal from '../../components/DemandModal';
 import LegislativoEditModal from '../../components/LegislativoEditModal';
@@ -53,17 +54,30 @@ interface Pagination {
   totalPages: number;
 }
 
+interface CabinetConfig {
+  name: string;
+  municipio: string;
+  uf: string;
+  partido: string;
+  mandato: string;
+  fotoUrl: string;
+  calendarUrl: string;
+  birthdayMessage: string;
+  birthdayAutomated: boolean;
+  legislativeMessage: string;
+}
+
 type SortField = 'name' | 'subject' | 'number' | 'date';
 type SortOrder = 'asc' | 'desc';
 
 export default function Legislativo() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cabinetConfig, setCabinetConfig] = useState<any>(null);
+  const [cabinetConfig, setCabinetConfig] = useState<CabinetConfig | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const [selectedDemand, setSelectedDemand] = useState<any>(null);
+  const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   
   // PDF Export States
@@ -141,14 +155,6 @@ export default function Legislativo() {
     }
   };
 
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length >= 12 && cleaned.startsWith('55')) cleaned = cleaned.slice(2);
-    if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    return phone;
-  };
 
   const sendToWhatsApp = async (d: Demand) => {
     if (!d.documentUrl) {

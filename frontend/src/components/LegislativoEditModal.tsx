@@ -1,12 +1,13 @@
 import api from '../api/client';
 import { useState, useEffect } from 'react';
-import { 
-  X, 
-  User, 
-  Phone, 
-  Tag, 
+import { formatPhone } from '../utils/formatPhone';
+import {
+  X,
+  User,
+  Phone,
+  Tag,
   MapPin as MapIcon,
-  CheckCircle2, 
+  CheckCircle2,
   Loader2,
   Edit2,
   FileText
@@ -55,14 +56,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
       .catch(() => setCategories(DEFAULT_CATEGORIES));
   }, [demand]);
 
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    const cleaned = phone.replace(/\D/g, '');
-    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
-    if (finalNumber.length === 11) return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
-    if (finalNumber.length === 10) return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
-    return phone;
-  };
 
   const applyPhoneMask = (value: string) => {
     const raw = value.replace(/\D/g, '').slice(0, 11);

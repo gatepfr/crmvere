@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Target, TrendingUp, ShieldCheck, Map as MapIcon, AlertTriangle, Zap, X, Copy, Phone, UserCheck, CheckSquare, Square, MessageCircle, ArrowUpDown } from 'lucide-react';
 import api from '../../api/client';
+import { formatPhone } from '../../utils/formatPhone';
 
 interface StrategicItem {
   bairro: string;
@@ -80,20 +81,6 @@ export default function StrategicDashboard() {
     }
   };
 
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('55') && cleaned.length >= 12) {
-      cleaned = cleaned.slice(2);
-    }
-    if (cleaned.length === 10) {
-      cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-    }
-    if (cleaned.length === 11) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    }
-    return phone;
-  };
 
   const toggleAliado = (phone: string) => {
     setSelectedAliados(prev => 

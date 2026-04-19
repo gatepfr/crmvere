@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { formatPhone } from '../../utils/formatPhone';
 import { 
   Users, 
   Search, 
@@ -52,11 +53,24 @@ interface Pagination {
   totalPages: number;
 }
 
+interface CabinetConfig {
+  name: string;
+  municipio: string;
+  uf: string;
+  partido: string;
+  mandato: string;
+  fotoUrl: string;
+  calendarUrl: string;
+  birthdayMessage: string;
+  birthdayAutomated: boolean;
+  legislativeMessage: string;
+}
+
 export default function Municipes() {
   const { user } = useAuth();
   const [municipes, setMunicipes] = useState<Municipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cabinetConfig, setCabinetConfig] = useState<any>(null);
+  const [cabinetConfig, setCabinetConfig] = useState<CabinetConfig | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
   const [onlyLideranca, setOnlyLideranca] = useState(false);
@@ -265,15 +279,6 @@ export default function Municipes() {
     setBroadcastMessage('');
     setSelectedSelectedMunicipes([]);
     alert('Mensagens enviadas com sucesso!');
-  };
-
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length >= 12 && cleaned.startsWith('55')) cleaned = cleaned.slice(2);
-    if (cleaned.length === 10) cleaned = cleaned.slice(0, 2) + '9' + cleaned.slice(2);
-    if (cleaned.length === 11) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-    return phone;
   };
 
   const formatDateDisplay = (dateStr: string | null) => {

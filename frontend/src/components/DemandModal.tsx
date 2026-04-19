@@ -1,14 +1,15 @@
 import api from '../api/client';
 import { useState, useEffect } from 'react';
-import { 
-  X, 
-  User, 
-  Phone, 
-  Tag, 
-  AlertCircle, 
-  MessageSquare, 
-  CheckCircle2, 
-  Clock, 
+import { formatPhone } from '../utils/formatPhone';
+import {
+  X,
+  User,
+  Phone,
+  Tag,
+  AlertCircle,
+  MessageSquare,
+  CheckCircle2,
+  Clock,
   Loader2,
   MapPin as MapIcon,
   Trash2,
@@ -58,19 +59,6 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
   const [isLegislativo] = useState(demand.demandas.isLegislativo);
   const [numeroIndicacao] = useState(demand.demandas.numeroIndicacao || '');
   const [documentUrl] = useState(demand.demandas.documentUrl || '');
-
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    const cleaned = phone.replace(/\D/g, '');
-    const finalNumber = cleaned.length > 11 ? cleaned.slice(-11) : cleaned;
-    
-    if (finalNumber.length === 11) {
-      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 7)}-${finalNumber.slice(7)}`;
-    } else if (finalNumber.length === 10) {
-      return `(${finalNumber.slice(0, 2)}) ${finalNumber.slice(2, 6)}-${finalNumber.slice(6)}`;
-    }
-    return phone;
-  };
 
   const applyPhoneMask = (value: string) => {
     const raw = value.replace(/\D/g, '').slice(0, 11);
