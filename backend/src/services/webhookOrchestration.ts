@@ -4,6 +4,8 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { normalizeEvolution } from './whatsappService';
 import { processDemand } from './aiService';
 import { EvolutionService } from './evolutionService';
+import { trackAIUsage } from '../middleware/quotaMiddleware';
+import { redisService } from './redisService';
 
 const formatName = (name: string) => {
   if (!name) return '';
@@ -53,11 +55,20 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const isHumanActive = existingAtendimento?.lastHumanInteractionAt && new Date(existingAtendimento.lastHumanInteractionAt) > thirtyMinutesAgo;
     if (isHumanActive) return { status: 'waiting_human' };
 
-    // 5. Chamada da IA
+    // 5. Verificação de Quota antes de chamar a IA
+    const today = new Date().toISOString().split('T')[0];
+    const currentUsage = await redisService.getUsage(tenantId, today);
+    const dailyLimit = tenant.dailyTokenLimit || 50000;
+    if (currentUsage >= dailyLimit) {
+      console.log(`[ORCHESTRATOR] Tenant ${tenantId} atingiu limite diário de tokens (${currentUsage}/${dailyLimit})`);
+      return { status: 'quota_exceeded' };
+    }
+
+    // 6. Chamada da IA
     const tenantDocs = await db.select().from(documents).where(eq(documents.tenantId, tenantId));
     const knowledge = tenantDocs.map(d => d.textContent).join('\n\n');
     const [globalConfig] = await db.select().from(systemConfigs).where(eq(systemConfigs.id, 'default'));
-    
+
     const apiKey = tenant.aiApiKey || globalConfig?.aiApiKey;
     if (!apiKey) return { status: 'no_ai_key' };
 
@@ -72,7 +83,11 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const aiRes = resultIA.data;
     const finalHistory = `${updatedHistory}\nAI: ${aiRes.resposta_usuario}`;
 
-    // 6. Atualiza com resposta da IA
+    // Contabiliza tokens usados
+    await trackAIUsage(tenantId, resultIA.usage.total_tokens);
+    console.log(`[ORCHESTRATOR] Tokens usados: ${resultIA.usage.total_tokens} | Tenant: ${tenantId}`);
+
+    // 7. Atualiza com resposta da IA
     await db.update(atendimentos).set({
       resumoIa: finalHistory,
       categoria: aiRes.categoria,
@@ -81,17 +96,17 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       updatedAt: new Date()
     }).where(eq(atendimentos.id, existingAtendimento.id));
 
-    // 7. Configuração da Evolution API (Usa URL do banco se disponível)
+    // 8. Configuração da Evolution API (Usa URL do banco se disponível)
     const evoUrl = tenant.evolutionApiUrl || process.env.EVOLUTION_URL || 'http://evolution_api:8080';
     const evoToken = tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
     const evolution = new EvolutionService(evoUrl, evoToken);
 
-    // 8. Envia WhatsApp para o Cidadão
+    // 9. Envia WhatsApp para o Cidadão
     if (aiRes.resposta_usuario && tenant.whatsappInstanceId) {
       await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiRes.resposta_usuario);
     }
 
-    // 9. Notifica a Equipe (ALERTA DE ATENÇÃO)
+    // 10. Notifica a Equipe (ALERTA DE ATENÇÃO)
     if (aiRes.precisa_retorno && tenant.whatsappNotificationNumber && tenant.whatsappInstanceId) {
       const cleanTeamNumber = tenant.whatsappNotificationNumber.replace(/\D/g, '');
       const teamJid = `${cleanTeamNumber.startsWith('55') ? cleanTeamNumber : '55' + cleanTeamNumber}@s.whatsapp.net`;
