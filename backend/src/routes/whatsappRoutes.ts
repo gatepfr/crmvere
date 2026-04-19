@@ -196,4 +196,27 @@ router.post('/send', async (req, res) => {
   }
 });
 
+// Salva configurações de conexão e notificações
+router.post('/setup', async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const { evolutionApiUrl, evolutionGlobalToken, whatsappNotificationNumber } = req.body;
+  
+  if (!tenantId) return res.status(403).json({ error: 'Sessão inválida' });
+
+  try {
+    await db.update(tenants)
+      .set({ 
+        evolutionApiUrl, 
+        evolutionGlobalToken, 
+        whatsappNotificationNumber 
+      })
+      .where(eq(tenants.id, tenantId));
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving WhatsApp setup:', error);
+    res.status(500).json({ error: 'Falha ao salvar configurações' });
+  }
+});
+
 export default router;
