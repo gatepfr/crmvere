@@ -1,122 +1,207 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import type { View } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../../api/client';
-import { Loader2, AlertCircle, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Loader2, AlertCircle, Link as LinkIcon, Unlink } from 'lucide-react';
+import EventModal from '../../components/EventModal';
+
+const locales = { 'pt-BR': ptBR };
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek: () => startOfWeek(new Date(), { locale: ptBR }),
+  getDay,
+  locales,
+});
+
+interface CalEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: boolean;
+  description?: string;
+}
+
+type ModalState =
+  | { mode: 'closed' }
+  | { mode: 'create'; start: Date; end: Date }
+  | { mode: 'edit'; event: CalEvent };
 
 export default function Agenda() {
-  const [calendarUrl, setCalendarUrl] = useState<string | null>(null);
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showHelp, setShowHelp] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<View>('month');
+  const [modal, setModal] = useState<ModalState>({ mode: 'closed' });
 
   useEffect(() => {
-    api.get('/config/me')
-      .then(res => setCalendarUrl(res.data.calendarUrl))
-      .catch(err => console.error('Erro ao buscar agenda:', err))
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('google_connected') === 'true') {
+      setConnected(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('google_error')) {
+      alert('Erro ao conectar o Google Calendar. Tente novamente.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    api.get('/calendar/status')
+      .then(res => setConnected(res.data.connected))
+      .catch(() => setConnected(false))
       .finally(() => setLoading(false));
   }, []);
 
+  const fetchEvents = useCallback(async (date: Date) => {
+    const start = startOfMonth(subMonths(date, 1)).toISOString();
+    const end = endOfMonth(addMonths(date, 1)).toISOString();
+    try {
+      const res = await api.get(`/calendar/events?start=${start}&end=${end}`);
+      const mapped: CalEvent[] = (res.data as any[]).map(e => ({
+        id: e.id,
+        title: e.summary ?? '(sem título)',
+        start: new Date(e.start?.dateTime ?? e.start?.date),
+        end: new Date(e.end?.dateTime ?? e.end?.date),
+        allDay: !e.start?.dateTime,
+        description: e.description,
+      }));
+      setEvents(mapped);
+    } catch {
+      setEvents([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (connected) fetchEvents(currentDate);
+  }, [connected, currentDate, fetchEvents]);
+
+  async function handleConnect() {
+    const res = await api.get('/calendar/auth');
+    window.location.href = res.data.url;
+  }
+
+  async function handleDisconnect() {
+    if (!confirm('Desconectar o Google Calendar?')) return;
+    await api.delete('/calendar/disconnect');
+    setConnected(false);
+    setEvents([]);
+  }
+
+  async function handleSave(data: { title: string; description: string; start: string; end: string; allDay: boolean }) {
+    if (modal.mode === 'create') {
+      await api.post('/calendar/events', data);
+    } else if (modal.mode === 'edit') {
+      await api.put(`/calendar/events/${modal.event.id}`, data);
+    }
+    setModal({ mode: 'closed' });
+    fetchEvents(currentDate);
+  }
+
+  async function handleDelete() {
+    if (modal.mode !== 'edit') return;
+    if (!confirm('Excluir este compromisso?')) return;
+    await api.delete(`/calendar/events/${modal.event.id}`);
+    setModal({ mode: 'closed' });
+    fetchEvents(currentDate);
+  }
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh]">
+      <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="animate-spin text-blue-600 h-10 w-10" />
-        <p className="mt-4 text-slate-600">Carregando agenda...</p>
       </div>
     );
   }
 
-  if (!calendarUrl) {
+  if (!connected) {
     return (
-      <div className="max-w-2xl mx-auto mt-20 p-8 bg-white rounded-2xl border border-slate-200 shadow-sm text-center">
-        <div className="inline-flex items-center justify-center p-4 bg-amber-50 text-amber-600 rounded-full mb-6">
+      <div className="max-w-lg mx-auto mt-20 p-10 bg-white rounded-2xl border border-slate-200 shadow-sm text-center">
+        <div className="inline-flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-full mb-6">
           <AlertCircle size={32} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Agenda não configurada</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Agenda não conectada</h2>
         <p className="text-slate-600 mb-8">
-          Para visualizar e gerenciar seus compromissos, você precisa configurar o link do seu Google Calendar.
+          Conecte sua conta Google para visualizar e gerenciar seus compromissos diretamente aqui.
         </p>
-        <Link 
-          to="/dashboard/cabinet"
-          className="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+        <button
+          onClick={handleConnect}
+          className="inline-flex items-center gap-2 bg-blue-600 text-white px-7 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
         >
-          Configurar Agora
-        </Link>
+          <LinkIcon size={18} />
+          Conectar Google Calendar
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col space-y-6">
+    <div className="h-[calc(100vh-10rem)] flex flex-col space-y-4">
       <header className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Agenda do Vereador</h2>
-          <p className="text-slate-500">Gerencie datas e horários de compromissos.</p>
+          <p className="text-slate-500 text-sm">Compromissos sincronizados com o Google Calendar.</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={() => setShowHelp(!showHelp)}
-            className="text-slate-500 hover:text-slate-700 text-sm font-medium px-3 py-2 rounded-lg border border-slate-200 bg-white transition-colors"
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleDisconnect}
+            className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-sm font-medium px-3 py-2 rounded-lg border border-slate-200 bg-white transition-colors"
           >
-            Como configurar?
+            <Unlink size={15} />
+            Desconectar
           </button>
-          <a 
-            href={calendarUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-700 flex items-center text-sm font-semibold bg-blue-50 px-4 py-2 rounded-lg transition-colors"
+          <button
+            onClick={() => setModal({ mode: 'create', start: new Date(), end: new Date(Date.now() + 3600000) })}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20"
           >
-            <ExternalLink size={16} className="mr-2" />
-            Abrir Google Agenda
-          </a>
+            <Plus size={18} />
+            Novo Compromisso
+          </button>
         </div>
       </header>
 
-      {showHelp && (
-        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
-          <h3 className="font-bold text-blue-900 mb-4 flex items-center">
-            <AlertCircle size={20} className="mr-2" />
-            Passo a Passo para Configurar a Agenda
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-blue-800">
-            <div className="space-y-3">
-              <p className="font-bold border-b border-blue-200 pb-1">Opção A: Apenas Visualização</p>
-              <ol className="list-decimal ml-4 space-y-2">
-                <li>No Google Agenda, vá em <strong>Configurações e Compartilhamento</strong> da sua agenda.</li>
-                <li>Role até <strong>Integrar Agenda</strong>.</li>
-                <li>Copie o link que aparece em <strong>URL pública para esta agenda</strong>.</li>
-                <li>Cole este link nas configurações do Gabinete.</li>
-              </ol>
-            </div>
-            <div className="space-y-3">
-              <p className="font-bold border-b border-blue-200 pb-1">Opção B: Para Marcar Horários (Recomendado)</p>
-              <ol className="list-decimal ml-4 space-y-2">
-                <li>No Google Agenda, clique em <strong>Criar</strong> &gt; <strong>Agendamento</strong>.</li>
-                <li>Configure seus horários e clique em <strong>Próximo</strong> até concluir.</li>
-                <li>Clique em <strong>Compartilhar</strong> &gt; <strong>Página de agendamento</strong>.</li>
-                <li>Copie o link e cole nas configurações do Gabinete.</li>
-              </ol>
-            </div>
-          </div>
-          <button 
-            onClick={() => setShowHelp(false)}
-            className="mt-4 text-xs font-bold text-blue-600 hover:underline"
-          >
-            Entendi, fechar instruções
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
-        <iframe 
-          src={calendarUrl} 
-          style={{ border: 0 }} 
-          width="100%" 
-          height="100%" 
-          frameBorder="0" 
-          scrolling="no"
-          title="Google Calendar"
-          className="absolute inset-0"
-        ></iframe>
+      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-4">
+        <Calendar
+          localizer={localizer}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '100%' }}
+          culture="pt-BR"
+          view={view}
+          onView={setView}
+          date={currentDate}
+          onNavigate={setCurrentDate}
+          messages={{
+            next: 'Próximo',
+            previous: 'Anterior',
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia',
+            agenda: 'Lista',
+            noEventsInRange: 'Sem compromissos neste período.',
+          }}
+          onSelectEvent={event => setModal({ mode: 'edit', event })}
+          onSelectSlot={({ start, end }) => setModal({ mode: 'create', start, end })}
+          selectable
+        />
       </div>
+
+      {modal.mode !== 'closed' && (
+        <EventModal
+          event={modal.mode === 'edit' ? modal.event : undefined}
+          defaultStart={modal.mode === 'create' ? modal.start : undefined}
+          defaultEnd={modal.mode === 'create' ? modal.end : undefined}
+          onSave={handleSave}
+          onDelete={modal.mode === 'edit' ? handleDelete : undefined}
+          onClose={() => setModal({ mode: 'closed' })}
+        />
+      )}
     </div>
   );
 }

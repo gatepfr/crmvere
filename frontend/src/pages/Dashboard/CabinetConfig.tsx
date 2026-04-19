@@ -37,7 +37,6 @@ export default function CabinetConfig() {
     partido: '',
     mandato: '',
     fotoUrl: '',
-    calendarUrl: '',
     birthdayMessage: '',
     birthdayAutomated: false,
     legislativeMessage: '',
@@ -49,6 +48,22 @@ export default function CabinetConfig() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [googleConnected, setGoogleConnected] = useState(false);
+
+  useEffect(() => {
+    api.get('/calendar/status').then(res => setGoogleConnected(res.data.connected)).catch(() => {});
+  }, []);
+
+  async function handleConnectGoogle() {
+    const res = await api.get('/calendar/auth');
+    window.location.href = res.data.url;
+  }
+
+  async function handleDisconnectGoogle() {
+    if (!confirm('Desconectar o Google Calendar?')) return;
+    await api.delete('/calendar/disconnect');
+    setGoogleConnected(false);
+  }
 
   useEffect(() => {
     api.get('/config/me')
@@ -60,7 +75,6 @@ export default function CabinetConfig() {
           partido: res.data.partido || '',
           mandato: res.data.mandato || '',
           fotoUrl: res.data.fotoUrl || '',
-          calendarUrl: res.data.calendarUrl || '',
           birthdayMessage: res.data.birthdayMessage || DEFAULT_BIRTHDAY,
           birthdayAutomated: res.data.birthdayAutomated || false,
           legislativeMessage: res.data.legislativeMessage || DEFAULT_LEGISLATIVE,
@@ -392,16 +406,34 @@ export default function CabinetConfig() {
                 placeholder="https://link-da-sua-foto.jpg"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar size={12} /> Agenda (Google Embed)
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl outline-none transition-all font-bold text-slate-700 text-xs"
-                value={config.calendarUrl}
-                onChange={e => setConfig({...config, calendarUrl: e.target.value})}
-              />
+            <div className="md:col-span-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <p className="text-sm font-semibold text-slate-700 mb-2">Google Calendar</p>
+              {googleConnected ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-green-700 font-medium flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                    Conectado ao Google Calendar
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    className="text-xs text-red-600 hover:underline font-medium"
+                  >
+                    Desconectar
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Não conectado</span>
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogle}
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    Conectar Google Calendar
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
