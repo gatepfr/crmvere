@@ -326,13 +326,13 @@ export default function Eleicoes() {
                       outerRadius={80}
                       paddingAngle={4}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                     >
                       {data.perfil.genero.map((_: any, i: number) => (
                         <Cell key={i} fill={['#6366f1', '#ec4899', '#94a3b8'][i]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => v.toLocaleString('pt-BR')} />
+                    <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -355,7 +355,7 @@ export default function Eleicoes() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                    <Tooltip formatter={(v: number) => v.toLocaleString('pt-BR')} />
+                    <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
                     <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -379,7 +379,7 @@ export default function Eleicoes() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} width={100} />
-                    <Tooltip formatter={(v: number) => v.toLocaleString('pt-BR')} />
+                    <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
                     <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
