@@ -77,7 +77,7 @@ export default function Legislativo() {
   const [searchTerm, setSearchTerm] = useState('');
   const [onlyPending, setOnlyPending] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
+  const [selectedDemand, setSelectedDemand] = useState<{ demandas: Demand; municipes: Demand['municipes'] } | null>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   
   // PDF Export States
