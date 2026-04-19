@@ -28,7 +28,6 @@ export default function CabinetConfig() {
     mandato: '',
     fotoUrl: '',
     calendarUrl: '',
-    whatsappNotificationNumber: '',
     birthdayMessage: '',
     birthdayAutomated: false,
     legislativeMessage: ''
@@ -100,10 +99,7 @@ export default function CabinetConfig() {
 
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
-        {/* Lado Esquerdo: Form de Dados */}
         <div className="lg:col-span-2 space-y-8">
-          
-          {/* Card: Perfil Político */}
           <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-100/50 overflow-hidden">
             <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center gap-3">
               <div className="bg-blue-600 p-2 rounded-xl">
@@ -178,7 +174,6 @@ export default function CabinetConfig() {
             </div>
           </section>
 
-          {/* Card: Automações */}
           <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-100/50 overflow-hidden">
             <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center gap-3">
               <div className="bg-pink-600 p-2 rounded-xl">
@@ -188,7 +183,6 @@ export default function CabinetConfig() {
             </div>
 
             <div className="p-10 space-y-10">
-              {/* Aniversário */}
               <div className="bg-pink-50/50 rounded-[2rem] p-8 border border-pink-100 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
                   <Sparkles size={100} />
@@ -221,7 +215,6 @@ export default function CabinetConfig() {
                 />
               </div>
 
-              {/* Legislativo */}
               <div className="bg-blue-50/50 rounded-[2rem] p-8 border border-blue-100 relative overflow-hidden">
                 <div className="flex justify-between items-center mb-6">
                   <h4 className="font-black text-blue-700 uppercase tracking-widest text-sm flex items-center gap-2">
@@ -244,13 +237,9 @@ export default function CabinetConfig() {
           </section>
         </div>
 
-        {/* Lado Direito: Preview e Foto */}
         <div className="space-y-8 lg:sticky lg:top-8">
-          
-          {/* Card: Preview de Identidade */}
           <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-blue-600 opacity-20 blur-3xl -translate-y-20"></div>
-            
             <div className="relative z-10 flex flex-col items-center text-center">
               <div className="w-32 h-32 rounded-[2.5rem] bg-white/10 border-2 border-white/20 p-1 mb-6 group-hover:scale-105 transition-transform duration-500 overflow-hidden">
                 {config.fotoUrl ? (
@@ -261,14 +250,11 @@ export default function CabinetConfig() {
                   </div>
                 )}
               </div>
-              
               <h4 className="text-3xl font-black tracking-tighter drop-shadow-md" style={{ color: '#a3e635' }}>
                 {config.name || 'Seu Nome Aqui'}
               </h4>
               <p className="text-blue-300 text-[11px] font-black uppercase tracking-[0.2em] mt-2">{config.partido || 'Seu Partido'}</p>
-              
               <div className="w-full h-px bg-white/10 my-6"></div>
-              
               <div className="grid grid-cols-2 w-full gap-4">
                 <div className="text-left">
                   <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Cidade</p>
@@ -282,7 +268,6 @@ export default function CabinetConfig() {
             </div>
           </div>
 
-          {/* Configuração Visual */}
           <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-100/50 p-8 space-y-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -296,7 +281,6 @@ export default function CabinetConfig() {
                 placeholder="https://link-da-sua-foto.jpg"
               />
             </div>
-
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Calendar size={12} /> Agenda (Google Embed)
@@ -310,7 +294,6 @@ export default function CabinetConfig() {
             </div>
           </section>
 
-          {/* Botão Salvar Principal */}
           <button 
             type="submit"
             disabled={loading}
@@ -326,7 +309,6 @@ export default function CabinetConfig() {
             )}
           </button>
         </div>
-
       </form>
     </div>
   );
