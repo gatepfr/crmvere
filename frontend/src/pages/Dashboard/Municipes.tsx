@@ -13,7 +13,6 @@ import {
   Square,
   Send,
   X,
-  CheckCircle2,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -28,7 +27,8 @@ import {
   ChevronRight,
   Filter,
   Check,
-  Calendar
+  Calendar,
+  ShieldCheck
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -59,7 +59,6 @@ export default function Municipes() {
   const [cabinetConfig, setCabinetConfig] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBairro, setSelectedBairro] = useState('');
-  const [onlyEngaged, setOnlyEngaged] = useState(false);
   const [onlyLideranca, setOnlyLideranca] = useState(false);
   const [onlyBirthdays, setOnlyBirthdays] = useState(false);
   const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
@@ -115,7 +114,6 @@ export default function Municipes() {
         limit: pagination.limit.toString(),
         search: searchTerm,
         bairro: selectedBairro,
-        engaged: onlyEngaged.toString(),
         lideranca: onlyLideranca.toString(),
         birthday: onlyBirthdays.toString(),
         sortBy: sortConfig.key,
@@ -129,11 +127,11 @@ export default function Municipes() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyEngaged, onlyLideranca, onlyBirthdays, sortConfig, cabinetConfig]);
+  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyLideranca, onlyBirthdays, sortConfig, cabinetConfig]);
 
   useEffect(() => { loadMunicipes(); }, [loadMunicipes]);
   useEffect(() => { loadAllBairros(); }, [loadAllBairros]);
-  useEffect(() => { setPagination(prev => ({ ...prev, page: 1 })); }, [searchTerm, selectedBairro, onlyEngaged, onlyLideranca, onlyBirthdays]);
+  useEffect(() => { setPagination(prev => ({ ...prev, page: 1 })); }, [searchTerm, selectedBairro, onlyLideranca, onlyBirthdays]);
 
   const isTodayBirthday = (dateStr: string | null) => {
     if (!dateStr) return false;
@@ -159,7 +157,7 @@ export default function Municipes() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedMunicipes.length === municipes.length) setSelectedSelectedMunicipes([]);
+    if (selectedMunicipes.length === municipes.length && municipes.length > 0) setSelectedSelectedMunicipes([]);
     else setSelectedSelectedMunicipes(municipes.map(m => m.id));
   };
 
@@ -178,6 +176,43 @@ export default function Municipes() {
     finally { setSaving(false); }
   };
 
+  const handleToggleLideranca = async (m: Municipe) => {
+    try {
+      await api.patch(`/demands/municipe/${m.id}`, { isLideranca: !m.isLideranca });
+      setMunicipes(prev => prev.map(p => p.id === m.id ? { ...p, isLideranca: !p.isLideranca } : p));
+    } catch (err) { alert('Erro ao atualizar status.'); }
+  };
+
+  const handleBulkLideranca = async () => {
+    if (selectedMunicipes.length === 0) return;
+    if (!confirm(`Tornar os ${selectedMunicipes.length} munícipes selecionados como Liderança?`)) return;
+    setSaving(true);
+    try {
+      for (const id of selectedMunicipes) {
+        await api.patch(`/demands/municipe/${id}`, { isLideranca: true });
+      }
+      setSelectedSelectedMunicipes([]);
+      loadMunicipes();
+      alert('Lideranças atualizadas com sucesso!');
+    } catch (err) { alert('Erro na atualização em massa.'); }
+    finally { setSaving(false); }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const firstLine = text.split('\n')[0];
+      const delimiter = firstLine.includes(';') ? ';' : ',';
+      const headers = firstLine.split(delimiter).map(h => h.trim().replace(/"/g, ''));
+      setCsvHeaders(headers);
+    };
+    reader.readAsText(file);
+  };
+
   const handleImportCSV = async () => {
     if (!csvFile || !mapping.name || !mapping.phone) {
       alert('Selecione um arquivo e mapeie pelo menos Nome e Telefone.');
@@ -188,14 +223,14 @@ export default function Municipes() {
     formData.append('file', csvFile);
     formData.append('mapping', JSON.stringify(mapping));
     try {
-      const res = await api.post('/demands/municipes/import', formData, {
+      await api.post('/demands/municipes/import', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setIsImportModalOpen(false);
       setCsvFile(null);
       setCsvHeaders([]);
       loadMunicipes();
-      alert(`Importação concluída! ${res.data.imported} contatos processados.`);
+      alert(`Importação concluída!`);
     } catch (err: any) { alert('Falha ao importar CSV: ' + (err.response?.data?.error || 'Erro desconhecido')); }
     finally { setSaving(false); }
   };
@@ -391,7 +426,7 @@ export default function Municipes() {
             <option value="">Todos Bairros</option>
             {allBairros.sort().map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <button onClick={() => setOnlyLideranca(!onlyLideranca)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyLideranca ? 'bg-blue-600 border-blue-500 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>Lideranças</button>
+          <button onClick={() => setOnlyLideranca(!onlyLideranca)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyLideranca ? 'bg-amber-500 border-amber-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>Lideranças</button>
           <button onClick={() => setOnlyBirthdays(!onlyBirthdays)} className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border ${onlyBirthdays ? 'bg-pink-500 border-pink-400 text-white shadow-md' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>🎂 Hoje</button>
           
           <select className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs" value={pagination.limit === 10000 ? 'all' : pagination.limit} onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}>
@@ -411,17 +446,21 @@ export default function Municipes() {
           </div>
           <div className="flex gap-2">
             <button onClick={() => setSelectedSelectedMunicipes([])} className="px-4 py-2 text-xs font-bold hover:bg-white/10 rounded-lg">Desmarcar</button>
+            <button onClick={handleBulkLideranca} className="bg-amber-500 text-white px-5 py-2 rounded-xl font-black text-xs hover:bg-amber-600 flex items-center gap-2 shadow-sm"><Star size={16} fill="currentColor" /> TORNAR LIDERANÇA</button>
             <button onClick={() => setIsModalOpen(true)} className="bg-white text-blue-600 px-5 py-2 rounded-xl font-black text-xs hover:bg-blue-50 flex items-center gap-2 shadow-sm"><MessageSquare size={16} /> ENVIAR WHATSAPP</button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[300px]">
+        {loading && <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={32} /></div>}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="pl-6 py-4 w-12"><div onClick={toggleSelectAll} className={`w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${selectedMunicipes.length === municipes.length && municipes.length > 0 ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'}`}>{selectedMunicipes.length === municipes.length && municipes.length > 0 && <Check size={12} strokeWidth={4} />}</div></th>
+                <th className="pl-6 py-4 w-12 text-center">
+                   <div onClick={(e) => { e.stopPropagation(); toggleSelectAll(); }} className={`mx-auto w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${selectedMunicipes.length === municipes.length && municipes.length > 0 ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'}`}>{selectedMunicipes.length === municipes.length && municipes.length > 0 && <Check size={12} strokeWidth={4} />}</div>
+                </th>
                 <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer group" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1 group-hover:text-blue-600 transition-colors">Munícipe {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-0 group-hover:opacity-100" />}</div>
                 </th>
@@ -434,11 +473,18 @@ export default function Municipes() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {municipes.map(m => (
-                <tr key={m.id} className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/50' : ''}`} onClick={() => toggleSelect(m.id)}>
-                  <td className="pl-6 py-4"><div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedMunicipes.includes(m.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200'}`}>{selectedMunicipes.includes(m.id) && <Check size={12} strokeWidth={4} />}</div></td>
+                <tr key={m.id} className={`group hover:bg-slate-50/50 transition-all cursor-pointer ${selectedMunicipes.includes(m.id) ? 'bg-blue-50/40' : ''}`} onClick={() => handleEdit(m)}>
+                  <td className="pl-6 py-4" onClick={(e) => e.stopPropagation()}>
+                    <div onClick={() => toggleSelect(m.id)} className={`mx-auto w-5 h-5 rounded-md border-2 flex items-center justify-center cursor-pointer transition-all ${selectedMunicipes.includes(m.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}>{selectedMunicipes.includes(m.id) && <Check size={12} strokeWidth={4} />}</div>
+                  </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${m.isLideranca ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-slate-100 text-slate-400'}`}>{m.isLideranca ? <Star size={20} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}</div>
+                      <div 
+                        onClick={(e) => { e.stopPropagation(); handleToggleLideranca(m); }}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg transition-all cursor-pointer hover:scale-110 active:scale-95 ${m.isLideranca ? 'bg-amber-100 text-amber-600 border border-amber-200 shadow-sm' : 'bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-400'}`}
+                      >
+                        {m.isLideranca ? <Star size={20} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}
+                      </div>
                       <div>
                         <div className="font-bold text-slate-900 flex items-center gap-2">{m.name} {m.isLideranca && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">Liderança</span>}</div>
                         <p className="text-xs font-bold text-slate-500">{formatPhone(m.phone)}</p>
@@ -448,10 +494,10 @@ export default function Municipes() {
                   <td className="px-4 py-4 font-bold text-slate-500 text-xs uppercase text-center">{m.bairro || '---'}</td>
                   <td className="px-4 py-4 text-center text-xs text-slate-400">{formatDateDisplay(m.birthDate)}</td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-1">
-                      {isTodayBirthday(m.birthDate) && <button onClick={(e) => { e.stopPropagation(); handleSendBirthdayMessage(m); }} className="w-8 h-8 flex items-center justify-center bg-pink-50 hover:bg-pink-100 rounded-lg text-lg animate-pulse" title="Parabéns">🎈</button>}
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(m); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Edit2 size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} className="p-2 text-slate-400 hover:text-red-600 rounded-lg"><Trash2 size={16} /></button>
+                    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                      {isTodayBirthday(m.birthDate) && <button onClick={() => handleSendBirthdayMessage(m)} className="w-8 h-8 flex items-center justify-center bg-pink-50 hover:bg-pink-100 rounded-lg text-lg animate-pulse" title="Parabéns">🎈</button>}
+                      <button onClick={() => handleEdit(m)} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(m.id)} className="p-2 text-slate-400 hover:text-red-600 rounded-lg"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -461,7 +507,7 @@ export default function Municipes() {
         </div>
         
         <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
-          <p className="text-[10px] font-black text-slate-400 uppercase">{pagination.total} MUNÍCIPES • PÁG {pagination.page}/{pagination.totalPages}</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{pagination.total} MUNÍCIPES • PÁGINA {pagination.page} DE {pagination.totalPages}</p>
           <div className="flex gap-1">
             <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"><ChevronLeft size={16} /></button>
             <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))} className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"><ChevronRight size={16} /></button>
@@ -557,6 +603,65 @@ export default function Municipes() {
               </div>
               <button type="submit" disabled={saving} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg disabled:opacity-50">{saving ? 'Salvando...' : (editingMunicipe ? 'Salvar Alterações' : 'Cadastrar Munícipe')}</button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-900">Importar Munícipes (CSV)</h3>
+              <button onClick={() => !saving && setIsImportModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100 flex flex-col items-center justify-center border-dashed border-2 cursor-pointer hover:bg-blue-100 transition-all relative">
+                <input type="file" accept=".csv" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                <Upload className="text-blue-600 mb-2" size={32} />
+                <p className="text-sm font-bold text-blue-900">{csvFile ? csvFile.name : 'Clique para selecionar arquivo CSV'}</p>
+                <p className="text-[10px] text-blue-500 uppercase mt-1">Semicólon (;) ou vírgula (,) aceitos</p>
+              </div>
+
+              {csvHeaders.length > 0 && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Coluna do Nome</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={mapping.name} onChange={e => setMapping({...mapping, name: e.target.value})}>
+                      <option value="">Selecione...</option>
+                      {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Coluna do WhatsApp</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={mapping.phone} onChange={e => setMapping({...mapping, phone: e.target.value})}>
+                      <option value="">Selecione...</option>
+                      {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Coluna do Bairro</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={mapping.bairro} onChange={e => setMapping({...mapping, bairro: e.target.value})}>
+                      <option value="">Não importar</option>
+                      {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Coluna Nascimento</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={mapping.birthDate} onChange={e => setMapping({...mapping, birthDate: e.target.value})}>
+                      <option value="">Não importar</option>
+                      {csvHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button onClick={() => setIsImportModalOpen(false)} disabled={saving} className="px-6 py-2.5 text-slate-600 font-bold">Cancelar</button>
+              <button onClick={handleImportCSV} disabled={saving || !csvFile || !mapping.name || !mapping.phone} className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-blue-700 transition-all">
+                {saving ? 'Importando...' : 'Iniciar Importação'}
+              </button>
+            </div>
           </div>
         </div>
       )}

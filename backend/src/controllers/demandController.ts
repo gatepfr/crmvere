@@ -33,6 +33,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
   const limit = req.query.limit === 'all' ? 10000 : (parseInt(req.query.limit as string) || 25);
   const search = req.query.search as string;
   const birthday = req.query.birthday === 'true';
+  const isLiderancaFilter = req.query.lideranca === 'true';
   const offset = (page - 1) * limit;
 
   try {
@@ -42,6 +43,9 @@ export const listMunicipes = async (req: Request, res: Response) => {
     }
     if (birthday) {
       conds.push(sql`to_char(${municipes.birthDate}, 'DD-MM') = to_char(now() AT TIME ZONE 'America/Sao_Paulo', 'DD-MM')`);
+    }
+    if (isLiderancaFilter) {
+      conds.push(eq(municipes.isLideranca, true));
     }
     const [totalCount] = await db.select({ count: count() }).from(municipes).where(and(...conds));
     const results = await db.select({ 
