@@ -250,6 +250,118 @@ export default function Eleicoes() {
         </div>
       </div>
 
+      {/* Perfil Demográfico do Eleitorado */}
+      {data?.perfil && (
+        <>
+          <header className="pt-4">
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Users className="text-purple-600" size={22} />
+              Perfil Demográfico do Eleitorado
+            </h2>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Perfil completo do eleitorado do município
+            </p>
+          </header>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Gráfico: Gênero */}
+            {data.perfil.genero?.length > 0 && (() => {
+              const total = data.perfil.genero.reduce((s: number, g: any) => s + Number(g.value), 0);
+              const GENERO_COLORS: Record<string, string> = { 'Feminino': '#ec4899', 'Masculino': '#6366f1' };
+              const generoData = data.perfil.genero.map((g: any) => ({
+                name: g.label,
+                value: total > 0 ? Math.round((Number(g.value) / total) * 100) : 0
+              })).filter((d: any) => d.value > 0);
+              return (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-pink-50 rounded-lg flex items-center justify-center text-pink-600">
+                    <Users size={16} />
+                  </div>
+                  <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Gênero</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={generoData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      dataKey="value"
+                      label={({ name, value }: any) => `${name} ${value}%`}
+                    >
+                      {generoData.map((entry: any, i: number) => (
+                        <Cell key={i} fill={GENERO_COLORS[entry.name] || '#94a3b8'} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: any, _: any, props: any) => [`${v}%`, props.payload.name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              );
+            })()}
+
+            {/* Gráfico: Faixa Etária */}
+            {data.perfil.idade?.length > 0 && (() => {
+              const total = data.perfil.idade.reduce((s: number, d: any) => s + Number(d.value), 0);
+              const idadeData = data.perfil.idade.map((d: any) => ({
+                name: d.label,
+                Eleitores: total > 0 ? Math.round((Number(d.value) / total) * 100) : 0
+              })).filter((d: any) => d.Eleitores > 0);
+              return (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
+                    <Calendar size={16} />
+                  </div>
+                  <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Faixa Etária</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={idadeData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} interval={0} angle={-25} textAnchor="end" height={45} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={(v: any) => [`${v}%`, 'Eleitores']} />
+                    <Bar dataKey="Eleitores" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              );
+            })()}
+
+            {/* Gráfico: Escolaridade */}
+            {data.perfil.escolaridade?.length > 0 && (() => {
+              const total = data.perfil.escolaridade.reduce((s: number, d: any) => s + Number(d.value), 0);
+              const escData = data.perfil.escolaridade.map((d: any) => ({
+                name: d.label,
+                Eleitores: total > 0 ? Math.round((Number(d.value) / total) * 100) : 0
+              })).filter((d: any) => d.Eleitores > 0);
+              return (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
+                    <GraduationCap size={16} />
+                  </div>
+                  <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Escolaridade</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart layout="vertical" data={escData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} width={110} />
+                    <Tooltip formatter={(v: any) => [`${v}%`, 'Eleitores']} />
+                    <Bar dataKey="Eleitores" fill="#10b981" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
+
       {/* Listagem por Bairro */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
@@ -275,9 +387,9 @@ export default function Eleicoes() {
                   <td className="px-8 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 rounded-full" 
-                          style={{ width: `${Math.min((b.total_votos / (data?.candidato?.qtVotosTotal || 1)) * 100 * 5, 100)}%` }} 
+                        <div
+                          className="h-full bg-blue-500 rounded-full"
+                          style={{ width: `${Math.min((b.total_votos / (data?.candidato?.qtVotosTotal || 1)) * 100 * 5, 100)}%` }}
                         />
                       </div>
                       <span className="text-[10px] font-black text-slate-400 italic">Reduto</span>
@@ -289,117 +401,6 @@ export default function Eleicoes() {
           </table>
         </div>
       </div>
-
-      {/* Perfil Demográfico do Eleitorado */}
-      {data?.perfil && (
-        <>
-          <header className="pt-4">
-            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-              <Users className="text-purple-600" size={22} />
-              Perfil Demográfico do Eleitorado
-            </h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Perfil completo do eleitorado do município
-            </p>
-          </header>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Gráfico: Gênero */}
-            {data.perfil.genero?.length > 0 && (() => {
-              const total = data.perfil.genero.reduce((s: number, g: any) => s + Number(g.value), 0);
-              const generoData = data.perfil.genero.map((g: any) => ({
-                name: g.label,
-                value: total > 0 ? Math.round((Number(g.value) / total) * 100) : 0
-              })).filter((d: any) => d.value > 0);
-              return (
-              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-pink-50 rounded-lg flex items-center justify-center text-pink-600">
-                    <Users size={16} />
-                  </div>
-                  <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Gênero</h3>
-                </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={generoData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={4}
-                      dataKey="value"
-                      label={({ name, value }: any) => `${name} ${value}%`}
-                    >
-                      {generoData.map((_: any, i: number) => (
-                        <Cell key={i} fill={['#6366f1', '#ec4899', '#94a3b8'][i]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: any) => `${v}%`} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              );
-            })()}
-
-            {/* Gráfico: Faixa Etária */}
-            {data.perfil.idade?.length > 0 && (() => {
-              const total = data.perfil.idade.reduce((s: number, d: any) => s + Number(d.value), 0);
-              const idadeData = data.perfil.idade.map((d: any) => ({
-                name: d.label,
-                value: total > 0 ? Math.round((Number(d.value) / total) * 100) : 0
-              })).filter((d: any) => d.value > 0);
-              return (
-              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
-                    <Calendar size={16} />
-                  </div>
-                  <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Faixa Etária</h3>
-                </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={idadeData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} interval={0} angle={-25} textAnchor="end" height={45} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                    <Tooltip formatter={(v: any) => `${v}%`} />
-                    <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              );
-            })()}
-
-            {/* Gráfico: Escolaridade */}
-            {data.perfil.escolaridade?.length > 0 && (() => {
-              const total = data.perfil.escolaridade.reduce((s: number, d: any) => s + Number(d.value), 0);
-              const escData = data.perfil.escolaridade.map((d: any) => ({
-                name: d.label,
-                value: total > 0 ? Math.round((Number(d.value) / total) * 100) : 0
-              })).filter((d: any) => d.value > 0);
-              return (
-              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-                    <GraduationCap size={16} />
-                  </div>
-                  <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Escolaridade</h3>
-                </div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart layout="vertical" data={escData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} width={110} />
-                    <Tooltip formatter={(v: any) => `${v}%`} />
-                    <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              );
-            })()}
-          </div>
-        </>
-      )}
     </div>
   );
 }
