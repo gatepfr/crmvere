@@ -160,27 +160,59 @@ router.get('/resumo', async (req, res) => {
     `);
 
     // 4. Perfil Demográfico do Eleitorado do Município
+    // Mapeia códigos numéricos do TSE para labels legíveis (dados antigos usam CD_ em vez de DS_)
     const perfilGenero = await db.execute(sql`
-      SELECT UPPER(ds_genero) as label, SUM(qt_eleitores)::int as value
+      SELECT CASE ds_genero
+        WHEN '2' THEN 'Feminino' WHEN '4' THEN 'Masculino'
+        WHEN 'FEMININO' THEN 'Feminino' WHEN 'MASCULINO' THEN 'Masculino'
+        ELSE ds_genero END as label,
+        SUM(qt_eleitores)::int as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
-        AND ds_genero IS NOT NULL AND UPPER(ds_genero) != 'NAO INFORMADO'
+        AND ds_genero IS NOT NULL AND ds_genero NOT IN ('-1', '-3')
       GROUP BY 1 ORDER BY value DESC
     `);
 
     const perfilIdade = await db.execute(sql`
-      SELECT ds_faixa_etaria as label, SUM(qt_eleitores)::int as value
+      SELECT CASE
+        WHEN ds_faixa_etaria IN ('1600','1700') THEN '16-17'
+        WHEN ds_faixa_etaria IN ('1800','1900','2000') THEN '18-20'
+        WHEN ds_faixa_etaria = '2124' THEN '21-24'
+        WHEN ds_faixa_etaria = '2529' THEN '25-29'
+        WHEN ds_faixa_etaria = '3034' THEN '30-34'
+        WHEN ds_faixa_etaria = '3539' THEN '35-39'
+        WHEN ds_faixa_etaria = '4044' THEN '40-44'
+        WHEN ds_faixa_etaria = '4549' THEN '45-49'
+        WHEN ds_faixa_etaria = '5054' THEN '50-54'
+        WHEN ds_faixa_etaria = '5559' THEN '55-59'
+        WHEN ds_faixa_etaria = '6064' THEN '60-64'
+        WHEN ds_faixa_etaria = '6569' THEN '65-69'
+        WHEN ds_faixa_etaria = '7074' THEN '70-74'
+        WHEN ds_faixa_etaria = '7579' THEN '75-79'
+        WHEN ds_faixa_etaria IN ('8084','8589','9094','9599','100') THEN '80+'
+        ELSE ds_faixa_etaria END as label,
+        SUM(qt_eleitores)::int as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
-        AND ds_faixa_etaria IS NOT NULL AND ds_faixa_etaria != '-1'
+        AND ds_faixa_etaria IS NOT NULL AND ds_faixa_etaria NOT IN ('-1', '-3')
       GROUP BY 1 ORDER BY label ASC
     `);
 
     const perfilEscolaridade = await db.execute(sql`
-      SELECT ds_grau_escolaridade as label, SUM(qt_eleitores)::int as value
+      SELECT CASE ds_grau_escolaridade
+        WHEN '1' THEN 'Analfabeto'
+        WHEN '2' THEN 'Lê e Escreve'
+        WHEN '3' THEN 'Fund. Incompl.'
+        WHEN '4' THEN 'Fund. Compl.'
+        WHEN '5' THEN 'Médio Incompl.'
+        WHEN '6' THEN 'Médio Compl.'
+        WHEN '7' THEN 'Sup. Incompl.'
+        WHEN '8' THEN 'Sup. Compl.'
+        ELSE ds_grau_escolaridade END as label,
+        SUM(qt_eleitores)::int as value
       FROM tse_perfil_eleitorado
       WHERE cd_municipio = ${cdMun} AND ano_eleicao = ${candidato.anoEleicao}
-        AND ds_grau_escolaridade IS NOT NULL AND ds_grau_escolaridade != '-1'
+        AND ds_grau_escolaridade IS NOT NULL AND ds_grau_escolaridade NOT IN ('-1', '-3')
       GROUP BY 1 ORDER BY value DESC
     `);
 

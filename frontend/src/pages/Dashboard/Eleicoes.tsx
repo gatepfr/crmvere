@@ -305,7 +305,13 @@ export default function Eleicoes() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Gráfico: Gênero */}
-            {data.perfil.genero?.length > 0 && (
+            {data.perfil.genero?.length > 0 && (() => {
+              const total = data.perfil.genero.reduce((s: number, g: any) => s + Number(g.value), 0);
+              const generoData = data.perfil.genero.map((g: any) => ({
+                name: g.label,
+                value: total > 0 ? Math.round((Number(g.value) / total) * 100) : 0
+              })).filter((d: any) => d.value > 0);
+              return (
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-pink-50 rounded-lg flex items-center justify-center text-pink-600">
@@ -316,30 +322,34 @@ export default function Eleicoes() {
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie
-                      data={data.perfil.genero.map((g: any) => ({
-                        name: g.label === 'MASCULINO' ? 'Masculino' : g.label === 'FEMININO' ? 'Feminino' : g.label,
-                        value: Number(g.value)
-                      }))}
+                      data={generoData}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
                       outerRadius={80}
                       paddingAngle={4}
                       dataKey="value"
-                      label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                      label={({ name, value }: any) => `${name} ${value}%`}
                     >
-                      {data.perfil.genero.map((_: any, i: number) => (
+                      {generoData.map((_: any, i: number) => (
                         <Cell key={i} fill={['#6366f1', '#ec4899', '#94a3b8'][i]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
+                    <Tooltip formatter={(v: any) => `${v}%`} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            )}
+              );
+            })()}
 
             {/* Gráfico: Faixa Etária */}
-            {data.perfil.idade?.length > 0 && (
+            {data.perfil.idade?.length > 0 && (() => {
+              const total = data.perfil.idade.reduce((s: number, d: any) => s + Number(d.value), 0);
+              const idadeData = data.perfil.idade.map((d: any) => ({
+                name: d.label,
+                value: total > 0 ? Math.round((Number(d.value) / total) * 100) : 0
+              })).filter((d: any) => d.value > 0);
+              return (
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
@@ -348,23 +358,26 @@ export default function Eleicoes() {
                   <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Faixa Etária</h3>
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={data.perfil.idade.map((d: any) => {
-                    let label = (d.label || '').replace(/ anos/gi, '').replace(/ a /g, '-').replace(/Superior a /gi, '80+').trim();
-                    if (label === '-1' || !label) label = 'N/I';
-                    return { name: label, value: Number(d.value) };
-                  }).filter((d: any) => d.value > 0)}>
+                  <BarChart data={idadeData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} interval={0} angle={-25} textAnchor="end" height={45} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                    <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={(v: any) => `${v}%`} />
                     <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            )}
+              );
+            })()}
 
             {/* Gráfico: Escolaridade */}
-            {data.perfil.escolaridade?.length > 0 && (
+            {data.perfil.escolaridade?.length > 0 && (() => {
+              const total = data.perfil.escolaridade.reduce((s: number, d: any) => s + Number(d.value), 0);
+              const escData = data.perfil.escolaridade.map((d: any) => ({
+                name: d.label,
+                value: total > 0 ? Math.round((Number(d.value) / total) * 100) : 0
+              })).filter((d: any) => d.value > 0);
+              return (
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
@@ -373,34 +386,17 @@ export default function Eleicoes() {
                   <h3 className="font-black text-slate-900 text-xs uppercase tracking-widest">Escolaridade</h3>
                 </div>
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart layout="vertical" data={data.perfil.escolaridade.map((d: any) => {
-                    const map: Record<string, string> = {
-                      'ANALFABETO': 'Analfabeto',
-                      'LE E ESCREVE': 'Lê e Escreve',
-                      'LÊ E ESCREVE': 'Lê e Escreve',
-                      'ENSINO FUNDAMENTAL INCOMPLETO': 'Fund. Incompl.',
-                      'ENSINO FUNDAMENTAL COMPLETO': 'Fund. Compl.',
-                      'ENSINO MEDIO INCOMPLETO': 'Médio Incompl.',
-                      'ENSINO MEDIO COMPLETO': 'Médio Compl.',
-                      'ENSINO MÉDIO INCOMPLETO': 'Médio Incompl.',
-                      'ENSINO MÉDIO COMPLETO': 'Médio Compl.',
-                      'SUPERIOR INCOMPLETO': 'Sup. Incompl.',
-                      'SUPERIOR COMPLETO': 'Sup. Compl.',
-                      'NAO INFORMADO': 'N/I',
-                      'NÃO INFORMADO': 'N/I',
-                    };
-                    const label = map[(d.label || '').toUpperCase()] || d.label;
-                    return { name: label, value: Number(d.value) };
-                  }).filter((d: any) => d.value > 0 && d.name !== 'N/I')}>
+                  <BarChart layout="vertical" data={escData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fontWeight: 700 }} width={110} />
-                    <Tooltip formatter={(v: any) => Number(v).toLocaleString('pt-BR')} />
+                    <Tooltip formatter={(v: any) => `${v}%`} />
                     <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            )}
+              );
+            })()}
           </div>
         </>
       )}

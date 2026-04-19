@@ -171,9 +171,9 @@ def process_import(ano, uf, municipio_nome, nr_candidato, tenant_id):
                             if first_row:
                                 first_row = {k.strip().upper(): v for k, v in first_row.items() if k}
                                 c_mun_p = find_col(first_row, ['CD_MUNICIPIO', 'CD_UE'])
-                                g_col = find_col(first_row, ['GENERO', 'SEXO'])
-                                a_col = find_col(first_row, ['FAIXA_ETARIA', 'FAIXA'])
-                                e_col = find_col(first_row, ['GRAU_ESCOLARIDADE', 'GRAU'])
+                                g_col = find_col(first_row, ['DS_GENERO', 'DS_SEXO'])
+                                a_col = find_col(first_row, ['DS_FAIXA_ETARIA'])
+                                e_col = find_col(first_row, ['DS_GRAU_ESCOLARIDADE'])
                                 q_col = find_col(first_row, ['QT_ELEITORES_PERFIL', 'QT_ELEITORES'])
                                 
                                 f.seek(0)
