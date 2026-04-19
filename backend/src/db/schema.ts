@@ -21,6 +21,8 @@ export const tenants = pgTable("tenants", {
   evolutionApiUrl: varchar("evolution_api_url", { length: 255 }),
   evolutionGlobalToken: varchar("evolution_global_token", { length: 255 }),
   calendarUrl: varchar("calendar_url", { length: 1000 }),
+  googleRefreshToken: varchar("google_refresh_token", { length: 500 }),
+  googleCalendarId: varchar("google_calendar_id", { length: 255 }).default("primary"),
   // Cabinet Info
   municipio: varchar("municipio", { length: 255 }),
   uf: varchar("uf", { length: 2 }),
