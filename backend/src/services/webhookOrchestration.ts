@@ -82,12 +82,23 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       updatedAt: new Date()
     }).where(eq(atendimentos.id, existingAtendimento.id));
 
-    // 7. Envia WhatsApp
+    // 7. Envia WhatsApp para o Cidadão
     if (aiRes.resposta_usuario && tenant.whatsappInstanceId) {
       const evoUrl = process.env.EVOLUTION_URL || 'http://evolution_api:8080';
       const evoToken = tenant.evolutionGlobalToken || process.env.WA_API_KEY || 'mestre123';
       const evolution = new EvolutionService(evoUrl, evoToken);
       await evolution.sendMessage(tenant.whatsappInstanceId, normalized.jid, aiRes.resposta_usuario);
+
+      // 8. Notifica a Equipe (se configurado e necessário)
+      if (aiRes.precisa_retorno && tenant.whatsappNotificationNumber) {
+        const teamMessage = `🚨 *ALERTA DE ATENÇÃO*\n\nO cidadão *${municipe.name}* (${municipe.phone}) enviou uma mensagem que requer atenção da equipe.\n\n*Resumo da IA:* ${aiRes.resumo_ia}\n\n*Categoria:* ${aiRes.categoria.toUpperCase()}\n*Prioridade:* ${aiRes.prioridade.toUpperCase()}`;
+        
+        await evolution.sendMessage(
+          tenant.whatsappInstanceId, 
+          `${tenant.whatsappNotificationNumber.replace(/\D/g, '')}@s.whatsapp.net`, 
+          teamMessage
+        ).catch(err => console.error('[NOTIFICATION ERROR]', err.message));
+      }
     }
 
     return { status: 'success' };

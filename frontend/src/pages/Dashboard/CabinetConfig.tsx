@@ -28,6 +28,7 @@ export default function CabinetConfig() {
     mandato: '',
     fotoUrl: '',
     calendarUrl: '',
+    whatsappNotificationNumber: '',
     birthdayMessage: '',
     birthdayAutomated: false,
     legislativeMessage: ''
