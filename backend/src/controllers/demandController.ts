@@ -104,8 +104,20 @@ export const listAtendimentos = async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 25;
   const search = req.query.search as string;
   const attention = req.query.attention === 'true';
+  const sortBy = (req.query.sortBy as string) || 'atendimentos.updatedAt';
+  const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
   const offset = (page - 1) * limit;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+
+  const sortColumn: Record<string, any> = {
+    'municipes.name': municipes.name,
+    'atendimentos.categoria': atendimentos.categoria,
+    'atendimentos.prioridade': atendimentos.prioridade,
+    'atendimentos.updatedAt': atendimentos.updatedAt,
+    'atendimentos.createdAt': atendimentos.createdAt,
+  };
+  const orderCol = sortColumn[sortBy] ?? atendimentos.updatedAt;
+  const orderExpr = sortOrder === 'asc' ? asc(orderCol) : desc(orderCol);
 
   try {
     const conditions = [eq(atendimentos.tenantId, tenantId)];
@@ -114,7 +126,7 @@ export const listAtendimentos = async (req: Request, res: Response) => {
       conditions.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`), ilike(municipes.bairro, `%${search}%`)) as any);
     }
     const [totalCount] = await db.select({ count: count() }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions));
-    const results = await db.select({ atendimentos: atendimentos, municipes: municipes }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions)).orderBy(desc(atendimentos.updatedAt)).limit(limit).offset(offset);
+    const results = await db.select({ atendimentos: atendimentos, municipes: municipes }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions)).orderBy(orderExpr).limit(limit).offset(offset);
     res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / limit) } });
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
