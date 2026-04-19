@@ -41,6 +41,10 @@ export const tenants = pgTable("tenants", {
   birthdayMessage: varchar("birthday_message", { length: 2000 }),
   birthdayAutomated: boolean("birthday_automated").default(false).notNull(),
   legislativeMessage: varchar("legislative_message", { length: 2000 }),
+  whatsappVereadorNumber: varchar("whatsapp_vereador_number", { length: 50 }),
+  followUpEnabled: boolean("follow_up_enabled").default(false).notNull(),
+  followUpDays: integer("follow_up_days").default(5).notNull(),
+  followUpMessage: varchar("follow_up_message", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
