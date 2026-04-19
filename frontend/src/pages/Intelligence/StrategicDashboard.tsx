@@ -63,6 +63,10 @@ export default function StrategicDashboard() {
     });
   }, [data, sortField, sortDirection]);
 
+  const maxConversion = useMemo(() => {
+    return Math.max(...data.map(d => d.conversion_rate), 0.01);
+  }, [data]);
+
   const executePlan = async (bairro: string) => {
     setExecuting(bairro);
     try {
@@ -144,7 +148,7 @@ export default function StrategicDashboard() {
           </div>
           <p className="text-red-600 text-[10px] font-black uppercase tracking-widest mb-1">Vácuos Críticos</p>
           <h3 className="text-4xl font-black text-slate-900">{stats.vacuums}</h3>
-          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Alto potencial nas urnas</p>
+          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Menos de 10% dos eleitores no CRM</p>
         </div>
 
         <div className="bg-white border-2 border-blue-50 p-8 rounded-[2rem] shadow-sm relative overflow-hidden group">
@@ -153,7 +157,7 @@ export default function StrategicDashboard() {
           </div>
           <p className="text-blue-600 text-[10px] font-black uppercase tracking-widest mb-1">Potencial</p>
           <h3 className="text-4xl font-black text-slate-900">{stats.potential}</h3>
-          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Crescimento moderado</p>
+          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Entre 10% e 30% dos eleitores no CRM</p>
         </div>
 
         <div className="bg-white border-2 border-green-50 p-8 rounded-[2rem] shadow-sm relative overflow-hidden group">
@@ -162,7 +166,7 @@ export default function StrategicDashboard() {
           </div>
           <p className="text-green-600 text-[10px] font-black uppercase tracking-widest mb-1">Consolidados</p>
           <h3 className="text-4xl font-black text-slate-900">{stats.consolidated}</h3>
-          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Base sólida ativa</p>
+          <p className="mt-2 text-slate-500 text-xs font-bold uppercase tracking-tight">Mais de 30% dos eleitores no CRM</p>
         </div>
       </div>
 
@@ -195,8 +199,15 @@ export default function StrategicDashboard() {
               <tbody className="divide-y divide-slate-50">
                 {sortedData.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-20 text-center text-slate-300 font-black text-xs uppercase tracking-widest">
-                      Aguardando dados do TSE...
+                    <td colSpan={5} className="p-20 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                        <AlertTriangle size={32} className="text-slate-200" />
+                        <p className="text-slate-300 font-black text-xs uppercase tracking-widest">Nenhum dado territorial encontrado</p>
+                        <a href="/dashboard/eleicoes" className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-2">
+                          <Zap size={14} />
+                          Importar dados na Inteligência Eleitoral
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ) : sortedData.map((item) => (
@@ -211,6 +222,12 @@ export default function StrategicDashboard() {
                         }`}>
                           {item.category}
                         </span>
+                        {item.priority === 'URGENTE' && (
+                          <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase bg-red-600 text-white animate-pulse">URGENTE</span>
+                        )}
+                        {item.priority === 'ALTA' && (
+                          <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase bg-orange-100 text-orange-700">ALTA</span>
+                        )}
                       </div>
                     </td>
                     <td className="p-6 text-center font-black text-slate-600">{item.total_votos.toLocaleString()}</td>
@@ -218,9 +235,12 @@ export default function StrategicDashboard() {
                     <td className="p-6 text-center">
                       <div className="flex flex-col items-center gap-1">
                         <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-1000 ${item.conversion_rate < 0.1 ? 'bg-red-500' : 'bg-green-500'}`} 
-                            style={{ width: `${Math.min(item.conversion_rate * 100, 100)}%` }}
+                          <div
+                            className={`h-full rounded-full transition-all duration-1000 ${
+                              item.conversion_rate < 0.1 ? 'bg-red-500' :
+                              item.conversion_rate < 0.3 ? 'bg-amber-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min((item.conversion_rate / maxConversion) * 100, 100)}%` }}
                           ></div>
                         </div>
                         <span className="text-[10px] font-black text-slate-400">{(item.conversion_rate * 100).toFixed(1)}%</span>
