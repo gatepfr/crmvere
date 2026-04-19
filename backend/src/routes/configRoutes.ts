@@ -39,45 +39,23 @@ router.get('/me', async (req, res) => {
 router.patch('/update', async (req, res) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
-  
-  const { 
-    name, 
-    aiProvider, 
-    aiApiKey, 
-    aiModel, 
-    aiBaseUrl,
-    systemPrompt,
-    municipio,
-    uf,
-    partido,
-    mandato,
-    fotoUrl,
-    calendarUrl,
-    birthdayMessage,
-    birthdayAutomated,
-    legislativeMessage
+
+  const {
+    name, aiProvider, aiApiKey, aiModel, aiBaseUrl, systemPrompt,
+    municipio, uf, partido, mandato, fotoUrl, calendarUrl,
+    birthdayMessage, birthdayAutomated, legislativeMessage,
+    whatsappVereadorNumber, followUpEnabled, followUpDays, followUpMessage
   } = req.body;
 
   await db.update(tenants)
-    .set({ 
-      name, 
-      aiProvider, 
-      aiApiKey, 
-      aiModel, 
-      aiBaseUrl,
-      systemPrompt,
-      municipio,
-      uf,
-      partido,
-      mandato,
-      fotoUrl,
-      calendarUrl,
-      birthdayMessage,
-      birthdayAutomated,
-      legislativeMessage
+    .set({
+      name, aiProvider, aiApiKey, aiModel, aiBaseUrl, systemPrompt,
+      municipio, uf, partido, mandato, fotoUrl, calendarUrl,
+      birthdayMessage, birthdayAutomated, legislativeMessage,
+      whatsappVereadorNumber, followUpEnabled, followUpDays, followUpMessage
     })
     .where(eq(tenants.id, tenantId));
-    
+
   res.json({ success: true });
 });
 
