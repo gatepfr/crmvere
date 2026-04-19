@@ -71,6 +71,7 @@ services:
       - WA_API_KEY=${WA_API_KEY:-mestre123}
       - EVOLUTION_API_URL=https://wa.crmvere.com.br
       - BACKEND_URL=https://api.crmvere.com.br
+      - WEBHOOK_INTERNAL_URL=http://backend:3001
       - NODE_ENV=production
     depends_on:
       - db

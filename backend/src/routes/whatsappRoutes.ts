@@ -48,9 +48,9 @@ router.post('/instance/create', async (req: Request, res: Response) => {
       }).where(eq(tenants.id, tenant.id));
 
       // 3. Configurar Webhook (Evolution para Backend)
-      // Usamos a URL PÚBLICA do servidor aqui
-      const backendUrl = process.env.BACKEND_URL || 'https://api.crmvere.com.br';
-      const webhookUrl = `${backendUrl}/api/webhook/evolution/${tenant.id}`;
+      // Usa URL interna do Docker para evitar dependência de DNS/SSL
+      const webhookBaseUrl = process.env.WEBHOOK_INTERNAL_URL || 'http://backend:3001';
+      const webhookUrl = `${webhookBaseUrl}/api/webhook/evolution/${tenant.id}`;
       
       await evo.setWebhook(tenant.slug, webhookUrl);
       console.log(`[WHATSAPP] Instância e Webhook configurados com sucesso!`);

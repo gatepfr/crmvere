@@ -19,7 +19,10 @@ router.get('/ping', (req, res) => {
  */
 router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express.json(), async (req: Request, res: Response) => {
   const tenantId = req.params.tenantId as string;
+  const eventName = req.params.eventName || 'direct';
   const payload = req.body;
+
+  console.log(`[WEBHOOK RECEIVED] Tenant: ${tenantId} | Event: ${eventName} | Type: ${payload?.event || 'unknown'}`);
 
   try {
     // 1. Resposta imediata para a Evolution API (Evita duplicidade)
@@ -28,7 +31,7 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
     // 2. Orquestração em Background
     // Não usamos 'await' aqui para liberar a resposta HTTP na hora
     orchestrateWebhook(payload, tenantId).catch(err => {
-      console.error(`[WEBHOOK BACKGROUND ERROR] Tenant ${tenantId}:`, err.message);
+      console.error(`[WEBHOOK BACKGROUND ERROR] Tenant ${tenantId}:`, err.message, err.stack);
     });
 
   } catch (error: any) {
