@@ -96,7 +96,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       const cleanTeamNumber = tenant.whatsappNotificationNumber.replace(/\D/g, '');
       const teamJid = `${cleanTeamNumber.startsWith('55') ? cleanTeamNumber : '55' + cleanTeamNumber}@s.whatsapp.net`;
       
-      const teamMessage = `🚨 *ALERTA DE ATENÇÃO*\n\nO cidadão *${municipe.name}* (${municipe.phone}) enviou uma mensagem que requer atenção da equipe.\n\n*Resumo:* ${aiRes.resumo_ia || 'Nova demanda identificada'}\n\n*Categoria:* ${(aiRes.categoria || 'OUTRO').toUpperCase()}\n*Prioridade:* ${(aiRes.prioridade || 'MEDIA').toUpperCase()}`;
+      const teamMessage = `🚨 *ATENÇÃO NECESSÁRIA*\n\n👤 *${municipe.name}*\n📱 ${municipe.phone}\n\n📋 *Resumo:* ${aiRes.resumo_ia || 'Nova demanda identificada'}\n\n💬 *Última mensagem:*\n"${normalized.text}"\n\n🏷️ ${(aiRes.categoria || 'OUTRO').toUpperCase()} · Prioridade ${(aiRes.prioridade || 'MEDIA').toUpperCase()}\n\n⏳ _A IA está pausada por 30 min. Responda pelo WhatsApp ou pelo painel._`;
       
       await evolution.sendMessage(tenant.whatsappInstanceId, teamJid, teamMessage)
         .catch(err => console.error('[NOTIFICATION ERROR]', err.message));
