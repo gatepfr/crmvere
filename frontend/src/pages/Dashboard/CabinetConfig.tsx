@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { 
-  Building2, 
-  Save, 
-  Loader2, 
-  Image as ImageIcon, 
-  MessageSquare, 
-  MapPin, 
-  Flag, 
-  Calendar, 
-  User, 
+import {
+  Building2,
+  Save,
+  Loader2,
+  Image as ImageIcon,
+  MessageSquare,
+  MapPin,
+  Flag,
+  Calendar,
+  User,
   Sparkles,
   Smartphone,
   CheckCircle2,
@@ -18,6 +18,7 @@ import {
 
 const DEFAULT_BIRTHDAY = "Olá {nome}, parabéns pelo seu aniversário! Desejamos muita saúde, paz e realizações. Conte sempre conosco! 🎂🎈";
 const DEFAULT_LEGISLATIVE = "Olá {nome}! Gostaria de informar que sua solicitação sobre *{assunto}* virou a Indicação oficial nº *{numero}*. Você pode acompanhar por aqui: {link}";
+const DEFAULT_FOLLOWUP = "Olá {nome}, passamos para informar que sua solicitação está sendo acompanhada pelo gabinete. Em breve teremos uma atualização para você. Obrigado pela paciência!";
 
 export default function CabinetConfig() {
   const [config, setConfig] = useState({
@@ -30,7 +31,11 @@ export default function CabinetConfig() {
     calendarUrl: '',
     birthdayMessage: '',
     birthdayAutomated: false,
-    legislativeMessage: ''
+    legislativeMessage: '',
+    whatsappVereadorNumber: '',
+    followUpEnabled: false,
+    followUpDays: 5,
+    followUpMessage: '',
   });
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -49,7 +54,11 @@ export default function CabinetConfig() {
           calendarUrl: res.data.calendarUrl || '',
           birthdayMessage: res.data.birthdayMessage || DEFAULT_BIRTHDAY,
           birthdayAutomated: res.data.birthdayAutomated || false,
-          legislativeMessage: res.data.legislativeMessage || DEFAULT_LEGISLATIVE
+          legislativeMessage: res.data.legislativeMessage || DEFAULT_LEGISLATIVE,
+          whatsappVereadorNumber: res.data.whatsappVereadorNumber || '',
+          followUpEnabled: res.data.followUpEnabled || false,
+          followUpDays: res.data.followUpDays || 5,
+          followUpMessage: res.data.followUpMessage || DEFAULT_FOLLOWUP,
         });
       })
       .catch(err => console.error('Erro ao carregar dados do gabinete:', err))
@@ -61,7 +70,13 @@ export default function CabinetConfig() {
     setLoading(true);
     setSaveStatus('idle');
     try {
-      await api.patch('/config/update', config);
+      await api.patch('/config/update', {
+        ...config,
+        whatsappVereadorNumber: config.whatsappVereadorNumber,
+        followUpEnabled: config.followUpEnabled,
+        followUpDays: config.followUpDays,
+        followUpMessage: config.followUpMessage,
+      });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
@@ -88,7 +103,7 @@ export default function CabinetConfig() {
           </h2>
           <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-xs ml-1">Configuração de Identidade e Automação</p>
         </div>
-        
+
         {saveStatus === 'success' && (
           <div className="flex items-center gap-2 bg-green-50 text-green-600 px-4 py-2 rounded-2xl border border-green-100 animate-in slide-in-from-right duration-300">
             <CheckCircle2 size={16} />
@@ -98,7 +113,7 @@ export default function CabinetConfig() {
       </header>
 
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        
+
         <div className="lg:col-span-2 space-y-8">
           <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-100/50 overflow-hidden">
             <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center gap-3">
@@ -107,12 +122,12 @@ export default function CabinetConfig() {
               </div>
               <h3 className="font-black text-slate-900 uppercase tracking-tighter text-lg">Perfil Político</h3>
             </div>
-            
+
             <div className="p-10 space-y-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Parlamentar</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-700"
                   value={config.name}
                   onChange={e => setConfig({...config, name: e.target.value})}
@@ -126,8 +141,8 @@ export default function CabinetConfig() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <MapPin size={12} /> Município
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-700"
                     value={config.municipio}
                     onChange={e => setConfig({...config, municipio: e.target.value})}
@@ -138,8 +153,8 @@ export default function CabinetConfig() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <Flag size={12} /> Estado (UF)
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     maxLength={2}
                     className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-700 uppercase"
                     value={config.uf}
@@ -151,8 +166,8 @@ export default function CabinetConfig() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <Sparkles size={12} /> Partido
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-700"
                     value={config.partido}
                     onChange={e => setConfig({...config, partido: e.target.value})}
@@ -163,8 +178,8 @@ export default function CabinetConfig() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <Calendar size={12} /> Mandato
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-700"
                     value={config.mandato}
                     onChange={e => setConfig({...config, mandato: e.target.value})}
@@ -187,13 +202,13 @@ export default function CabinetConfig() {
                 <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
                   <Sparkles size={100} />
                 </div>
-                
+
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 relative z-10">
                   <div className="flex items-center gap-4">
                     <h4 className="font-black text-pink-700 uppercase tracking-widest text-sm">🎈 Aniversariantes</h4>
                     <label className="relative inline-flex items-center cursor-pointer scale-110">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="sr-only peer"
                         checked={config.birthdayAutomated}
                         onChange={e => setConfig({...config, birthdayAutomated: e.target.checked})}
@@ -207,7 +222,7 @@ export default function CabinetConfig() {
                   <span className="text-[9px] font-black text-pink-400 bg-white px-3 py-1 rounded-full border border-pink-100 uppercase tracking-widest">Variável: {'{nome}'}</span>
                 </div>
 
-                <textarea 
+                <textarea
                   className="w-full px-6 py-5 bg-white/80 border-2 border-pink-100 focus:border-pink-500 rounded-[1.5rem] outline-none transition-all font-bold text-slate-700 text-sm min-h-[120px] relative z-10"
                   value={config.birthdayMessage}
                   onChange={e => setConfig({...config, birthdayMessage: e.target.value})}
@@ -226,12 +241,99 @@ export default function CabinetConfig() {
                     ))}
                   </div>
                 </div>
-                <textarea 
+                <textarea
                   className="w-full px-6 py-5 bg-white/80 border-2 border-blue-100 focus:border-blue-500 rounded-[1.5rem] outline-none transition-all font-bold text-slate-700 text-sm min-h-[120px]"
                   value={config.legislativeMessage}
                   onChange={e => setConfig({...config, legislativeMessage: e.target.value})}
                   placeholder="Mensagem para quando uma demanda virar indicação..."
                 />
+              </div>
+
+              {/* Número do Vereador */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="bg-green-50 p-2 rounded-xl"><Smartphone className="text-green-600" size={20} /></div>
+                  <div>
+                    <h3 className="font-black text-slate-900">Número do Vereador</h3>
+                    <p className="text-xs text-slate-400">Recebe o relatório semanal pessoalmente</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">WhatsApp do Vereador</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="5511999999999"
+                    value={config.whatsappVereadorNumber}
+                    onChange={e => setConfig({ ...config, whatsappVereadorNumber: e.target.value })}
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Formato: código país + DDD + número (ex: 5511999999999)</p>
+                </div>
+              </div>
+
+              {/* Follow-up Automático */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="bg-blue-50 p-2 rounded-xl"><MessageSquare className="text-blue-600" size={20} /></div>
+                  <div>
+                    <h3 className="font-black text-slate-900">Follow-up Automático</h3>
+                    <p className="text-xs text-slate-400">Lembra o cidadão que a solicitação está sendo tratada</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                  <span className="text-sm font-black text-slate-700 uppercase tracking-tighter">Ativar Follow-up Automático</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={config.followUpEnabled}
+                      onChange={e => setConfig({ ...config, followUpEnabled: e.target.checked })}
+                    />
+                    <div className="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                {config.followUpEnabled && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Dias sem resposta para disparar</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        className="w-24 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        value={config.followUpDays}
+                        onChange={e => setConfig({ ...config, followUpDays: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Mensagem de follow-up</label>
+                      <textarea
+                        rows={4}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        value={config.followUpMessage}
+                        onChange={e => setConfig({ ...config, followUpMessage: e.target.value })}
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Use <strong>{'{nome}'}</strong> para inserir o nome do cidadão</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Relatório Semanal */}
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-indigo-50 p-2 rounded-xl"><Sparkles className="text-indigo-600" size={20} /></div>
+                  <div>
+                    <h3 className="font-black text-slate-900">Relatório Semanal</h3>
+                    <p className="text-xs text-slate-400">Enviado automaticamente toda segunda-feira às 08h</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                  <p className="text-xs text-indigo-800 font-bold">
+                    O relatório inclui: atendimentos da semana, indicações realizadas, aniversariantes nos próximos 7 dias e bairro mais ativo.
+                    É enviado para o número da equipe e para o número do vereador cadastrados acima.
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -273,8 +375,8 @@ export default function CabinetConfig() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                 <ImageIcon size={12} /> URL da Foto Oficial
               </label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl outline-none transition-all font-bold text-slate-700 text-xs"
                 value={config.fotoUrl}
                 onChange={e => setConfig({...config, fotoUrl: e.target.value})}
@@ -285,8 +387,8 @@ export default function CabinetConfig() {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                 <Calendar size={12} /> Agenda (Google Embed)
               </label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-xl outline-none transition-all font-bold text-slate-700 text-xs"
                 value={config.calendarUrl}
                 onChange={e => setConfig({...config, calendarUrl: e.target.value})}
@@ -294,7 +396,7 @@ export default function CabinetConfig() {
             </div>
           </section>
 
-          <button 
+          <button
             type="submit"
             disabled={loading}
             className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl shadow-slate-200 hover:bg-blue-600 hover:scale-[1.02] active:scale-95 transition-all duration-300 disabled:opacity-50"
