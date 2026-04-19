@@ -20,6 +20,15 @@ const DEFAULT_BIRTHDAY = "Olá {nome}, parabéns pelo seu aniversário! Desejamo
 const DEFAULT_LEGISLATIVE = "Olá {nome}! Gostaria de informar que sua solicitação sobre *{assunto}* virou a Indicação oficial nº *{numero}*. Você pode acompanhar por aqui: {link}";
 const DEFAULT_FOLLOWUP = "Olá {nome}, passamos para informar que sua solicitação está sendo acompanhada pelo gabinete. Em breve teremos uma atualização para você. Obrigado pela paciência!";
 
+const formatPhoneBR = (value: string) => {
+  const d = value.replace(/\D/g, '').slice(0, 13);
+  if (d.length <= 2) return d.length ? `+${d}` : '';
+  if (d.length <= 4) return `+${d.slice(0, 2)} (${d.slice(2)}`;
+  if (d.length <= 9) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4)}`;
+  if (d.length <= 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
+  return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9, 13)}`;
+};
+
 export default function CabinetConfig() {
   const [config, setConfig] = useState({
     name: '',
@@ -55,7 +64,7 @@ export default function CabinetConfig() {
           birthdayMessage: res.data.birthdayMessage || DEFAULT_BIRTHDAY,
           birthdayAutomated: res.data.birthdayAutomated || false,
           legislativeMessage: res.data.legislativeMessage || DEFAULT_LEGISLATIVE,
-          whatsappVereadorNumber: res.data.whatsappVereadorNumber || '',
+          whatsappVereadorNumber: formatPhoneBR(res.data.whatsappVereadorNumber || ''),
           followUpEnabled: res.data.followUpEnabled || false,
           followUpDays: res.data.followUpDays || 5,
           followUpMessage: res.data.followUpMessage || DEFAULT_FOLLOWUP,
@@ -265,9 +274,9 @@ export default function CabinetConfig() {
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="5511999999999"
                     value={config.whatsappVereadorNumber}
-                    onChange={e => setConfig({ ...config, whatsappVereadorNumber: e.target.value })}
+                    onChange={e => setConfig({ ...config, whatsappVereadorNumber: formatPhoneBR(e.target.value) })}
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Formato: código país + DDD + número (ex: 5511999999999)</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Ex: +55 (43) 99999-9999</p>
                 </div>
               </div>
 

@@ -8,6 +8,15 @@ interface WhatsAppStatus {
   status: string;
 }
 
+const formatPhoneBR = (value: string) => {
+  const d = value.replace(/\D/g, '').slice(0, 13);
+  if (d.length <= 2) return d.length ? `+${d}` : '';
+  if (d.length <= 4) return `+${d.slice(0, 2)} (${d.slice(2)}`;
+  if (d.length <= 9) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4)}`;
+  if (d.length <= 13) return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
+  return `+${d.slice(0, 2)} (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9, 13)}`;
+};
+
 export default function WhatsAppConfig() {
   const { user } = useAuth();
   const [config, setConfig] = useState({ 
@@ -29,7 +38,7 @@ export default function WhatsAppConfig() {
       setConfig({
         evolutionApiUrl: res.data.evolutionApiUrl || '',
         evolutionGlobalToken: res.data.evolutionGlobalToken || '',
-        whatsappNotificationNumber: res.data.whatsappNotificationNumber || '',
+        whatsappNotificationNumber: formatPhoneBR(res.data.whatsappNotificationNumber || ''),
       });
       
       return res.data;
@@ -217,8 +226,8 @@ export default function WhatsAppConfig() {
                   type="text" 
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold"
                   value={config.whatsappNotificationNumber}
-                  onChange={e => setConfig({...config, whatsappNotificationNumber: e.target.value})}
-                  placeholder="Ex: 5543999999999"
+                  onChange={e => setConfig({...config, whatsappNotificationNumber: formatPhoneBR(e.target.value)})}
+                  placeholder="+55 (43) 99999-9999"
                 />
                 <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
                   Este número receberá um alerta imediato quando a IA solicitar intervenção humana.
