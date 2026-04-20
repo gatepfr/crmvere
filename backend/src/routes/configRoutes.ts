@@ -23,7 +23,7 @@ router.get('/me', async (req, res) => {
   if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
   // Get current daily usage from Redis
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('sv', { timeZone: 'America/Sao_Paulo' });
   const currentUsage = await redisService.getUsage(tenantId, today);
 
   res.json({

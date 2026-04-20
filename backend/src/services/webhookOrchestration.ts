@@ -30,8 +30,8 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     }
 
     // 2. Busca Atendimento de HOJE
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStr = new Date().toLocaleDateString('sv', { timeZone: 'America/Sao_Paulo' });
+    const todayStart = new Date(`${todayStr}T00:00:00-03:00`);
 
     let [existingAtendimento] = await db.select().from(atendimentos).where(and(
       eq(atendimentos.municipeId, municipe.id),
@@ -56,7 +56,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     if (isHumanActive) return { status: 'waiting_human' };
 
     // 5. Verificação de Quota antes de chamar a IA
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv', { timeZone: 'America/Sao_Paulo' });
     const currentUsage = await redisService.getUsage(tenantId, today);
     const dailyLimit = tenant.dailyTokenLimit || 50000;
     if (currentUsage >= dailyLimit) {

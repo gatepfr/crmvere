@@ -22,7 +22,7 @@ export const checkAIQuota = async (req: Request, res: Response, next: NextFuncti
     }
 
     // 2. Get Usage and Limit
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('sv', { timeZone: 'America/Sao_Paulo' });
     const usage = await redisService.getUsage(tenantId, today);
     
     let limit = await redisService.getLimit(tenantId);
@@ -72,8 +72,8 @@ export const checkAIQuota = async (req: Request, res: Response, next: NextFuncti
  */
 export const trackAIUsage = async (tenantId: string, tokens: number) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const today = new Date().toLocaleDateString('sv', { timeZone: 'America/Sao_Paulo' });
+
     // 1. Update Redis (Real-time)
     await redisService.incrementUsage(tenantId, today, tokens);
 
