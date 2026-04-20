@@ -9,3 +9,4 @@ frontend/dist/
 backend/dist/
 *.log
 .superpowers/
+.worktrees/
