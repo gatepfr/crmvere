@@ -35,8 +35,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const last7Days = await db.select({
       date: sql<string>`TO_CHAR(${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo', 'DD/MM')`,
       count: sql<number>`count(*)::int`,
-      day: sql`DATE_TRUNC('day', ${atendimentos.createdAt})`
-    }).from(atendimentos).where(and(eq(atendimentos.tenantId, tenantId), sql`${atendimentos.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`)).groupBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt}), TO_CHAR(${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo', 'DD/MM')`).orderBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt}) ASC`);
+      day: sql`DATE_TRUNC('day', ${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo')`
+    }).from(atendimentos).where(and(eq(atendimentos.tenantId, tenantId), sql`(${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo')::date >= (NOW() AT TIME ZONE 'America/Sao_Paulo')::date - INTERVAL '7 days'`)).groupBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo'), TO_CHAR(${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo', 'DD/MM')`).orderBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt} AT TIME ZONE 'America/Sao_Paulo') ASC`);
 
     res.json({
       summary: {
