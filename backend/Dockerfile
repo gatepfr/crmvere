@@ -8,7 +8,7 @@ RUN npm run build
 FROM node:20-slim
 WORKDIR /app
 
-# Instala Python e dependências do sistema
+# Instala Python, Chromium e dependências do sistema
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -16,7 +16,12 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     libpq-dev \
     gcc \
+    chromium \
+    fonts-liberation \
+    --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Copia dependências do Python e instala
 COPY requirements.txt .
