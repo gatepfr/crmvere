@@ -187,7 +187,7 @@ router.post('/send', async (req, res) => {
     }).where(and(
         eq(atendimentos.municipeId, demand.municipe.id),
         eq(atendimentos.tenantId, tenantId!),
-        sql`date_trunc('day', ${atendimentos.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo') = date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo')`
+        sql`${atendimentos.createdAt}::date = (now() AT TIME ZONE 'America/Sao_Paulo')::date`
     ));
 
     res.json({ success: true });
