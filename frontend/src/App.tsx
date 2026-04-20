@@ -21,6 +21,7 @@ import Municipes from './pages/Dashboard/Municipes';
 import IALab from './pages/Dashboard/IALab';
 import Eleicoes from './pages/Dashboard/Eleicoes';
 import MyTasks from './pages/Dashboard/MyTasks';
+import Broadcasts from './pages/Dashboard/Broadcasts';
 import StrategicIntelligence from './pages/Intelligence/StrategicDashboard';
 import Billing from './pages/Billing';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -95,6 +96,7 @@ function AppContent() {
             <Route path="demands" element={<Demands />} />
             <Route path="legislativo" element={<Legislativo />} />
             <Route path="my-tasks" element={<MyTasks />} />
+            <Route path="broadcasts" element={<Broadcasts />} />
             <Route path="map" element={<VoterMap />} />
             <Route path="cabinet" element={<CabinetConfig />} />
             <Route path="kanban" element={<KanbanLeads />} />

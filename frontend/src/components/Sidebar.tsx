@@ -19,7 +19,8 @@ import {
   ClipboardList,
   Settings,
   Target,
-  ListTodo
+  ListTodo,
+  Megaphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -35,6 +36,7 @@ export default function Sidebar() {
     { name: 'Atendimento On Line', icon: MessageSquare, path: '/dashboard/demands' },
     { name: 'Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
     { name: 'Minhas Tarefas', icon: ListTodo, path: '/dashboard/my-tasks' },
+    { name: 'Disparo em Massa', icon: Megaphone, path: '/dashboard/broadcasts' },
     { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
     { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
     { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
