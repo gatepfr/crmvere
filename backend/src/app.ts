@@ -19,6 +19,7 @@ import eleicoesRoutes from './routes/eleicoesRoutes';
 import intelligenceRoutes from './routes/intelligenceRoutes';
 import calendarRoutes from './routes/calendarRoutes';
 import broadcastRoutes from './routes/broadcastRoutes';
+import reportRoutes from './routes/reportRoutes';
 import { authenticate } from './middleware/auth';
 import { initAutomations } from './services/automationService';
 import { checkTenant } from './middleware/tenant';
@@ -76,6 +77,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/eleicoes', eleicoesRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/broadcasts', broadcastRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
