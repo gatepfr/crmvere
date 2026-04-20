@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { tenants, municipes, demandas, documents, systemConfigs, atendimentos } from '../db/schema';
+import { tenants, municipes, demandas, documents, systemConfigs, atendimentos, optouts } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { normalizeEvolution } from './whatsappService';
 import { processDemand } from './aiService';
@@ -27,6 +27,22 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     if (!municipe) {
       const [newM] = await db.insert(municipes).values({ tenantId, name: formatName(normalized.name), phone: normalized.from }).returning();
       municipe = newM;
+    }
+
+    // 1.5. Verificação de opt-out
+    const OPT_OUT_WORDS = ['sair', 'parar', 'stop', 'cancelar', 'descadastrar', 'não quero'];
+    const isOptOut = OPT_OUT_WORDS.some(w => normalized.text.toLowerCase().trim() === w);
+
+    if (isOptOut) {
+      await db.insert(optouts).values({ tenantId, phone: normalized.from, reason: 'user_request' })
+        .onConflictDoNothing();
+
+      if (tenant.evolutionApiUrl && tenant.evolutionGlobalToken && tenant.whatsappInstanceId) {
+        const evolution = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+        await evolution.sendMessage(tenant.whatsappInstanceId, normalized.from,
+          'Você foi removido da nossa lista de envios. Para se recadastrar, responda QUERO.');
+      }
+      return { status: 'opted_out' };
     }
 
     // 2. Busca Atendimento de HOJE

@@ -3,6 +3,7 @@ import { db } from '../db';
 import { tenants, municipes, atendimentos, demandas, users, demandActivityLog } from '../db/schema';
 import { eq, sql, and, lt, isNotNull, ne } from 'drizzle-orm';
 import { EvolutionService } from './evolutionService';
+import { processQueue } from './broadcastService';
 
 /**
  * Inicia os agendamentos automáticos do sistema.
@@ -31,6 +32,11 @@ export const initAutomations = () => {
     console.log('[AUTOMATION] Verificando SLA de demandas...');
     await processDemandasSLA();
   }, { timezone: 'America/Sao_Paulo' });
+
+  // A cada 30 segundos — processamento da fila de disparos em massa
+  cron.schedule('*/30 * * * * *', async () => {
+    await processQueue();
+  });
 };
 
 /**
