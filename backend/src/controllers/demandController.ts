@@ -78,11 +78,14 @@ export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const { name, phone, cep, bairro, birthDate, isLideranca } = req.body;
   try {
-    const [u] = await db.update(municipes).set({ 
-      name, phone: normalizePhone(phone), cep, bairro, 
-      birthDate: birthDate ? new Date(birthDate) : null,
-      isLideranca
-    }).where(eq(municipes.id, id)).returning();
+    const updateData: Record<string, any> = {};
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = normalizePhone(phone);
+    if (cep !== undefined) updateData.cep = cep;
+    if (bairro !== undefined) updateData.bairro = bairro;
+    if (birthDate !== undefined) updateData.birthDate = birthDate ? new Date(birthDate) : null;
+    if (isLideranca !== undefined) updateData.isLideranca = isLideranca;
+    const [u] = await db.update(municipes).set(updateData).where(eq(municipes.id, id)).returning();
     res.json(u);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
