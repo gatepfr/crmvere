@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../db';
 import { municipes, tenants, atendimentos } from '../db/schema';
 import { eq, sql, and } from 'drizzle-orm';
+import { redisService } from '../services/redisService';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
@@ -10,8 +11,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     const [tenant] = await db.select({
       dailyTokenLimit: tenants.dailyTokenLimit,
-      tokenUsageTotal: tenants.tokenUsageTotal
     }).from(tenants).where(eq(tenants.id, tenantId));
+
+    const today = new Date().toLocaleDateString('sv', { timeZone: 'America/Sao_Paulo' });
+    const tokenUsageToday = await redisService.getUsage(tenantId, today);
 
     const [summary] = await db.select({
       total: sql<number>`count(*)::int`,
@@ -43,7 +46,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         birthdaysToday: municipeSummary?.birthdaysToday || 0,
         uniqueBairros: municipeSummary?.uniqueBairros || 0,
         dailyTokenLimit: tenant?.dailyTokenLimit || 0,
-        tokenUsageTotal: tenant?.tokenUsageTotal || 0
+        tokenUsageTotal: tokenUsageToday
       },
       categoryStats: categoryStats.map(c => ({ ...c, value: Number(c.value) })),
       dailyStats: last7Days.map(d => ({ date: d.date, count: Number(d.count) }))
