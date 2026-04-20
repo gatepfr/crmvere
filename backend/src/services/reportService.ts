@@ -110,96 +110,59 @@ export async function collectReportData(
     .from(tenants)
     .where(eq(tenants.id, tenantId));
 
-  const start = new Date(startDate);
-  const end = new Date(endDate + 'T23:59:59');
+  if (!tenant) {
+    throw new Error(`Tenant not found: ${tenantId}`);
+  }
 
-  const statusCounts = await db
-    .select({
-      status: demandas.status,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(demandas)
-    .where(
-      and(
-        eq(demandas.tenantId, tenantId),
-        gte(demandas.createdAt, start),
-        lte(demandas.createdAt, end)
-      )
-    )
-    .groupBy(demandas.status);
+  const start = new Date(startDate);
+  const end = new Date(endDate + 'T23:59:59.999');
+
+  const [
+    statusCounts,
+    bairroRows,
+    categoriaRows,
+    indicacoesRows,
+    [municipeSummary],
+    broadcastRows,
+  ] = await Promise.all([
+    db.select({ status: demandas.status, count: sql<number>`count(*)::int` })
+      .from(demandas)
+      .where(and(eq(demandas.tenantId, tenantId), gte(demandas.createdAt, start), lte(demandas.createdAt, end)))
+      .groupBy(demandas.status),
+
+    db.select({ bairro: municipes.bairro, count: sql<number>`count(*)::int` })
+      .from(demandas)
+      .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
+      .where(and(eq(demandas.tenantId, tenantId), gte(demandas.createdAt, start), lte(demandas.createdAt, end)))
+      .groupBy(municipes.bairro)
+      .orderBy(sql`count(*) desc`)
+      .limit(10),
+
+    db.select({ categoria: demandas.categoria, count: sql<number>`count(*)::int` })
+      .from(demandas)
+      .where(and(eq(demandas.tenantId, tenantId), gte(demandas.createdAt, start), lte(demandas.createdAt, end)))
+      .groupBy(demandas.categoria)
+      .orderBy(sql`count(*) desc`)
+      .limit(15),
+
+    db.select({ numeroIndicacao: demandas.numeroIndicacao, descricao: demandas.descricao, status: demandas.status, createdAt: demandas.createdAt })
+      .from(demandas)
+      .where(and(eq(demandas.tenantId, tenantId), eq(demandas.isLegislativo, true), gte(demandas.createdAt, start), lte(demandas.createdAt, end)))
+      .orderBy(demandas.createdAt)
+      .limit(50),
+
+    db.select({ total: sql<number>`count(*)::int` })
+      .from(municipes)
+      .where(eq(municipes.tenantId, tenantId)),
+
+    db.select({ totalSent: sql<number>`coalesce(sum(${broadcasts.sentCount}), 0)::int` })
+      .from(broadcasts)
+      .where(and(eq(broadcasts.tenantId, tenantId), eq(broadcasts.status, 'concluido'), gte(broadcasts.completedAt, start), lte(broadcasts.completedAt, end))),
+  ]);
 
   const countMap: Record<string, number> = {};
   statusCounts.forEach(r => { countMap[r.status] = Number(r.count); });
   const totalDemandas = Object.values(countMap).reduce((a, b) => a + b, 0);
-
-  const bairroRows = await db
-    .select({
-      bairro: municipes.bairro,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(demandas)
-    .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
-    .where(
-      and(
-        eq(demandas.tenantId, tenantId),
-        gte(demandas.createdAt, start),
-        lte(demandas.createdAt, end)
-      )
-    )
-    .groupBy(municipes.bairro)
-    .orderBy(sql`count(*) desc`)
-    .limit(10);
-
-  const categoriaRows = await db
-    .select({
-      categoria: demandas.categoria,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(demandas)
-    .where(
-      and(
-        eq(demandas.tenantId, tenantId),
-        gte(demandas.createdAt, start),
-        lte(demandas.createdAt, end)
-      )
-    )
-    .groupBy(demandas.categoria)
-    .orderBy(sql`count(*) desc`);
-
-  const indicacoesRows = await db
-    .select({
-      numeroIndicacao: demandas.numeroIndicacao,
-      descricao: demandas.descricao,
-      status: demandas.status,
-      createdAt: demandas.createdAt,
-    })
-    .from(demandas)
-    .where(
-      and(
-        eq(demandas.tenantId, tenantId),
-        eq(demandas.isLegislativo, true),
-        gte(demandas.createdAt, start),
-        lte(demandas.createdAt, end)
-      )
-    )
-    .orderBy(demandas.createdAt);
-
-  const [municipeSummary] = await db
-    .select({ total: sql<number>`count(*)::int` })
-    .from(municipes)
-    .where(eq(municipes.tenantId, tenantId));
-
-  const broadcastRows = await db
-    .select({ totalSent: sql<number>`coalesce(sum(${broadcasts.sentCount}), 0)::int` })
-    .from(broadcasts)
-    .where(
-      and(
-        eq(broadcasts.tenantId, tenantId),
-        eq(broadcasts.status, 'concluido'),
-        gte(broadcasts.completedAt, start),
-        lte(broadcasts.completedAt, end)
-      )
-    );
 
   return {
     tenant,
@@ -229,6 +192,9 @@ function formatPeriod(startDate: string, endDate: string): string {
   return `${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} a ${new Date(endDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
 }
 
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 export function buildHtmlTemplate(data: ReportData): string {
   const { tenant, period } = data;
 
@@ -244,7 +210,8 @@ export function buildHtmlTemplate(data: ReportData): string {
       ${content}
     </div>`;
 
-  const fotoHtml = tenant.fotoUrl
+  const isSafeUrl = (url: string) => url.startsWith('http://') || url.startsWith('https://');
+  const fotoHtml = tenant.fotoUrl && isSafeUrl(tenant.fotoUrl)
     ? `<img src="${tenant.fotoUrl}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid white;box-shadow:0 4px 20px rgba(0,0,0,0.2)" />`
     : `<div style="width:120px;height:120px;border-radius:50%;background:#94a3b8;border:4px solid white;display:flex;align-items:center;justify-content:center"><span style="font-size:40px;color:white">👤</span></div>`;
 
@@ -253,9 +220,9 @@ export function buildHtmlTemplate(data: ReportData): string {
     : data.indicacoes.map(ind => `
         <tr style="border-bottom:1px solid #f1f5f9">
           <td style="padding:8px 12px;font-size:12px;font-weight:700;color:#3b82f6">${ind.numeroIndicacao ?? '—'}</td>
-          <td style="padding:8px 12px;font-size:12px;color:#334155;max-width:300px">${ind.descricao.length > 80 ? ind.descricao.slice(0, 80) + '...' : ind.descricao}</td>
+          <td style="padding:8px 12px;font-size:12px;color:#334155;max-width:300px">${escapeHtml(ind.descricao.length > 80 ? ind.descricao.slice(0, 80) + '...' : ind.descricao)}</td>
           <td style="padding:8px 12px;font-size:12px;color:#64748b">${formatDate(ind.createdAt)}</td>
-          <td style="padding:8px 12px"><span style="background:#f0fdf4;color:#16a34a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase">${ind.status}</span></td>
+          <td style="padding:8px 12px"><span style="background:#f0fdf4;color:#16a34a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase">${escapeHtml(ind.status)}</span></td>
         </tr>`).join('');
 
   return `<!DOCTYPE html>
@@ -275,9 +242,9 @@ export function buildHtmlTemplate(data: ReportData): string {
   <div>${fotoHtml}</div>
   <div style="color:white">
     <p style="font-size:12px;text-transform:uppercase;letter-spacing:3px;opacity:0.7;margin-bottom:8px">Prestação de Contas</p>
-    <h1 style="font-size:28px;font-weight:900;margin-bottom:8px">${tenant.name}</h1>
-    <p style="font-size:14px;opacity:0.85;margin-bottom:4px">${tenant.partido ?? ''} • ${tenant.municipio ?? ''}${tenant.uf ? '/' + tenant.uf : ''}</p>
-    <p style="font-size:13px;opacity:0.75">${tenant.mandato ?? ''}</p>
+    <h1 style="font-size:28px;font-weight:900;margin-bottom:8px">${escapeHtml(tenant.name)}</h1>
+    <p style="font-size:14px;opacity:0.85;margin-bottom:4px">${escapeHtml(tenant.partido ?? '')} • ${escapeHtml(tenant.municipio ?? '')}${tenant.uf ? '/' + escapeHtml(tenant.uf) : ''}</p>
+    <p style="font-size:13px;opacity:0.75">${escapeHtml(tenant.mandato ?? '')}</p>
     <p style="font-size:12px;opacity:0.7;margin-top:16px;border-top:1px solid rgba(255,255,255,0.3);padding-top:16px">Período: ${formatPeriod(period.startDate, period.endDate)}</p>
   </div>
 </div>
