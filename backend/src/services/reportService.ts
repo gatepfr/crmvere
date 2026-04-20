@@ -1,3 +1,4 @@
+// These imports are used by collectReportData and generateReportPdf (added in Task 3)
 import puppeteer from 'puppeteer-core';
 import { db } from '../db';
 import { tenants, demandas, municipes, broadcasts } from '../db/schema';
@@ -7,6 +8,9 @@ export interface BarItem {
   label: string;
   value: number;
 }
+
+const escapeSvg = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export function buildSvgBars(data: BarItem[]): string {
   if (data.length === 0) {
@@ -24,7 +28,7 @@ export function buildSvgBars(data: BarItem[]): string {
     return `
       <g>
         <rect x="140" y="${y}" width="${w}" height="18" rx="4" fill="#3b82f6" opacity="0.85"/>
-        <text x="135" y="${y + 13}" text-anchor="end" font-size="11" fill="#475569" font-family="Arial">${item.label}</text>
+        <text x="135" y="${y + 13}" text-anchor="end" font-size="11" fill="#475569" font-family="Arial">${escapeSvg(item.label)}</text>
         <text x="${140 + w + 6}" y="${y + 13}" font-size="11" fill="#334155" font-weight="bold" font-family="Arial">${item.value}</text>
       </g>`;
   }).join('');
@@ -47,8 +51,7 @@ export function calcDateRange(
   }
 
   if (type === 'trimestral') {
-    const start = new Date(now);
-    start.setMonth(start.getMonth() - 3);
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
     return { startDate: fmt(start), endDate: fmt(now) };
   }
 
@@ -57,5 +60,8 @@ export function calcDateRange(
   }
 
   // custom
-  return { startDate: customStart!, endDate: customEnd! };
+  if (!customStart || !customEnd) {
+    throw new Error('calcDateRange: customStart and customEnd are required for type "custom"');
+  }
+  return { startDate: customStart, endDate: customEnd };
 }
