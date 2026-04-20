@@ -30,6 +30,7 @@ router.post('/', async (req: Request, res: Response) => {
         segmentType,
         segmentValue: segmentValue ?? null,
         status: 'rascunho',
+        createdBy: req.user!.id,
       })
       .returning();
 
@@ -62,7 +63,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [broadcast] = await db
       .select()
@@ -95,7 +96,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.get('/:id/preview', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [broadcast] = await db
       .select()
@@ -120,7 +121,7 @@ router.get('/:id/preview', async (req: Request, res: Response) => {
 router.post('/:id/send', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [broadcast] = await db
       .select()
@@ -138,7 +139,6 @@ router.post('/:id/send', async (req: Request, res: Response) => {
 
     await queueBroadcast(id);
 
-    // Processa a fila em background sem await
     processQueue().catch(err => console.error('[BROADCAST] Erro ao processar fila:', err));
 
     return res.json({ status: 'enfileirado', message: 'Broadcast enfileirado para envio' });
@@ -152,7 +152,7 @@ router.post('/:id/send', async (req: Request, res: Response) => {
 router.post('/:id/cancel', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [broadcast] = await db
       .select()
