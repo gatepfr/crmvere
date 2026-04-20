@@ -109,19 +109,43 @@ export const demandas = pgTable("demandas", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
   municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "cascade" }).notNull(),
-  atendimentoId: uuid("atendimento_id").references(() => atendimentos.id), // Vinculo opcional com a conversa
+  atendimentoId: uuid("atendimento_id").references(() => atendimentos.id),
   categoria: varchar("categoria", { length: 255 }).notNull(),
   descricao: varchar("descricao", { length: 10000 }).notNull(),
   status: varchar("status", { length: 20 }).default("nova").notNull(),
   prioridade: varchar("prioridade", { length: 20 }).default("media").notNull(),
-  
+
   // Campos Legislativos
   isLegislativo: boolean("is_legislative").default(false),
   numeroIndicacao: varchar("numero_indicacao", { length: 50 }),
   documentUrl: varchar("document_url", { length: 500 }),
-  
+
+  // Atribuição
+  assignedToId: uuid("assigned_to_id").references(() => users.id),
+  assignedAt: timestamp("assigned_at"),
+  dueDate: timestamp("due_date"),
+  closedAt: timestamp("closed_at"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const demandComments = pgTable("demand_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  demandId: uuid("demand_id").references(() => demandas.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  comment: varchar("comment", { length: 2000 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const demandActivityLog = pgTable("demand_activity_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  demandId: uuid("demand_id").references(() => demandas.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  action: varchar("action", { length: 50 }).notNull(),
+  oldValue: varchar("old_value", { length: 500 }),
+  newValue: varchar("new_value", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const documents = pgTable("documents", {

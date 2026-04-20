@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  MessageSquare, 
-  MessageCircle, 
-  Bot, 
-  LogOut, 
-  Map, 
-  Building2, 
-  Users, 
-  User, 
-  Menu, 
+import {
+  LayoutDashboard,
+  MessageSquare,
+  MessageCircle,
+  Bot,
+  LogOut,
+  Map,
+  Building2,
+  Users,
+  User,
+  Menu,
   X,
   Layout as KanbanIcon,
   Calendar,
@@ -18,7 +18,8 @@ import {
   Zap,
   ClipboardList,
   Settings,
-  Target
+  Target,
+  ListTodo
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -33,6 +34,7 @@ export default function Sidebar() {
     { name: 'Estratégia Territorial', icon: Target, path: '/dashboard/strategic-intelligence' },
     { name: 'Atendimento On Line', icon: MessageSquare, path: '/dashboard/demands' },
     { name: 'Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
+    { name: 'Minhas Tarefas', icon: ListTodo, path: '/dashboard/my-tasks' },
     { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
     { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
     { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },

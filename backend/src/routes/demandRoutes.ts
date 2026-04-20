@@ -1,17 +1,21 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { checkTenant } from '../middleware/tenant';
-import { 
-  listDemands, 
+import {
+  listDemands,
+  listMyDemands,
+  assignDemand,
+  addDemandComment,
+  getDemandTimeline,
   listAtendimentos,
   updateAtendimento,
   deleteAtendimento,
-  getDemand, 
-  updateDemand, 
+  getDemand,
+  updateDemand,
   deleteDemand,
-  updateMunicipe, 
-  deleteMunicipe, 
-  createDemand, 
+  updateMunicipe,
+  deleteMunicipe,
+  createDemand,
   listMunicipes,
   createMunicipe,
   importMunicipes,
@@ -35,9 +39,13 @@ router.delete('/atendimentos/:id', deleteAtendimento);
 
 // Rotas de Demandas Oficiais
 router.get('/', listDemands);
+router.get('/my', listMyDemands);
 router.post('/', createDemand);
 router.get('/:id', getDemand);
 router.patch('/:id/status', updateDemand);
+router.patch('/:id/assign', assignDemand);
+router.post('/:id/comments', addDemandComment);
+router.get('/:id/timeline', getDemandTimeline);
 router.delete('/:id', deleteDemand);
 
 // Rotas de Categorias

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes, systemConfigs, tenants, demandCategories, atendimentos } from '../db/schema';
-import { eq, desc, asc, and, sql, count, ilike, or } from 'drizzle-orm';
+import { demandas, municipes, systemConfigs, tenants, demandCategories, atendimentos, users, demandComments, demandActivityLog } from '../db/schema';
+import { eq, desc, asc, and, sql, count, ilike, or, lt, isNull } from 'drizzle-orm';
 import { normalizePhone } from '../utils/phoneUtils';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
@@ -169,6 +169,8 @@ export const listDemands = async (req: Request, res: Response) => {
   const search = req.query.search as string;
   const category = req.query.category as string;
   const status = req.query.status as string;
+  const overdue = req.query.overdue === 'true';
+  const unassigned = req.query.unassigned === 'true';
   const offset = (page - 1) * limit;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
 
@@ -176,12 +178,102 @@ export const listDemands = async (req: Request, res: Response) => {
     const conditions = [eq(demandas.tenantId, tenantId)];
     if (category) conditions.push(eq(demandas.categoria, category));
     if (status) conditions.push(eq(demandas.status, status as any));
+    if (overdue) {
+      conditions.push(lt(demandas.dueDate, new Date()));
+      conditions.push(sql`${demandas.status} != 'concluida'`);
+    }
+    if (unassigned) conditions.push(isNull(demandas.assignedToId));
     if (search) {
       conditions.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`), ilike(municipes.bairro, `%${search}%`)) as any);
     }
+    const assignedUser = { id: users.id, email: users.email };
     const [totalCount] = await db.select({ count: count() }).from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id)).where(and(...conditions));
-    const results = await db.select({ demandas: demandas, municipes: municipes }).from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id)).where(and(...conditions)).orderBy(desc(demandas.createdAt)).limit(limit).offset(offset);
+    const results = await db
+      .select({ demandas: demandas, municipes: municipes, assignedTo: { id: users.id, email: users.email } })
+      .from(demandas)
+      .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
+      .leftJoin(users, eq(demandas.assignedToId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(demandas.createdAt))
+      .limit(limit)
+      .offset(offset);
     res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / limit) } });
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+};
+
+export const listMyDemands = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  const userId = req.user?.id;
+  if (!tenantId || !userId) return res.status(403).json({ error: 'No tenant context' });
+  try {
+    const results = await db
+      .select({ demandas: demandas, municipes: municipes })
+      .from(demandas)
+      .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
+      .where(and(eq(demandas.tenantId, tenantId), eq(demandas.assignedToId, userId)))
+      .orderBy(asc(demandas.dueDate), desc(demandas.createdAt));
+    res.json(results);
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+};
+
+export const assignDemand = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { userId } = req.body;
+  const tenantId = req.user?.tenantId;
+  const actorId = req.user?.id;
+  if (!tenantId || !actorId) return res.status(403).json({ error: 'No tenant context' });
+  try {
+    const [existing] = await db.select({ assignedToId: demandas.assignedToId }).from(demandas).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId)));
+    if (!existing) return res.status(404).json({ error: 'Demand not found' });
+
+    await db.update(demandas).set({
+      assignedToId: userId || null,
+      assignedAt: userId ? new Date() : null,
+      updatedAt: new Date()
+    }).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId)));
+
+    await db.insert(demandActivityLog).values({
+      demandId: id, userId: actorId, action: 'assigned',
+      oldValue: existing.assignedToId || null,
+      newValue: userId || null
+    });
+
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+};
+
+export const addDemandComment = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { comment } = req.body;
+  const tenantId = req.user?.tenantId;
+  const userId = req.user?.id;
+  if (!tenantId || !userId) return res.status(403).json({ error: 'No tenant context' });
+  if (!comment?.trim()) return res.status(400).json({ error: 'Comment required' });
+  try {
+    const [newComment] = await db.insert(demandComments).values({ demandId: id, userId, comment: comment.trim() }).returning();
+    res.status(201).json(newComment);
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+};
+
+export const getDemandTimeline = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  try {
+    const comments = await db
+      .select({ id: demandComments.id, type: sql<string>`'comment'`, content: demandComments.comment, userId: demandComments.userId, userEmail: users.email, createdAt: demandComments.createdAt })
+      .from(demandComments)
+      .leftJoin(users, eq(demandComments.userId, users.id))
+      .where(eq(demandComments.demandId, id));
+
+    const activities = await db
+      .select({ id: demandActivityLog.id, type: sql<string>`'activity'`, content: sql<string>`concat(${demandActivityLog.action}, ': ', coalesce(${demandActivityLog.oldValue}, 'null'), ' -> ', coalesce(${demandActivityLog.newValue}, 'null'))`, userId: demandActivityLog.userId, userEmail: users.email, action: demandActivityLog.action, oldValue: demandActivityLog.oldValue, newValue: demandActivityLog.newValue, createdAt: demandActivityLog.createdAt })
+      .from(demandActivityLog)
+      .leftJoin(users, eq(demandActivityLog.userId, users.id))
+      .where(eq(demandActivityLog.demandId, id));
+
+    const timeline = [...comments, ...activities].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    res.json(timeline);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
@@ -213,18 +305,27 @@ export const createDemand = async (req: Request, res: Response) => {
 
 export const updateDemand = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { status, resumoIa, prioridade, categoria, isLegislativo, numeroIndicacao, documentUrl } = req.body;
+  const { status, resumoIa, prioridade, categoria, isLegislativo, numeroIndicacao, documentUrl, dueDate } = req.body;
   const tenantId = req.user?.tenantId;
+  const actorId = req.user?.id;
   try {
+    const [existing] = await db.select({ status: demandas.status }).from(demandas).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
     const updateData: any = { updatedAt: new Date() };
-    if (status) updateData.status = status;
+    if (status) {
+      updateData.status = status;
+      if (status === 'concluida') updateData.closedAt = new Date();
+    }
     if (prioridade) updateData.prioridade = prioridade;
     if (categoria) updateData.categoria = categoria;
     if (resumoIa) updateData.descricao = resumoIa;
     if (isLegislativo !== undefined) updateData.isLegislativo = isLegislativo;
     if (numeroIndicacao !== undefined) updateData.numeroIndicacao = numeroIndicacao;
     if (documentUrl !== undefined) updateData.documentUrl = documentUrl;
+    if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
     await db.update(demandas).set(updateData).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
+    if (status && existing?.status !== status && actorId) {
+      await db.insert(demandActivityLog).values({ demandId: id, userId: actorId, action: 'status_changed', oldValue: existing?.status || null, newValue: status });
+    }
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };

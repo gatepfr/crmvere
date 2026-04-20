@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { db } from '../db';
-import { tenants, municipes, atendimentos, demandas } from '../db/schema';
-import { eq, sql, and, lt } from 'drizzle-orm';
+import { tenants, municipes, atendimentos, demandas, users, demandActivityLog } from '../db/schema';
+import { eq, sql, and, lt, isNotNull, ne } from 'drizzle-orm';
 import { EvolutionService } from './evolutionService';
 
 /**
@@ -24,6 +24,12 @@ export const initAutomations = () => {
   cron.schedule('0 8 * * 1', async () => {
     console.log('[AUTOMATION] Iniciando relatório semanal às 08:00 de segunda...');
     await processWeeklyReport();
+  }, { timezone: 'America/Sao_Paulo' });
+
+  // Todo dia às 09:00 — SLA de demandas vencendo/vencidas
+  cron.schedule('0 9 * * *', async () => {
+    console.log('[AUTOMATION] Verificando SLA de demandas...');
+    await processDemandasSLA();
   }, { timezone: 'America/Sao_Paulo' });
 };
 
@@ -133,6 +139,65 @@ const processFollowUpAutomations = async () => {
     }
   } catch (error) {
     console.error('[FOLLOW-UP] Erro crítico:', error);
+  }
+};
+
+/**
+ * Notifica assessores sobre demandas com prazo vencendo nas próximas 24h ou já vencidas.
+ */
+const processDemandasSLA = async () => {
+  try {
+    const allTenants = await db.select().from(tenants).where(eq(tenants.active, true));
+
+    for (const tenant of allTenants) {
+      if (!tenant.whatsappInstanceId || !tenant.evolutionApiUrl || !tenant.evolutionGlobalToken) continue;
+
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+
+      const overdueOrSoon = await db
+        .select({
+          demandId: demandas.id,
+          categoria: demandas.categoria,
+          dueDate: demandas.dueDate,
+          assigneeEmail: users.email,
+        })
+        .from(demandas)
+        .innerJoin(users, eq(demandas.assignedToId, users.id))
+        .where(
+          and(
+            eq(demandas.tenantId, tenant.id),
+            isNotNull(demandas.dueDate),
+            ne(demandas.status, 'concluida'),
+            lt(demandas.dueDate, tomorrow)
+          )
+        );
+
+      if (overdueOrSoon.length === 0) continue;
+
+      const evolution = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+      const notifyNumber = tenant.whatsappNotificationNumber || tenant.whatsappVereadorNumber;
+      if (!notifyNumber) continue;
+
+      for (const row of overdueOrSoon) {
+        try {
+          const dueDateStr = row.dueDate ? new Date(row.dueDate).toLocaleDateString('pt-BR') : '?';
+          const isOverdue = row.dueDate && new Date(row.dueDate) < now;
+          const msg = isOverdue
+            ? `⚠️ *SLA Vencido* — Demanda de ${row.categoria} estava prevista para ${dueDateStr}. Responsável: ${row.assigneeEmail}`
+            : `🔔 *SLA Vencendo Hoje* — Demanda de ${row.categoria} com prazo em ${dueDateStr}. Responsável: ${row.assigneeEmail}`;
+
+          await evolution.sendMessage(tenant.whatsappInstanceId, notifyNumber, msg);
+        } catch (err) {
+          console.error(`[SLA] Erro ao notificar demanda ${row.demandId}:`, err);
+        }
+      }
+
+      console.log(`[SLA] ${overdueOrSoon.length} demandas notificadas para ${tenant.name}`);
+    }
+  } catch (error) {
+    console.error('[SLA] Erro crítico:', error);
   }
 };
 

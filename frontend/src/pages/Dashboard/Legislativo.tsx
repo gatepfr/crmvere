@@ -38,6 +38,8 @@ interface Demand {
   isLegislativo: boolean;
   numeroIndicacao: string | null;
   documentUrl: string | null;
+  assignedToId: string | null;
+  dueDate: string | null;
   createdAt: string;
   municipes: {
     id: string;
@@ -45,6 +47,12 @@ interface Demand {
     phone: string;
     bairro: string | null;
   };
+}
+
+interface TeamMember {
+  id: string;
+  email: string;
+  role: string;
 }
 
 interface Pagination {
@@ -70,16 +78,20 @@ interface CabinetConfig {
 type SortField = 'name' | 'subject' | 'number' | 'date';
 type SortOrder = 'asc' | 'desc';
 
+type FilterMode = 'all' | 'mine' | 'unassigned' | 'overdue';
+
 export default function Legislativo() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [cabinetConfig, setCabinetConfig] = useState<CabinetConfig | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [onlyPending, setOnlyPending] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedDemand, setSelectedDemand] = useState<{ demandas: Demand; municipes: Demand['municipes'] } | null>(null);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
-  
+
   // PDF Export States
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -92,27 +104,42 @@ export default function Legislativo() {
     setLoading(true);
     try {
       if (!cabinetConfig) {
-        const configRes = await api.get('/config/me');
+        const [configRes, teamRes] = await Promise.all([api.get('/config/me'), api.get('/team')]);
         setCabinetConfig(configRes.data);
+        setTeamMembers(teamRes.data || []);
       }
 
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        search: searchTerm
-      });
-      const res = await api.get(`/demands?${params.toString()}`);
-      setDemands(res.data.data.map((d: any) => ({
-        ...d.demandas,
-        municipes: d.municipes
-      })));
-      setPagination(res.data.pagination);
+      if (filterMode === 'mine') {
+        const res = await api.get('/demands/my');
+        setDemands((res.data as any[]).map((d: any) => ({
+          ...d.demandas,
+          municipes: d.municipes,
+          assignedToEmail: null,
+        })));
+        setPagination({ page: 1, limit: 1000, total: res.data.length, totalPages: 1 });
+      } else {
+        const params = new URLSearchParams({
+          page: pagination.page.toString(),
+          limit: pagination.limit.toString(),
+          search: searchTerm,
+        });
+        if (filterMode === 'unassigned') params.set('unassigned', 'true');
+        if (filterMode === 'overdue') params.set('overdue', 'true');
+
+        const res = await api.get(`/demands?${params.toString()}`);
+        setDemands(res.data.data.map((d: any) => ({
+          ...d.demandas,
+          municipes: d.municipes,
+          assignedToEmail: d.assignedTo?.email || null,
+        })));
+        setPagination(res.data.pagination);
+      }
     } catch (err) {
       console.error('Erro ao carregar dados legislativos');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, searchTerm]);
+  }, [pagination.page, pagination.limit, searchTerm, filterMode, cabinetConfig]);
 
   useEffect(() => {
     loadDemands();
@@ -341,26 +368,36 @@ export default function Legislativo() {
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input 
+          <input
             type="text"
             placeholder="Buscar por nome, bairro ou assunto..."
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-blue-200 transition-all font-bold text-sm"
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={e => { setSearchTerm(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
           />
         </div>
-        <button 
+        <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-100">
+          {(['all', 'mine', 'unassigned', 'overdue'] as FilterMode[]).map(mode => (
+            <button
+              key={mode}
+              onClick={() => { setFilterMode(mode); setPagination(p => ({ ...p, page: 1 })); }}
+              className={`px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${
+                filterMode === mode ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              } ${mode === 'overdue' && filterMode === mode ? 'text-red-600' : ''}`}
+            >
+              {mode === 'all' ? 'Todas' : mode === 'mine' ? 'Minhas' : mode === 'unassigned' ? 'Sem resp.' : 'Vencidas'}
+            </button>
+          ))}
+        </div>
+        <button
           onClick={() => setOnlyPending(!onlyPending)}
-          className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border w-full md:w-auto flex items-center justify-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border flex items-center gap-2 ${
             onlyPending ? 'bg-amber-500 border-amber-400 text-white shadow-lg' : 'bg-slate-50 border-transparent text-slate-500'
           }`}
         >
           <AlertCircle size={14} />
-          Pendentes de Protocolo
+          Pendentes
         </button>
-
-        <div className="h-8 w-[1px] bg-slate-100 mx-1 hidden lg:block"></div>
-
         <select
           className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
           value={pagination.limit === 10000 ? 'all' : pagination.limit}
@@ -378,7 +415,7 @@ export default function Legislativo() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-6 py-4 w-1/4 cursor-pointer group" onClick={() => toggleSort('name')}>
+                <th className="px-6 py-4 w-1/5 cursor-pointer group" onClick={() => toggleSort('name')}>
                   <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
                     Munícipe <SortIcon field="name" />
                   </div>
@@ -388,6 +425,7 @@ export default function Legislativo() {
                     Assunto Detalhado <SortIcon field="subject" />
                   </div>
                 </th>
+                <th className="px-6 py-4">Responsável</th>
                 <th className="px-6 py-4 text-center cursor-pointer group" onClick={() => toggleSort('number')}>
                   <div className="flex items-center justify-center gap-1.5 group-hover:text-blue-600 transition-colors">
                     Nº Indicação <SortIcon field="number" />
@@ -397,18 +435,24 @@ export default function Legislativo() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {sortedDemands.map(d => (
-                <tr key={d.id} className="group hover:bg-slate-50/30 transition-all align-top">
+              {sortedDemands.map(d => {
+                const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'concluida';
+                const assignedEmail = (d as any).assignedToEmail as string | null;
+                return (
+                <tr key={d.id} className={`group hover:bg-slate-50/30 transition-all align-top ${isOverdue ? 'bg-red-50/20' : ''}`}>
                   <td className="px-6 py-5">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{d.municipes.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{d.municipes.name}</span>
+                        {isOverdue && <span className="bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Vencida</span>}
+                      </div>
                       <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mt-1">
                         <MapPin size={10} /> {d.municipes.bairro || 'Centro'}
                       </span>
                       <div className="mt-3 flex items-center gap-2">
-                         <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase border border-blue-100">
-                           {d.categoria}
-                         </span>
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase border border-blue-100">
+                          {d.categoria}
+                        </span>
                       </div>
                     </div>
                   </td>
@@ -417,14 +461,31 @@ export default function Legislativo() {
                       {d.descricao}
                     </div>
                     {d.documentUrl && (
-                      <a 
-                        href={d.documentUrl} 
-                        target="_blank" 
+                      <a
+                        href={d.documentUrl}
+                        target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 mt-3 text-blue-600 font-bold text-[10px] uppercase hover:underline"
                       >
                         <FileText size={12} /> Ver documento oficial
                       </a>
+                    )}
+                    {d.dueDate && (
+                      <div className={`mt-2 text-[10px] font-black uppercase ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
+                        Prazo: {new Date(d.dueDate).toLocaleDateString('pt-BR')}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-5">
+                    {assignedEmail ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs">
+                          {assignedEmail[0].toUpperCase()}
+                        </div>
+                        <span className="text-xs font-bold text-slate-600 truncate max-w-[100px]">{assignedEmail.split('@')[0]}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-300 font-black uppercase">—</span>
                     )}
                   </td>
                   <td className="px-6 py-5 text-center">
@@ -464,14 +525,14 @@ export default function Legislativo() {
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex justify-end items-center gap-1">
-                      <button 
+                      <button
                         onClick={() => setSelectedDemand({ demandas: d, municipes: d.municipes })}
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                         title="Editar Detalhes"
                       >
                         <Edit2 size={18} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(d.id)}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                         title="Excluir Indicação"
@@ -481,7 +542,8 @@ export default function Legislativo() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
