@@ -287,3 +287,48 @@ export const tsePerfilEleitorado = pgTable("tse_perfil_eleitorado", {
   qtEleitores: integer("qt_eleitores"),
   createdAt: timestamp("created_at").defaultNow().notNull()
 });
+
+// --- MÓDULO DE DISPARO EM MASSA (FASE 2) ---
+
+export const broadcastStatusEnum = pgEnum("broadcast_status", ["rascunho", "enfileirado", "enviando", "concluido", "cancelado"]);
+export const segmentTypeEnum = pgEnum("segment_type", ["bairro", "lideranca", "aniversariantes", "categoria_demanda", "custom", "todos"]);
+export const recipientStatusEnum = pgEnum("recipient_status", ["pendente", "enviado", "erro", "opt_out"]);
+
+export const broadcasts = pgTable("broadcasts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  message: varchar("message", { length: 4000 }).notNull(),
+  mediaUrl: varchar("media_url", { length: 500 }),
+  segmentType: segmentTypeEnum("segment_type").notNull(),
+  segmentValue: varchar("segment_value", { length: 255 }),
+  status: broadcastStatusEnum("status").default("rascunho").notNull(),
+  totalRecipients: integer("total_recipients").default(0).notNull(),
+  sentCount: integer("sent_count").default(0).notNull(),
+  failedCount: integer("failed_count").default(0).notNull(),
+  scheduledFor: timestamp("scheduled_for"),
+  createdBy: uuid("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const broadcastRecipients = pgTable("broadcast_recipients", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  broadcastId: uuid("broadcast_id").references(() => broadcasts.id, { onDelete: "cascade" }).notNull(),
+  municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "cascade" }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  status: recipientStatusEnum("status").default("pendente").notNull(),
+  errorMessage: varchar("error_message", { length: 500 }),
+  sentAt: timestamp("sent_at"),
+});
+
+export const optouts = pgTable("optouts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  tenantPhoneUnq: unique("optout_tenant_phone_unq").on(table.tenantId, table.phone),
+}));
