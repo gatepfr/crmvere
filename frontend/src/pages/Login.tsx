@@ -140,14 +140,25 @@ export default function Login() {
             </svg>
             Quero testar o CRM Vere
           </a>
-          <a
-            href="/privacy-policy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            Política de Privacidade
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Política de Privacidade
+            </a>
+            <span className="text-xs text-slate-300">·</span>
+            <a
+              href="/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Termos de Serviço
+            </a>
+          </div>
         </div>
       </div>
 

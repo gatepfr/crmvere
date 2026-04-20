@@ -23,6 +23,7 @@ import Eleicoes from './pages/Dashboard/Eleicoes';
 import StrategicIntelligence from './pages/Intelligence/StrategicDashboard';
 import Billing from './pages/Billing';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import Sidebar from './components/Sidebar';
 
 function DashboardLayout() {
@@ -103,6 +104,7 @@ function AppContent() {
             <Route path="billing" element={<Billing />} />
           </Route>
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
       </SubscriptionProvider>
