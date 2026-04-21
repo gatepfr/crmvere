@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "dev": "nodemon src/app.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "db:migrate": "drizzle-kit push",
     "db:migrate:force": "drizzle-kit push",
     "db:cleanup:municipes": "ts-node -O '{\"module\":\"commonjs\"}' src/scripts/cleanupMunicipes.ts",
