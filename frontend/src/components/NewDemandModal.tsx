@@ -14,6 +14,16 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
   const [searchMunicipe, setSearchMunicipe] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+
+  React.useEffect(() => {
+    api.get('/demands/categories')
+      .then(res => {
+        const sorted = [...res.data].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
+        setCategories(sorted);
+      })
+      .catch(() => {});
+  }, []);
 
   const [formData, setFormData] = useState({
     municipeId: '',
@@ -21,7 +31,7 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
     municipePhone: '',
     municipeCep: '',
     municipeBairro: '',
-    categoria: 'outro',
+    categoria: '',
     prioridade: 'media',
     resumoIa: ''
   });
@@ -231,18 +241,9 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
                   value={formData.categoria}
                   onChange={e => setFormData({...formData, categoria: e.target.value})}
                 >
-                  <option value="saude">Saúde</option>
-                  <option value="infraestrutura">Infraestrutura</option>
-                  <option value="seguranca">Segurança</option>
-                  <option value="educacao">Educação</option>
-                  <option value="esporte">Esporte</option>
-                  <option value="zeladoria_urbana">Zeladoria Urbana</option>
-                  <option value="mobilidade_transito">Mobilidade e Trânsito</option>
-                  <option value="causa_animal">Causa Animal</option>
-                  <option value="assistencia_social">Assistência Social</option>
-                  <option value="meio_ambiente">Meio Ambiente</option>
-                  <option value="habitacao">Habitação</option>
-                  <option value="outro">Outro</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

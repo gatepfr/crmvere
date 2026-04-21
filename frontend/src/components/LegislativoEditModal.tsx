@@ -39,12 +39,18 @@ interface TimelineItem {
 }
 
 const DEFAULT_CATEGORIES = [
-  { id: 'f1', name: 'SAÚDE', color: '#db2777' },
-  { id: 'f2', name: 'INFRAESTRUTURA', color: '#2563eb' },
-  { id: 'f3', name: 'SEGURANÇA', color: '#dc2626' },
-  { id: 'f4', name: 'EDUCAÇÃO', color: '#7c3aed' },
-  { id: 'f5', name: 'ESPORTE', color: '#059669' },
-  { id: 'f6', name: 'OUTRO', color: '#4b5563' }
+  { id: 'f1', name: 'ASSISTÊNCIA SOCIAL', color: '#4f46e5' },
+  { id: 'f2', name: 'CAUSA ANIMAL', color: '#0d9488' },
+  { id: 'f3', name: 'EDUCAÇÃO', color: '#7c3aed' },
+  { id: 'f4', name: 'ESPORTE', color: '#059669' },
+  { id: 'f5', name: 'HABITAÇÃO', color: '#b45309' },
+  { id: 'f6', name: 'INFRAESTRUTURA', color: '#2563eb' },
+  { id: 'f7', name: 'MEIO AMBIENTE', color: '#16a34a' },
+  { id: 'f8', name: 'MOBILIDADE E TRÂNSITO', color: '#ca8a04' },
+  { id: 'f9', name: 'OUTRO', color: '#4b5563' },
+  { id: 'f10', name: 'SAÚDE', color: '#db2777' },
+  { id: 'f11', name: 'SEGURANÇA', color: '#dc2626' },
+  { id: 'f12', name: 'ZELADORIA URBANA', color: '#ea580c' },
 ];
 
 type Tab = 'detalhes' | 'atribuicao' | 'timeline';
@@ -76,7 +82,10 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
   useEffect(() => {
     if (demand.municipes.phone) setDisplayPhone(formatPhone(demand.municipes.phone));
     api.get('/demands/categories')
-      .then(res => setCategories(res.data.length > 0 ? res.data : DEFAULT_CATEGORIES))
+      .then(res => {
+        const data = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES;
+        setCategories([...data].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')));
+      })
       .catch(() => setCategories(DEFAULT_CATEGORIES));
     api.get('/team')
       .then(res => setTeamMembers(res.data || []))

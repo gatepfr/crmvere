@@ -84,8 +84,11 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     }
     // Carrega categorias com fallback
     api.get('/demands/categories')
-      .then(res => setCategories(res.data.length > 0 ? res.data : DEFAULT_CATEGORIES_FALLBACK))
-      .catch(() => setCategories(DEFAULT_CATEGORIES_FALLBACK));
+      .then(res => {
+        const data = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES_FALLBACK;
+        setCategories([...data].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')));
+      })
+      .catch(() => setCategories([...DEFAULT_CATEGORIES_FALLBACK].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))));
   }, [demand.municipes.phone, demand.demandas.id]);
 
   const handleUpdateField = async (field: string, value: string) => {
