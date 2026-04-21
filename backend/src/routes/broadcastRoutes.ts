@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { checkTenant } from '../middleware/tenant';
-import { broadcasts, broadcastRecipients } from '../db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { broadcasts, broadcastRecipients, municipes, demandas } from '../db/schema';
+import { eq, and, desc, sql, isNotNull } from 'drizzle-orm';
 import { db } from '../db';
 import { queueBroadcast, previewSegment, processQueue } from '../services/broadcastService';
 
@@ -10,6 +10,37 @@ const router = Router();
 
 router.use(authenticate);
 router.use(checkTenant);
+
+// GET /api/broadcasts/segment-values?segmentType=bairro|categoria_demanda
+router.get('/segment-values', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const { segmentType } = req.query;
+
+    if (segmentType === 'bairro') {
+      const rows = await db
+        .selectDistinct({ value: municipes.bairro })
+        .from(municipes)
+        .where(and(eq(municipes.tenantId, tenantId), isNotNull(municipes.bairro)));
+      const values = rows.map(r => r.value).filter(Boolean).sort();
+      return res.json(values);
+    }
+
+    if (segmentType === 'categoria_demanda') {
+      const rows = await db
+        .selectDistinct({ value: demandas.categoria })
+        .from(demandas)
+        .where(eq(demandas.tenantId, tenantId));
+      const values = rows.map(r => r.value).filter(Boolean).sort();
+      return res.json(values);
+    }
+
+    return res.json([]);
+  } catch (err: any) {
+    console.error('[BROADCAST] Erro ao buscar segment-values:', err);
+    return res.status(500).json({ error: 'Erro interno' });
+  }
+});
 
 // POST /api/broadcasts — cria rascunho
 router.post('/', async (req: Request, res: Response) => {
@@ -56,6 +87,45 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[BROADCAST] Erro ao listar:', err);
     return res.status(500).json({ error: 'Erro interno ao listar broadcasts' });
+  }
+});
+
+// PATCH /api/broadcasts/:id — atualiza segmento do rascunho
+router.patch('/:id', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const id = String(req.params.id);
+    const { segmentType, segmentValue, mediaUrl } = req.body;
+
+    const [broadcast] = await db
+      .select()
+      .from(broadcasts)
+      .where(and(eq(broadcasts.id, id), eq(broadcasts.tenantId, tenantId)))
+      .limit(1);
+
+    if (!broadcast) {
+      return res.status(404).json({ error: 'Broadcast não encontrado' });
+    }
+
+    if (broadcast.status !== 'rascunho') {
+      return res.status(400).json({ error: 'Apenas rascunhos podem ser atualizados' });
+    }
+
+    const updates: Record<string, any> = {};
+    if (segmentType) updates.segmentType = segmentType;
+    if (segmentValue !== undefined) updates.segmentValue = segmentValue || null;
+    if (mediaUrl !== undefined) updates.mediaUrl = mediaUrl || null;
+
+    const [updated] = await db
+      .update(broadcasts)
+      .set(updates)
+      .where(eq(broadcasts.id, id))
+      .returning();
+
+    return res.json(updated);
+  } catch (err: any) {
+    console.error('[BROADCAST] Erro ao atualizar:', err);
+    return res.status(500).json({ error: 'Erro interno ao atualizar broadcast' });
   }
 });
 

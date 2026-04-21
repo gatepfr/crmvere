@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api/client';
 import { X, Loader2, ChevronRight, ChevronLeft, Send, Clock } from 'lucide-react';
 
@@ -42,6 +42,18 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [segmentOptions, setSegmentOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (segmentType !== 'bairro' && segmentType !== 'categoria_demanda') {
+      setSegmentOptions([]);
+      return;
+    }
+    api.get(`/broadcasts/segment-values?segmentType=${segmentType}`)
+      .then(res => setSegmentOptions(res.data as string[]))
+      .catch(() => setSegmentOptions([]));
+  }, [isOpen, segmentType]);
 
   if (!isOpen) return null;
 
@@ -238,15 +250,28 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
               {needsSegmentValue && (
                 <div>
                   <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
-                    {segmentType === 'bairro' ? 'Nome do Bairro' : 'Categoria da Demanda'}
+                    {segmentType === 'bairro' ? 'Bairro' : 'Categoria da Demanda'}
                   </label>
-                  <input
-                    type="text"
-                    value={segmentValue}
-                    onChange={e => setSegmentValue(e.target.value)}
-                    placeholder={segmentType === 'bairro' ? 'Ex: Centro' : 'Ex: Saúde'}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  {segmentOptions.length > 0 ? (
+                    <select
+                      value={segmentValue}
+                      onChange={e => setSegmentValue(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="">Selecione...</option>
+                      {segmentOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={segmentValue}
+                      onChange={e => setSegmentValue(e.target.value)}
+                      placeholder={segmentType === 'bairro' ? 'Ex: Centro' : 'Ex: Saúde'}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
                 </div>
               )}
             </div>
