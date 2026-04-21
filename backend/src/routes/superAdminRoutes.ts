@@ -1,18 +1,22 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
-import { 
-  createTenant, 
-  listTenants, 
-  deleteTenant, 
-  updateTenant, 
-  updateSubscriptionStatus, 
-  getSystemStats, 
-  listAllUsers, 
+import {
+  createTenant,
+  listTenants,
+  deleteTenant,
+  updateTenant,
+  updateSubscriptionStatus,
+  getSystemStats,
+  listAllUsers,
   resetUserPassword,
   resetDatabase,
   getGlobalConfig,
-  updateGlobalConfig
+  updateGlobalConfig,
+  listGlobalCategories,
+  createGlobalCategory,
+  updateGlobalCategory,
+  deleteGlobalCategory
 } from '../controllers/superAdminController';
 
 const router = Router();
@@ -42,6 +46,12 @@ router.get('/stats', getSystemStats);
 router.get('/users', listAllUsers);
 router.post('/users/:id/reset-password', resetUserPassword);
 router.post('/reset-database', resetDatabase);
+
+// Global Categories
+router.get('/categories', listGlobalCategories);
+router.post('/categories', createGlobalCategory);
+router.patch('/categories/:id', updateGlobalCategory);
+router.delete('/categories/:id', deleteGlobalCategory);
 
 export default router;
 

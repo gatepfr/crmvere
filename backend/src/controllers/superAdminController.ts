@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { tenants, users, demandas, municipes, systemConfigs } from '../db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { tenants, users, demandas, municipes, systemConfigs, globalCategories } from '../db/schema';
+import { eq, sql, asc } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { redisService } from '../services/redisService';
 
@@ -252,13 +252,13 @@ export const deleteTenant = async (req: Request, res: Response) => {
 export const updateSubscriptionStatus = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const { status, trialEndsAt, isManual } = req.body;
-  
+
   try {
-    const updateData: any = { 
+    const updateData: any = {
       subscriptionStatus: status,
       isManual: isManual ?? true
     };
-    
+
     if (trialEndsAt) {
       updateData.trialEndsAt = new Date(trialEndsAt);
     }
@@ -267,12 +267,66 @@ export const updateSubscriptionStatus = async (req: Request, res: Response) => {
       .set(updateData)
       .where(eq(tenants.id, id))
       .returning();
-    
+
     if (!updated) return res.status(404).json({ error: 'Tenant not found' });
     res.json(updated);
   } catch (error) {
     console.error('Error updating subscription status:', error);
     res.status(500).json({ error: 'Failed to update subscription status' });
+  }
+};
+
+// --- Global Categories ---
+
+export const listGlobalCategories = async (_req: Request, res: Response) => {
+  try {
+    const cats = await db.select().from(globalCategories).orderBy(asc(globalCategories.order));
+    res.json(cats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to list global categories' });
+  }
+};
+
+export const createGlobalCategory = async (req: Request, res: Response) => {
+  const { name, color, icon } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const existing = await db.select({ order: globalCategories.order }).from(globalCategories).orderBy(asc(globalCategories.order));
+    const nextOrder = existing.length > 0 ? Math.max(...existing.map(c => c.order)) + 1 : 1;
+    const [cat] = await db.insert(globalCategories)
+      .values({ name: name.toUpperCase().trim(), color: color || '#2563eb', icon: icon || 'Tag', order: nextOrder })
+      .returning();
+    res.status(201).json(cat);
+  } catch (error: any) {
+    if (error.code === '23505') return res.status(400).json({ error: 'Category already exists' });
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+};
+
+export const updateGlobalCategory = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { name, color, icon, order } = req.body;
+  try {
+    const updateData: any = { updatedAt: new Date() };
+    if (name) updateData.name = name.toUpperCase().trim();
+    if (color) updateData.color = color;
+    if (icon) updateData.icon = icon;
+    if (order !== undefined) updateData.order = order;
+    const [updated] = await db.update(globalCategories).set(updateData).where(eq(globalCategories.id, id)).returning();
+    if (!updated) return res.status(404).json({ error: 'Category not found' });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update category' });
+  }
+};
+
+export const deleteGlobalCategory = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  try {
+    await db.delete(globalCategories).where(eq(globalCategories.id, id));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete category' });
   }
 };
 

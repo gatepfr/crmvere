@@ -33,6 +33,12 @@ const DEFAULT_CATEGORIES_FALLBACK = [
   { id: 'f3', name: 'SEGURANÇA', color: '#dc2626' },
   { id: 'f4', name: 'EDUCAÇÃO', color: '#7c3aed' },
   { id: 'f5', name: 'ESPORTE', color: '#059669' },
+  { id: 'f7', name: 'ZELADORIA URBANA', color: '#ea580c' },
+  { id: 'f8', name: 'MOBILIDADE E TRÂNSITO', color: '#ca8a04' },
+  { id: 'f9', name: 'CAUSA ANIMAL', color: '#0d9488' },
+  { id: 'f10', name: 'ASSISTÊNCIA SOCIAL', color: '#4f46e5' },
+  { id: 'f11', name: 'MEIO AMBIENTE', color: '#16a34a' },
+  { id: 'f12', name: 'HABITAÇÃO', color: '#b45309' },
   { id: 'f6', name: 'OUTRO', color: '#4b5563' }
 ];
 

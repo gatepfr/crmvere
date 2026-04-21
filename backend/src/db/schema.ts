@@ -92,6 +92,16 @@ export const demandCategories = pgTable("demand_categories", {
   tenantNameUnq: unique("cat_tenant_name_unq").on(table.tenantId, table.name),
 }));
 
+export const globalCategories = pgTable("global_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  color: varchar("color", { length: 20 }).default("#2563eb").notNull(),
+  icon: varchar("icon", { length: 50 }).default("Tag"),
+  order: integer("order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const atendimentos = pgTable("atendimentos", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),

@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
 export interface AIDemandResult {
-  categoria: 'saude' | 'infraestrutura' | 'seguranca' | 'educacao' | 'funcionario_publico' | 'outro';
+  categoria: 'saude' | 'infraestrutura' | 'seguranca' | 'educacao' | 'funcionario_publico' | 'zeladoria_urbana' | 'mobilidade_transito' | 'causa_animal' | 'assistencia_social' | 'meio_ambiente' | 'habitacao' | 'outro';
   subcategoria: string;
   resumo_ia: string;
   prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
@@ -52,7 +52,7 @@ export async function processDemand(
     4. Responda ao cidadão de forma natural e humana no campo "resposta_usuario".
     5. Extraia os dados técnicos (categoria, prioridade, etc) para controle interno do gabinete.
 CATEGORIAS PERMITIDAS (USE EXATAMENTE UMA DESTAS):
-SAÚDE, INFRAESTRUTURA, SEGURANÇA, EDUCAÇÃO, ESPORTE, FUNCIONÁRIO PÚBLICO, OUTRO.
+SAÚDE, INFRAESTRUTURA, SEGURANÇA, EDUCAÇÃO, ESPORTE, FUNCIONÁRIO PÚBLICO, ZELADORIA URBANA, MOBILIDADE E TRÂNSITO, CAUSA ANIMAL, ASSISTÊNCIA SOCIAL, MEIO AMBIENTE, HABITAÇÃO, OUTRO.
 
 BASE DE CONHECIMENTO DO GABINETE:
 ${knowledgeBaseContent || 'Nenhuma informação adicional disponível.'}

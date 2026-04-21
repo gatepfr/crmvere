@@ -1,26 +1,27 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  Users, 
-  Building2, 
-  MessageSquare, 
-  UserCheck, 
-  Trash2, 
-  Power, 
-  LayoutDashboard, 
+import {
+  Users,
+  Building2,
+  MessageSquare,
+  Trash2,
+  Power,
+  LayoutDashboard,
   PlusCircle,
   LogOut,
   Clock,
   Infinity,
-  CalendarDays,
   Zap,
   ShieldAlert,
   ShieldCheck,
   Globe,
   Cpu,
   Settings,
-  X
+  X,
+  Tag,
+  Pencil,
+  Check
 } from 'lucide-react';
 
 interface Stats {
@@ -59,8 +60,13 @@ const PROVIDER_URLS: Record<string, string> = {
   groq: ''
 };
 
+interface GlobalCategory { id: string; name: string; color: string; icon: string; order: number; }
+
 export default function Tenants() {
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'stats'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'categories'>('tenants');
+  const [globalCats, setGlobalCats] = useState<GlobalCategory[]>([]);
+  const [editingCat, setEditingCat] = useState<GlobalCategory | null>(null);
+  const [newCat, setNewCat] = useState({ name: '', color: '#2563eb' });
   const [tenants, setTenants] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats>({ tenants: 0, users: 0, demandas: 0, municipes: 0 });
@@ -97,16 +103,18 @@ export default function Tenants() {
 
   const loadData = useCallback(async () => {
     try {
-      const [tenantsRes, statsRes, usersRes, configRes] = await Promise.all([
+      const [tenantsRes, statsRes, usersRes, configRes, catsRes] = await Promise.all([
         api.get('/superadmin/tenants'),
         api.get('/superadmin/stats'),
         api.get('/superadmin/users'),
-        api.get('/superadmin/config')
+        api.get('/superadmin/config'),
+        api.get('/superadmin/categories')
       ]);
       setTenants(tenantsRes.data);
       setStats(statsRes.data);
       setAllUsers(usersRes.data);
-      
+      setGlobalCats(catsRes.data);
+
       const gConfig = configRes.data;
       setGlobalConfig(gConfig);
       setAIConfig({
@@ -119,6 +127,32 @@ export default function Tenants() {
       setError('Falha ao carregar dados do sistema.');
     }
   }, []);
+
+  const handleAddCat = async () => {
+    if (!newCat.name.trim()) return;
+    try {
+      await api.post('/superadmin/categories', newCat);
+      setNewCat({ name: '', color: '#2563eb' });
+      loadData();
+    } catch { alert('Erro ao criar categoria.'); }
+  };
+
+  const handleSaveCat = async () => {
+    if (!editingCat) return;
+    try {
+      await api.patch(`/superadmin/categories/${editingCat.id}`, { name: editingCat.name, color: editingCat.color });
+      setEditingCat(null);
+      loadData();
+    } catch { alert('Erro ao salvar categoria.'); }
+  };
+
+  const handleDeleteCat = async (id: string) => {
+    if (!confirm('Excluir esta categoria? Demandas existentes com ela não serão afetadas.')) return;
+    try {
+      await api.delete(`/superadmin/categories/${id}`);
+      loadData();
+    } catch { alert('Erro ao excluir categoria.'); }
+  };
 
   useEffect(() => {
     loadData();
@@ -468,6 +502,7 @@ export default function Tenants() {
         <nav className="flex gap-2 p-1.5 bg-slate-200 rounded-2xl w-fit">
           <button onClick={() => setActiveTab('tenants')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'tenants' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Gabinetes</button>
           <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Usuários</button>
+          <button onClick={() => setActiveTab('categories')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'categories' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Categorias</button>
         </nav>
 
         {activeTab === 'tenants' && (
@@ -575,6 +610,86 @@ export default function Tenants() {
                       </button>
                     </div>
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'categories' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div className="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><Tag size={18} className="text-blue-600" /> Nova Categoria</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm uppercase"
+                  placeholder="Nome da categoria"
+                  value={newCat.name}
+                  onChange={e => setNewCat({ ...newCat, name: e.target.value })}
+                />
+                <div className="flex items-center gap-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase">Cor</label>
+                  <input
+                    type="color"
+                    className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer"
+                    value={newCat.color}
+                    onChange={e => setNewCat({ ...newCat, color: e.target.value })}
+                  />
+                  <span className="font-mono text-xs text-slate-500">{newCat.color}</span>
+                </div>
+                <button onClick={handleAddCat} className="w-full py-3 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg">
+                  Adicionar Categoria
+                </button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-sm font-black text-slate-700 uppercase tracking-tighter flex items-center gap-2">
+                  <Tag size={16} className="text-slate-400" /> Categorias Globais ({globalCats.length})
+                </h3>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {globalCats.map(cat => (
+                  <div key={cat.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50">
+                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                    {editingCat?.id === cat.id ? (
+                      <div className="flex-1 flex items-center gap-3">
+                        <input
+                          className="flex-1 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl font-bold text-sm uppercase outline-none focus:ring-2 focus:ring-blue-500"
+                          value={editingCat.name}
+                          onChange={e => setEditingCat({ ...editingCat, name: e.target.value })}
+                        />
+                        <input
+                          type="color"
+                          className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer"
+                          value={editingCat.color}
+                          onChange={e => setEditingCat({ ...editingCat, color: e.target.value })}
+                        />
+                      </div>
+                    ) : (
+                      <span className="flex-1 font-bold text-sm text-slate-800">{cat.name}</span>
+                    )}
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      {editingCat?.id === cat.id ? (
+                        <>
+                          <button onClick={handleSaveCat} className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100"><Check size={15} /></button>
+                          <button onClick={() => setEditingCat(null)} className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200"><X size={15} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => setEditingCat(cat)} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100"><Pencil size={15} /></button>
+                          <button onClick={() => handleDeleteCat(cat.id)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100"><Trash2 size={15} /></button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {globalCats.length === 0 && (
+                  <p className="px-6 py-10 text-center text-slate-400 font-bold text-sm">Nenhuma categoria cadastrada.</p>
                 )}
               </div>
             </div>

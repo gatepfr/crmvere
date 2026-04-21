@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
-import { demandas, municipes, systemConfigs, tenants, demandCategories, atendimentos, users, demandComments, demandActivityLog } from '../db/schema';
+import { demandas, municipes, systemConfigs, tenants, demandCategories, globalCategories, atendimentos, users, demandComments, demandActivityLog } from '../db/schema';
 import { eq, desc, asc, and, sql, count, ilike, or, lt, isNull } from 'drizzle-orm';
 import { normalizePhone } from '../utils/phoneUtils';
 import fs from 'fs';
@@ -331,57 +331,27 @@ export const updateDemand = async (req: Request, res: Response) => {
 };
 
 /**
- * CATEGORIAS
+ * CATEGORIAS — lidas da tabela global gerenciada pelo superadmin
  */
-export const listCategories = async (req: Request, res: Response) => {
-  const tenantId = req.user?.tenantId;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
-  const defs = [
-    { name: 'SAÚDE', color: '#db2777' }, { name: 'INFRAESTRUTURA', color: '#2563eb' },
-    { name: 'SEGURANÇA', color: '#dc2626' }, { name: 'EDUCAÇÃO', color: '#7c3aed' },
-    { name: 'ESPORTE', color: '#059669' }, { name: 'OUTRO', color: '#4b5563' }
-  ];
+export const listCategories = async (_req: Request, res: Response) => {
   try {
-    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
-    if (cats.length === 0) {
-      for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
-      return res.json(await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId)));
-    }
+    const cats = await db.select().from(globalCategories).orderBy(asc(globalCategories.order));
     res.json(cats);
-  } catch (error) { res.json(defs); }
+  } catch (error) { res.status(500).json({ error: 'Failed to list categories' }); }
 };
 
-export const createCategory = async (req: Request, res: Response) => {
-  const tenantId = req.user?.tenantId;
-  const { name, color } = req.body;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
-  try {
-    const [nc] = await db.insert(demandCategories).values({ tenantId, name: name.toUpperCase().trim(), color: color || '#2563eb' }).onConflictDoNothing().returning();
-    res.status(201).json(nc);
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+// Mantido por compatibilidade de rota, não faz mais nada
+export const createCategory = async (_req: Request, res: Response) => {
+  res.status(400).json({ error: 'Categories are managed globally by the superadmin' });
 };
 
-export const deleteCategory = async (req: Request, res: Response) => {
-  const { id } = req.params as { id: string };
-  const tenantId = req.user?.tenantId;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
-  try {
-    await db.delete(demandCategories).where(and(eq(demandCategories.id, id), eq(demandCategories.tenantId, tenantId)));
-    res.json({ success: true });
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+export const deleteCategory = async (_req: Request, res: Response) => {
+  res.status(400).json({ error: 'Categories are managed globally by the superadmin' });
 };
 
-export const seedCategories = async (req: Request, res: Response) => {
-  const tenantId = req.user?.tenantId;
-  if (!tenantId) return res.status(403).json({ error: 'No tenant' });
-  const defs = [
-    { name: 'SAÚDE', color: '#db2777' }, { name: 'INFRAESTRUTURA', color: '#2563eb' },
-    { name: 'SEGURANÇA', color: '#dc2626' }, { name: 'EDUCAÇÃO', color: '#7c3aed' },
-    { name: 'ESPORTE', color: '#059669' }, { name: 'OUTRO', color: '#4b5563' }
-  ];
+export const seedCategories = async (_req: Request, res: Response) => {
   try {
-    for (const c of defs) await db.insert(demandCategories).values({ ...c, tenantId }).onConflictDoNothing();
-    const cats = await db.select().from(demandCategories).where(eq(demandCategories.tenantId, tenantId));
+    const cats = await db.select().from(globalCategories).orderBy(asc(globalCategories.order));
     res.json(cats);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };

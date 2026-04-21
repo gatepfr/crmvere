@@ -235,6 +235,13 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
                   <option value="infraestrutura">Infraestrutura</option>
                   <option value="seguranca">Segurança</option>
                   <option value="educacao">Educação</option>
+                  <option value="esporte">Esporte</option>
+                  <option value="zeladoria_urbana">Zeladoria Urbana</option>
+                  <option value="mobilidade_transito">Mobilidade e Trânsito</option>
+                  <option value="causa_animal">Causa Animal</option>
+                  <option value="assistencia_social">Assistência Social</option>
+                  <option value="meio_ambiente">Meio Ambiente</option>
+                  <option value="habitacao">Habitação</option>
                   <option value="outro">Outro</option>
                 </select>
               </div>
