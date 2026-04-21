@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { checkTenant } from '../middleware/tenant';
-import { broadcasts, broadcastRecipients, municipes, demandas } from '../db/schema';
-import { eq, and, desc, sql, isNotNull } from 'drizzle-orm';
+import { broadcasts, broadcastRecipients, municipes, demandas, globalCategories } from '../db/schema';
+import { eq, and, desc, sql, isNotNull, asc } from 'drizzle-orm';
 import { db } from '../db';
 import { queueBroadcast, previewSegment, processQueue } from '../services/broadcastService';
 
@@ -28,11 +28,10 @@ router.get('/segment-values', async (req: Request, res: Response) => {
 
     if (segmentType === 'categoria_demanda') {
       const rows = await db
-        .selectDistinct({ value: demandas.categoria })
-        .from(demandas)
-        .where(eq(demandas.tenantId, tenantId));
-      const values = rows.map(r => r.value).filter(Boolean).sort();
-      return res.json(values);
+        .select({ name: globalCategories.name })
+        .from(globalCategories)
+        .orderBy(asc(globalCategories.order), asc(globalCategories.name));
+      return res.json(rows.map(r => r.name.toUpperCase()));
     }
 
     return res.json([]);

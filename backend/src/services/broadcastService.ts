@@ -44,7 +44,7 @@ export async function resolveSegment(
       .where(
         and(
           eq(municipes.tenantId, tenantId),
-          sql`EXTRACT(MONTH FROM birth_date) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birth_date) = EXTRACT(DAY FROM CURRENT_DATE)`
+          sql`EXTRACT(MONTH FROM birth_date) = EXTRACT(MONTH FROM CURRENT_DATE)`
         )
       );
   } else if (segmentType === 'categoria_demanda') {
@@ -57,7 +57,7 @@ export async function resolveSegment(
       .where(
         and(
           eq(demandas.tenantId, tenantId),
-          eq(demandas.categoria, segmentValue ?? ''),
+          sql`UPPER(${demandas.categoria}) = UPPER(${segmentValue ?? ''})`,
           sql`${demandas.createdAt} >= ${ninetyDaysAgo.toISOString()}`
         )
       );
