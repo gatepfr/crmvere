@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "dev": "nodemon src/app.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "swc src -d dist --strip-leading-paths",
     "db:migrate": "drizzle-kit push",
     "db:migrate:force": "drizzle-kit push",
     "db:cleanup:municipes": "ts-node -O '{\"module\":\"commonjs\"}' src/scripts/cleanupMunicipes.ts",
@@ -52,6 +52,8 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
+    "@swc/cli": "^0.7.7",
+    "@swc/core": "^1.11.24",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
