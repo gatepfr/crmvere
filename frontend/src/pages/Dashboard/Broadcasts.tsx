@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
-import { Megaphone, Loader2, Plus } from 'lucide-react';
+import { Megaphone, Loader2, Plus, Trash2 } from 'lucide-react';
 import BroadcastModal from '../../components/BroadcastModal';
 import BroadcastDetail from '../../components/BroadcastDetail';
 
@@ -48,6 +48,21 @@ export default function Broadcasts() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Tem certeza que deseja excluir este disparo?')) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/broadcasts/${id}`);
+      setBroadcasts(prev => prev.filter(b => b.id !== id));
+    } catch (err: any) {
+      alert(err?.response?.data?.error ?? 'Erro ao excluir disparo.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -113,6 +128,7 @@ export default function Broadcasts() {
                 <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Progresso</th>
                 <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -159,6 +175,16 @@ export default function Broadcasts() {
                     </td>
                     <td className="px-5 py-3.5 text-slate-500 text-xs whitespace-nowrap">
                       {new Date(b.createdAt).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-3 py-3.5" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={e => handleDelete(b.id, e)}
+                        disabled={deletingId === b.id || b.status === 'enviando' || b.status === 'enfileirado'}
+                        title={b.status === 'enviando' || b.status === 'enfileirado' ? 'Cancele antes de excluir' : 'Excluir disparo'}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        {deletingId === b.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      </button>
                     </td>
                   </tr>
                 );

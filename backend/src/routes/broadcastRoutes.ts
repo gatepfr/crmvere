@@ -217,6 +217,36 @@ router.post('/:id/send', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/broadcasts/:id — exclui broadcast
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const id = String(req.params.id);
+
+    const [broadcast] = await db
+      .select()
+      .from(broadcasts)
+      .where(and(eq(broadcasts.id, id), eq(broadcasts.tenantId, tenantId)))
+      .limit(1);
+
+    if (!broadcast) {
+      return res.status(404).json({ error: 'Broadcast não encontrado' });
+    }
+
+    if (broadcast.status === 'enviando' || broadcast.status === 'enfileirado') {
+      return res.status(400).json({ error: 'Cancele o disparo antes de excluir' });
+    }
+
+    await db.delete(broadcastRecipients).where(eq(broadcastRecipients.broadcastId, id));
+    await db.delete(broadcasts).where(eq(broadcasts.id, id));
+
+    return res.status(204).send();
+  } catch (err: any) {
+    console.error('[BROADCAST] Erro ao excluir:', err);
+    return res.status(500).json({ error: 'Erro interno ao excluir broadcast' });
+  }
+});
+
 // POST /api/broadcasts/:id/cancel — cancela broadcast
 router.post('/:id/cancel', async (req: Request, res: Response) => {
   try {
