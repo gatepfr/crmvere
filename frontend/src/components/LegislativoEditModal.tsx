@@ -83,10 +83,21 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
     if (demand.municipes.phone) setDisplayPhone(formatPhone(demand.municipes.phone));
     api.get('/demands/categories')
       .then(res => {
-        const data = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES;
-        setCategories([...data].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')));
+        const data: Category[] = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES;
+        const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        setCategories(sorted);
+        // Normaliza a categoria salva para o nome canônico da lista (resolve mismatch de capitalização)
+        const saved = demand.demandas.categoria || '';
+        const match = sorted.find(c => c.name.toUpperCase() === saved.toUpperCase());
+        if (match) setCategoria(match.name);
       })
-      .catch(() => setCategories(DEFAULT_CATEGORIES));
+      .catch(() => {
+        const sorted = DEFAULT_CATEGORIES;
+        setCategories(sorted);
+        const saved = demand.demandas.categoria || '';
+        const match = sorted.find(c => c.name.toUpperCase() === saved.toUpperCase());
+        if (match) setCategoria(match.name);
+      });
     api.get('/team')
       .then(res => setTeamMembers(res.data || []))
       .catch(() => {});

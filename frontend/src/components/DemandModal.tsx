@@ -82,13 +82,23 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
       const formatted = formatPhone(demand.municipes.phone);
       setDisplayPhone(formatted);
     }
-    // Carrega categorias com fallback
+    // Carrega categorias com fallback e normaliza capitalização
     api.get('/demands/categories')
       .then(res => {
-        const data = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES_FALLBACK;
-        setCategories([...data].sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')));
+        const data: Category[] = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES_FALLBACK;
+        const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        setCategories(sorted);
+        const saved = demand.demandas.categoria || '';
+        const match = sorted.find(c => c.name.toUpperCase() === saved.toUpperCase());
+        if (match) setCategoria(match.name);
       })
-      .catch(() => setCategories([...DEFAULT_CATEGORIES_FALLBACK].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))));
+      .catch(() => {
+        const sorted = [...DEFAULT_CATEGORIES_FALLBACK].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        setCategories(sorted);
+        const saved = demand.demandas.categoria || '';
+        const match = sorted.find(c => c.name.toUpperCase() === saved.toUpperCase());
+        if (match) setCategoria(match.name);
+      });
   }, [demand.municipes.phone, demand.demandas.id]);
 
   const handleUpdateField = async (field: string, value: string) => {
