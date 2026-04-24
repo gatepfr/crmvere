@@ -496,7 +496,7 @@ export default function Municipes() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 font-bold text-slate-500 text-xs uppercase text-center">{m.bairro || '---'}</td>
+                  <td className="px-4 py-4 font-bold text-slate-500 text-xs uppercase text-left">{m.bairro || '---'}</td>
                   <td className="px-4 py-4 text-center text-xs text-slate-400">{formatDateDisplay(m.birthDate)}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
