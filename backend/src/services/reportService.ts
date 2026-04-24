@@ -198,31 +198,56 @@ const escapeHtml = (s: string) =>
 export function buildHtmlTemplate(data: ReportData): string {
   const { tenant, period } = data;
 
-  const kpiCard = (label: string, value: string | number, color: string) => `
-    <div style="background:${color}10;border:1px solid ${color}30;border-radius:12px;padding:20px;text-align:center;min-width:130px;flex:1">
-      <p style="font-size:32px;font-weight:900;color:${color};margin:0">${value}</p>
-      <p style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:6px 0 0;font-weight:700">${label}</p>
-    </div>`;
+  const isSafeUrl = (url: string) => url.startsWith('http://') || url.startsWith('https://');
+  const fotoHtml = tenant.fotoUrl && isSafeUrl(tenant.fotoUrl)
+    ? `<img src="${tenant.fotoUrl}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.25)" />`
+    : `<div style="width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,0.15);border:3px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:44px">👤</div>`;
 
-  const section = (title: string, content: string) => `
-    <div style="margin-bottom:36px">
-      <h2 style="font-size:16px;font-weight:900;color:#1e293b;text-transform:uppercase;letter-spacing:2px;border-bottom:2px solid #3b82f6;padding-bottom:8px;margin-bottom:20px">${title}</h2>
+  const statusBar = () => {
+    const total = data.totalDemandas || 1;
+    const items = [
+      { label: 'Novas', value: data.demandasNova, color: '#3b82f6' },
+      { label: 'Em andamento', value: data.demandasEmAndamento, color: '#f59e0b' },
+      { label: 'Concluídas', value: data.demandasConcluidas, color: '#10b981' },
+      { label: 'Canceladas', value: data.demandasCanceladas, color: '#ef4444' },
+    ].filter(i => i.value > 0);
+
+    const bars = items.map(i => {
+      const pct = Math.round((i.value / total) * 100);
+      return `<div style="flex:${pct};background:${i.color};min-width:4px" title="${i.label}"></div>`;
+    }).join('');
+
+    const legend = items.map(i => `
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="width:10px;height:10px;border-radius:2px;background:${i.color};flex-shrink:0"></div>
+        <span style="font-size:11px;color:#64748b;font-weight:600">${i.label}</span>
+        <span style="font-size:11px;color:#1e293b;font-weight:800">${i.value}</span>
+      </div>`).join('');
+
+    return `
+      <div style="background:#f8fafc;border-radius:12px;padding:20px 24px">
+        <div style="display:flex;height:10px;border-radius:8px;overflow:hidden;gap:2px;margin-bottom:16px">${bars}</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap">${legend}</div>
+      </div>`;
+  };
+
+  const section = (title: string, content: string, icon = '') => `
+    <div style="margin-bottom:32px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        ${icon ? `<div style="width:32px;height:32px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div>` : ''}
+        <h2 style="font-size:13px;font-weight:800;color:#1e293b;text-transform:uppercase;letter-spacing:2px">${title}</h2>
+        <div style="flex:1;height:1px;background:#e2e8f0;margin-left:8px"></div>
+      </div>
       ${content}
     </div>`;
 
-  const isSafeUrl = (url: string) => url.startsWith('http://') || url.startsWith('https://');
-  const fotoHtml = tenant.fotoUrl && isSafeUrl(tenant.fotoUrl)
-    ? `<img src="${tenant.fotoUrl}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid white;box-shadow:0 4px 20px rgba(0,0,0,0.2)" />`
-    : `<div style="width:120px;height:120px;border-radius:50%;background:#94a3b8;border:4px solid white;display:flex;align-items:center;justify-content:center"><span style="font-size:40px;color:white">👤</span></div>`;
-
   const indicacoesRows = data.indicacoes.length === 0
-    ? `<tr><td colspan="4" style="text-align:center;color:#94a3b8;font-style:italic;padding:16px">Nenhuma indicação no período</td></tr>`
-    : data.indicacoes.map(ind => `
-        <tr style="border-bottom:1px solid #f1f5f9">
-          <td style="padding:8px 12px;font-size:12px;font-weight:700;color:#3b82f6">${ind.numeroIndicacao ?? '—'}</td>
-          <td style="padding:8px 12px;font-size:12px;color:#334155;max-width:300px">${escapeHtml(ind.descricao.length > 80 ? ind.descricao.slice(0, 80) + '...' : ind.descricao)}</td>
-          <td style="padding:8px 12px;font-size:12px;color:#64748b">${formatDate(ind.createdAt)}</td>
-          <td style="padding:8px 12px"><span style="background:#f0fdf4;color:#16a34a;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase">${escapeHtml(ind.status)}</span></td>
+    ? `<tr><td colspan="3" style="text-align:center;color:#94a3b8;font-style:italic;padding:20px;font-size:12px">Nenhuma indicação protocolada no período</td></tr>`
+    : data.indicacoes.map((ind, i) => `
+        <tr style="background:${i % 2 === 0 ? 'white' : '#f8fafc'}">
+          <td style="padding:10px 14px;font-size:12px;font-weight:800;color:#3b82f6;white-space:nowrap">${ind.numeroIndicacao ? `Nº ${ind.numeroIndicacao}` : '—'}</td>
+          <td style="padding:10px 14px;font-size:12px;color:#334155;line-height:1.4">${escapeHtml(ind.descricao.length > 90 ? ind.descricao.slice(0, 90) + '…' : ind.descricao)}</td>
+          <td style="padding:10px 14px;font-size:11px;color:#94a3b8;white-space:nowrap;text-align:right">${formatDate(ind.createdAt)}</td>
         </tr>`).join('');
 
   return `<!DOCTYPE html>
@@ -231,72 +256,83 @@ export function buildHtmlTemplate(data: ReportData): string {
   <meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; color: #1e293b; background: white; }
-    @page { margin: 15mm; size: A4; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1e293b; background: white; font-size: 13px; }
+    @page { margin: 0; size: A4; }
   </style>
 </head>
 <body>
 
 <!-- CAPA -->
-<div style="background:linear-gradient(135deg,#1e3a5f 0%,#3b82f6 100%);min-height:280px;border-radius:16px;padding:48px;display:flex;align-items:center;gap:40px;margin-bottom:40px;page-break-after:always">
-  <div>${fotoHtml}</div>
-  <div style="color:white">
-    <p style="font-size:12px;text-transform:uppercase;letter-spacing:3px;opacity:0.7;margin-bottom:8px">Prestação de Contas</p>
-    <h1 style="font-size:28px;font-weight:900;margin-bottom:8px">${escapeHtml(tenant.name)}</h1>
-    <p style="font-size:14px;opacity:0.85;margin-bottom:4px">${escapeHtml(tenant.partido ?? '')} • ${escapeHtml(tenant.municipio ?? '')}${tenant.uf ? '/' + escapeHtml(tenant.uf) : ''}</p>
-    <p style="font-size:13px;opacity:0.75">${escapeHtml(tenant.mandato ?? '')}</p>
-    <p style="font-size:12px;opacity:0.7;margin-top:16px;border-top:1px solid rgba(255,255,255,0.3);padding-top:16px">Período: ${formatPeriod(period.startDate, period.endDate)}</p>
+<div style="page-break-after:always;min-height:297mm;display:flex;flex-direction:column">
+
+  <!-- Header azul -->
+  <div style="background:linear-gradient(150deg,#0f2952 0%,#1d4ed8 60%,#3b82f6 100%);padding:64px 56px 56px;flex:1;display:flex;flex-direction:column;justify-content:space-between">
+
+    <div>
+      <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:rgba(255,255,255,0.5);margin-bottom:40px">Prestação de Contas do Mandato</p>
+      <div style="display:flex;align-items:center;gap:32px;margin-bottom:48px">
+        ${fotoHtml}
+        <div style="color:white">
+          <h1 style="font-size:32px;font-weight:900;line-height:1.15;margin-bottom:10px">${escapeHtml(tenant.name)}</h1>
+          <p style="font-size:14px;opacity:0.75;font-weight:600;margin-bottom:4px">${escapeHtml(tenant.partido ?? '')}${tenant.municipio ? ' • ' + escapeHtml(tenant.municipio) : ''}${tenant.uf ? '/' + escapeHtml(tenant.uf) : ''}</p>
+          ${tenant.mandato ? `<p style="font-size:12px;opacity:0.55;font-weight:500">${escapeHtml(tenant.mandato)}</p>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs na capa -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      ${[
+        { label: 'Total de Demandas', value: data.totalDemandas, icon: '📋' },
+        { label: 'Indicações Protocoladas', value: data.indicacoes.length, icon: '📜' },
+        { label: 'Em Andamento', value: data.demandasEmAndamento, icon: '⏳' },
+      ].map(k => `
+        <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:20px 24px;backdrop-filter:blur(4px)">
+          <p style="font-size:24px;margin-bottom:4px">${k.icon}</p>
+          <p style="font-size:30px;font-weight:900;color:white;line-height:1">${k.value}</p>
+          <p style="font-size:10px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-top:6px">${k.label}</p>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Faixa do período -->
+  <div style="background:#f8fafc;border-top:3px solid #1d4ed8;padding:18px 56px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#94a3b8">Período de referência</span>
+    <span style="font-size:13px;font-weight:800;color:#1e293b">${formatPeriod(period.startDate, period.endDate)}</span>
   </div>
 </div>
 
-<!-- RESUMO EXECUTIVO -->
-${section('Resumo Executivo', `
-  <div style="display:flex;gap:16px;flex-wrap:wrap">
-    ${kpiCard('Total de Demandas', data.totalDemandas, '#3b82f6')}
-    ${kpiCard('Concluídas', data.demandasConcluidas, '#16a34a')}
-    ${kpiCard('Munícipes Atendidos', data.totalMunicipes, '#8b5cf6')}
-    ${kpiCard('Mensagens Enviadas', data.totalMensagensDisparadas, '#f59e0b')}
-  </div>`)}
+<!-- CONTEÚDO -->
+<div style="padding:40px 48px">
 
-<!-- DEMANDAS POR BAIRRO -->
-${section('Demandas por Bairro (Top 10)', buildSvgBars(data.demandsByBairro))}
+  <!-- STATUS DAS DEMANDAS -->
+  ${section('Situação das Demandas', statusBar(), '📊')}
 
-<!-- DEMANDAS POR CATEGORIA -->
-${section('Demandas por Categoria', buildSvgBars(data.demandsByCategoria))}
+  <!-- DEMANDAS POR BAIRRO -->
+  ${section('Demandas por Bairro · Top 10', buildSvgBars(data.demandsByBairro), '📍')}
 
-<!-- STATUS DAS DEMANDAS -->
-${section('Status das Demandas', `
-  <div style="display:flex;gap:16px;flex-wrap:wrap">
-    ${kpiCard('Novas', data.demandasNova, '#3b82f6')}
-    ${kpiCard('Em Andamento', data.demandasEmAndamento, '#f59e0b')}
-    ${kpiCard('Concluídas', data.demandasConcluidas, '#16a34a')}
-    ${kpiCard('Canceladas', data.demandasCanceladas, '#ef4444')}
-  </div>`)}
+  <!-- DEMANDAS POR CATEGORIA -->
+  ${section('Demandas por Categoria', buildSvgBars(data.demandsByCategoria), '🏷️')}
 
-<!-- INDICAÇÕES PROTOCOLADAS -->
-${section('Indicações Protocoladas', `
-  <table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead>
-      <tr style="background:#f8fafc">
-        <th style="text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700">Nº Indicação</th>
-        <th style="text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700">Descrição</th>
-        <th style="text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700">Data</th>
-        <th style="text-align:left;padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700">Status</th>
-      </tr>
-    </thead>
-    <tbody>${indicacoesRows}</tbody>
-  </table>`)}
+  <!-- INDICAÇÕES PROTOCOLADAS -->
+  ${section('Indicações Protocoladas', `
+    <table style="width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">
+      <thead>
+        <tr style="background:#1d4ed8">
+          <th style="text-align:left;padding:11px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);font-weight:700;white-space:nowrap">Nº</th>
+          <th style="text-align:left;padding:11px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);font-weight:700">Descrição</th>
+          <th style="text-align:right;padding:11px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.85);font-weight:700;white-space:nowrap">Data</th>
+        </tr>
+      </thead>
+      <tbody>${indicacoesRows}</tbody>
+    </table>`, '📜')}
 
-<!-- ALCANCE DE COMUNICAÇÃO -->
-${section('Alcance de Comunicação', `
-  <div style="display:flex;gap:16px;flex-wrap:wrap">
-    ${kpiCard('Munícipes Cadastrados', data.totalMunicipes, '#3b82f6')}
-    ${kpiCard('Mensagens Disparadas no Período', data.totalMensagensDisparadas, '#f59e0b')}
-  </div>`)}
+</div>
 
 <!-- RODAPÉ -->
-<div style="margin-top:48px;border-top:1px solid #e2e8f0;padding-top:20px;text-align:center">
-  <p style="font-size:11px;color:#94a3b8">Relatório gerado pelo VereDoc em ${formatDate(new Date())}</p>
+<div style="padding:16px 48px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between">
+  <span style="font-size:10px;color:#cbd5e1;font-weight:600;text-transform:uppercase;letter-spacing:1px">VereDoc</span>
+  <span style="font-size:10px;color:#cbd5e1">Gerado em ${formatDate(new Date())}</span>
 </div>
 
 </body>
