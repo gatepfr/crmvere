@@ -179,7 +179,7 @@ export async function collectReportData(
       .map(r => ({ label: r.bairro!, value: Number(r.count) })),
     demandsByCategoria: categoriaRows
       .filter(r => r.categoria)
-      .map(r => ({ label: r.categoria, value: Number(r.count) })),
+      .map(r => ({ label: r.categoria.toUpperCase(), value: Number(r.count) })),
     indicacoes: indicacoesRows,
   };
 }
@@ -281,11 +281,10 @@ export function buildHtmlTemplate(data: ReportData): string {
     </div>
 
     <!-- KPIs na capa -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px">
       ${[
         { label: 'Total de Demandas', value: data.totalDemandas, icon: '📋' },
         { label: 'Indicações Protocoladas', value: data.indicacoes.length, icon: '📜' },
-        { label: 'Em Andamento', value: data.demandasEmAndamento, icon: '⏳' },
       ].map(k => `
         <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:20px 24px;backdrop-filter:blur(4px)">
           <p style="font-size:24px;margin-bottom:4px">${k.icon}</p>
