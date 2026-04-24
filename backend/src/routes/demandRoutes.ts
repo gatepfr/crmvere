@@ -37,6 +37,19 @@ router.get('/atendimentos', listAtendimentos);
 router.patch('/atendimentos/:id', updateAtendimento);
 router.delete('/atendimentos/:id', deleteAtendimento);
 
+// Rotas de Categorias (antes de /:id para evitar conflito de rota)
+router.get('/categories', listCategories);
+router.post('/categories', createCategory);
+router.post('/categories/seed', seedCategories);
+router.delete('/categories/:id', deleteCategory);
+
+// Rotas de Munícipes (antes de /:id para evitar conflito de rota)
+router.get('/municipes/list', listMunicipes);
+router.post('/municipes', createMunicipe);
+router.post('/municipes/import', upload.single('file'), importMunicipes);
+router.patch('/municipe/:id', updateMunicipe);
+router.delete('/municipe/:id', deleteMunicipe);
+
 // Rotas de Demandas Oficiais
 router.get('/', listDemands);
 router.get('/my', listMyDemands);
@@ -47,18 +60,5 @@ router.patch('/:id/assign', assignDemand);
 router.post('/:id/comments', addDemandComment);
 router.get('/:id/timeline', getDemandTimeline);
 router.delete('/:id', deleteDemand);
-
-// Rotas de Categorias
-router.get('/categories', listCategories);
-router.post('/categories', createCategory);
-router.post('/categories/seed', seedCategories);
-router.delete('/categories/:id', deleteCategory);
-
-// Rotas de Munícipes
-router.get('/municipes/list', listMunicipes);
-router.post('/municipes', createMunicipe);
-router.post('/municipes/import', upload.single('file'), importMunicipes);
-router.patch('/municipe/:id', updateMunicipe);
-router.delete('/municipe/:id', deleteMunicipe);
 
 export default router;
