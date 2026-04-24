@@ -27,6 +27,19 @@ export const createMunicipe = async (req: Request, res: Response) => {
   }
 };
 
+export const listBairros = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  try {
+    const rows = await db
+      .selectDistinct({ bairro: municipes.bairro })
+      .from(municipes)
+      .where(and(eq(municipes.tenantId, tenantId), sql`${municipes.bairro} is not null`))
+      .orderBy(asc(municipes.bairro));
+    res.json(rows.map(r => r.bairro).filter(Boolean));
+  } catch { res.status(500).json({ error: 'Failed' }); }
+};
+
 export const listMunicipes = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const page = parseInt(req.query.page as string) || 1;

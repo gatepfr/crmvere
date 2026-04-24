@@ -17,6 +17,7 @@ import {
   deleteMunicipe,
   createDemand,
   listMunicipes,
+  listBairros,
   createMunicipe,
   importMunicipes,
   listCategories,
@@ -45,10 +46,11 @@ router.delete('/categories/:id', deleteCategory);
 
 // Rotas de Munícipes (antes de /:id para evitar conflito de rota)
 router.get('/municipes/list', listMunicipes);
+router.get('/municipes/bairros', listBairros);
 router.post('/municipes', createMunicipe);
 router.post('/municipes/import', upload.single('file'), importMunicipes);
-router.patch('/municipe/:id', updateMunicipe);
-router.delete('/municipe/:id', deleteMunicipe);
+router.patch('/municipes/:id', updateMunicipe);
+router.delete('/municipes/:id', deleteMunicipe);
 
 // Rotas de Demandas Oficiais
 router.get('/', listDemands);

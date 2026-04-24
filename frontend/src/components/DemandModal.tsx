@@ -61,10 +61,6 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
   const [manualMessage, setManualMessage] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // Novos estados legislativos
-  const [isLegislativo] = useState(demand.demandas.isLegislativo);
-  const [numeroIndicacao] = useState(demand.demandas.numeroIndicacao || '');
-  const [documentUrl] = useState(demand.demandas.documentUrl || '');
 
   const applyPhoneMask = (value: string) => {
     const raw = value.replace(/\D/g, '').slice(0, 11);
@@ -126,7 +122,7 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     setLoading(true);
     const dataToSave = forceUpdate ? { ...municipe, ...forceUpdate } : municipe;
     try {
-      await api.patch(`/demands/municipe/${municipe.id}`, dataToSave);
+      await api.patch(`/demands/municipes/${municipe.id}`, dataToSave);
       setIsEditing(false);
       onUpdate();
       if (forceUpdate?.isLideranca !== undefined) {
@@ -146,7 +142,7 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     if (!confirm('Deseja realmente EXCLUIR este munícipe e TODAS as suas demandas? Esta ação é irreversível.')) return;
     setLoading(true);
     try {
-      await api.delete(`/demands/municipe/${municipe.id}`);
+      await api.delete(`/demands/municipes/${municipe.id}`);
       onClose();
       onUpdate();
     } catch (err) {
@@ -172,19 +168,6 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
       alert('Falha ao enviar mensagem pelo WhatsApp.');
     } finally {
       setSendingMessage(false);
-    }
-  };
-
-  const handleUpdateLegislativo = async () => {
-    setLoading(true);
-    try {
-      await api.patch(`/demands/${demand.demandas.id}/status`, { isLegislativo, numeroIndicacao, documentUrl });
-      onUpdate();
-      alert('Dados legislativos salvos!');
-    } catch (err) {
-      alert('Falha ao salvar indicação.');
-    } finally {
-      setLoading(false);
     }
   };
 

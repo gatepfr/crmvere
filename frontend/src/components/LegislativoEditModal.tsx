@@ -112,8 +112,9 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
     try {
       const res = await api.get(`/demands/${demand.demandas.id}/timeline`);
       setTimeline(res.data);
-    } catch {}
-    finally { setTimelineLoading(false); }
+    } catch {
+      setTimeline([]);
+    } finally { setTimelineLoading(false); }
   };
 
   const applyPhoneMask = (value: string) => {
@@ -129,7 +130,7 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
   const handleSave = async () => {
     setLoading(true);
     try {
-      await api.patch(`/demands/municipe/${municipe.id}`, {
+      await api.patch(`/demands/municipes/${municipe.id}`, {
         name: municipe.name, phone: municipe.phone, bairro: municipe.bairro
       });
       await api.patch(`/demands/${demand.demandas.id}/status`, {

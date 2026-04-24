@@ -75,7 +75,7 @@ export default function Municipes() {
   const [selectedBairro, setSelectedBairro] = useState('');
   const [onlyLideranca, setOnlyLideranca] = useState(false);
   const [onlyBirthdays, setOnlyBirthdays] = useState(false);
-  const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
+  const [selectedMunicipes, setSelectedMunicipes] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [allBairros, setAllBairros] = useState<string[]>([]);
@@ -107,22 +107,14 @@ export default function Municipes() {
 
   const loadAllBairros = useCallback(async () => {
     try {
-      const res = await api.get('/demands/municipes/list?limit=1000');
-      const uniqueBairros = Array.from(new Set(res.data.data.map((m: any) => m.bairro).filter(Boolean))) as string[];
-      setAllBairros(uniqueBairros);
-    } catch (err) {
-      console.error('Erro ao carregar bairros');
-    }
+      const res = await api.get('/demands/municipes/bairros');
+      setAllBairros(res.data || []);
+    } catch { }
   }, []);
 
   const loadMunicipes = useCallback(async () => {
     setLoading(true);
     try {
-      if (!cabinetConfig) {
-        const configRes = await api.get('/config/me');
-        setCabinetConfig(configRes.data);
-      }
-
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
@@ -141,10 +133,13 @@ export default function Municipes() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyLideranca, onlyBirthdays, sortConfig, cabinetConfig]);
+  }, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyLideranca, onlyBirthdays, sortConfig]);
 
   useEffect(() => { loadMunicipes(); }, [loadMunicipes]);
   useEffect(() => { loadAllBairros(); }, [loadAllBairros]);
+  useEffect(() => {
+    api.get('/config/me').then(res => setCabinetConfig(res.data)).catch(() => {});
+  }, []);
   useEffect(() => { setPagination(prev => ({ ...prev, page: 1 })); }, [searchTerm, selectedBairro, onlyLideranca, onlyBirthdays]);
 
   const isTodayBirthday = (dateStr: string | null) => {
@@ -167,12 +162,12 @@ export default function Municipes() {
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedSelectedMunicipes(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelectedMunicipes(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const toggleSelectAll = () => {
-    if (selectedMunicipes.length === municipes.length && municipes.length > 0) setSelectedSelectedMunicipes([]);
-    else setSelectedSelectedMunicipes(municipes.map(m => m.id));
+    if (selectedMunicipes.length === municipes.length && municipes.length > 0) setSelectedMunicipes([]);
+    else setSelectedMunicipes(municipes.map(m => m.id));
   };
 
   const handleCreateMunicipe = async (e: React.FormEvent) => {
@@ -192,7 +187,7 @@ export default function Municipes() {
 
   const handleToggleLideranca = async (m: Municipe) => {
     try {
-      await api.patch(`/demands/municipe/${m.id}`, { isLideranca: !m.isLideranca });
+      await api.patch(`/demands/municipes/${m.id}`, { isLideranca: !m.isLideranca });
       setMunicipes(prev => prev.map(p => p.id === m.id ? { ...p, isLideranca: !p.isLideranca } : p));
     } catch (err) { alert('Erro ao atualizar status.'); }
   };
@@ -203,9 +198,9 @@ export default function Municipes() {
     setSaving(true);
     try {
       for (const id of selectedMunicipes) {
-        await api.patch(`/demands/municipe/${id}`, { isLideranca: true });
+        await api.patch(`/demands/municipes/${id}`, { isLideranca: true });
       }
-      setSelectedSelectedMunicipes([]);
+      setSelectedMunicipes([]);
       loadMunicipes();
       alert('Lideranças atualizadas com sucesso!');
     } catch (err) { alert('Erro na atualização em massa.'); }
@@ -263,13 +258,14 @@ export default function Municipes() {
     if (!broadcastMessage.trim()) return;
     setSending(true);
     setSendProgress({ current: 0, total: selectedMunicipes.length });
+    let failedCount = 0;
     for (let i = 0; i < selectedMunicipes.length; i++) {
       const municipe = (municipes || []).find(m => m.id === selectedMunicipes[i]);
       if (municipe) {
         try {
           const personalizedMessage = broadcastMessage.replace(/{{nome}}/g, municipe.name);
           await api.post('/whatsapp/send-direct', { phone: municipe.phone, message: personalizedMessage });
-        } catch (err) { console.error(`Erro ao enviar para ${municipe.name}:`, err); }
+        } catch { failedCount++; }
       }
       setSendProgress(prev => ({ ...prev, current: i + 1 }));
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -277,8 +273,12 @@ export default function Municipes() {
     setSending(false);
     setIsModalOpen(false);
     setBroadcastMessage('');
-    setSelectedSelectedMunicipes([]);
-    alert('Mensagens enviadas com sucesso!');
+    setSelectedMunicipes([]);
+    if (failedCount > 0) {
+      alert(`Envio concluído. ${selectedMunicipes.length - failedCount} enviadas, ${failedCount} falharam.`);
+    } else {
+      alert('Mensagens enviadas com sucesso!');
+    }
   };
 
   const formatDateDisplay = (dateStr: string | null) => {
@@ -351,7 +351,7 @@ export default function Municipes() {
     setSaving(true);
     try {
       const birthDateISO = parseDateToISO(editForm.birthDate);
-      await api.patch(`/demands/municipe/${editingMunicipe.id}`, { ...editForm, birthDate: birthDateISO });
+      await api.patch(`/demands/municipes/${editingMunicipe.id}`, { ...editForm, birthDate: birthDateISO });
       setEditingMunicipe(null);
       alert('Dados atualizados com sucesso!');
       loadMunicipes();
@@ -362,7 +362,7 @@ export default function Municipes() {
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja realmente excluir este munícipe?')) return;
     try {
-      await api.delete(`/demands/municipe/${id}`);
+      await api.delete(`/demands/municipes/${id}`);
       setMunicipes(prev => prev.filter(m => m.id !== id));
       alert('Munícipe excluído com sucesso!');
     } catch (err) { alert('Falha ao excluir munícipe.'); }
@@ -450,7 +450,7 @@ export default function Municipes() {
             <div><p className="font-black text-sm uppercase tracking-tighter">{selectedMunicipes.length} Selecionados</p></div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setSelectedSelectedMunicipes([])} className="px-4 py-2 text-xs font-bold hover:bg-white/10 rounded-lg">Desmarcar</button>
+            <button onClick={() => setSelectedMunicipes([])} className="px-4 py-2 text-xs font-bold hover:bg-white/10 rounded-lg">Desmarcar</button>
             <button onClick={handleBulkLideranca} className="bg-amber-500 text-white px-5 py-2 rounded-xl font-black text-xs hover:bg-amber-600 flex items-center gap-2 shadow-sm"><Star size={16} fill="currentColor" /> TORNAR LIDERANÇA</button>
             <button onClick={() => setIsModalOpen(true)} className="bg-white text-blue-600 px-5 py-2 rounded-xl font-black text-xs hover:bg-blue-50 flex items-center gap-2 shadow-sm"><MessageSquare size={16} /> ENVIAR WHATSAPP</button>
           </div>

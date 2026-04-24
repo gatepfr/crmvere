@@ -66,6 +66,28 @@ export function calcDateRange(
   return { startDate: customStart, endDate: customEnd };
 }
 
+const PRIVATE_HOST_RE = /^(localhost|127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.|::1$|metadata\.google\.internal)/i;
+
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return null;
+  try {
+    const { hostname } = new URL(trimmed);
+    if (PRIVATE_HOST_RE.test(hostname)) return null;
+  } catch { return null; }
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(trimmed, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.startsWith('image/')) return null;
+    const buf = await res.arrayBuffer();
+    return `data:${ct.split(';')[0]};base64,${Buffer.from(buf).toString('base64')}`;
+  } catch { return null; }
+}
+
 export interface ReportData {
   tenant: {
     name: string;
@@ -75,6 +97,7 @@ export interface ReportData {
     partido: string | null;
     mandato: string | null;
   };
+  fotoDataUri?: string | null;
   period: { startDate: string; endDate: string };
   totalDemandas: number;
   demandasConcluidas: number;
@@ -189,7 +212,8 @@ function formatDate(d: Date): string {
 }
 
 function formatPeriod(startDate: string, endDate: string): string {
-  return `${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} a ${new Date(endDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+  const fmt = (d: string) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z'));
+  return `${fmt(startDate)} a ${fmt(endDate)}`;
 }
 
 const escapeHtml = (s: string) =>
@@ -198,9 +222,8 @@ const escapeHtml = (s: string) =>
 export function buildHtmlTemplate(data: ReportData): string {
   const { tenant, period } = data;
 
-  const isSafeUrl = (url: string) => url.startsWith('http://') || url.startsWith('https://');
-  const fotoHtml = tenant.fotoUrl && isSafeUrl(tenant.fotoUrl)
-    ? `<img src="${tenant.fotoUrl}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.25)" />`
+  const fotoHtml = data.fotoDataUri
+    ? `<img src="${data.fotoDataUri}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.25)" />`
     : `<div style="width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,0.15);border:3px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:44px">👤</div>`;
 
   const statusBar = () => {
@@ -344,7 +367,8 @@ export async function generateReportPdf(
   endDate: string
 ): Promise<Buffer> {
   const data = await collectReportData(tenantId, startDate, endDate);
-  const html = buildHtmlTemplate(data);
+  const fotoDataUri = data.tenant.fotoUrl ? await fetchImageAsBase64(data.tenant.fotoUrl) : null;
+  const html = buildHtmlTemplate({ ...data, fotoDataUri });
 
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
 
