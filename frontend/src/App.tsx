@@ -28,6 +28,7 @@ import Billing from './pages/Billing';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Sidebar from './components/Sidebar';
+import WhatsAppSupport from './components/WhatsAppSupport';
 
 function DashboardLayout() {
   return (
@@ -43,6 +44,7 @@ function DashboardLayout() {
           </div>
         </main>
       </div>
+      <WhatsAppSupport />
     </div>
   );
 }
