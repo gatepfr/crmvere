@@ -69,6 +69,24 @@ export async function resolveSegment(
       .select({ municipeId: municipes.id, phone: municipes.phone })
       .from(municipes)
       .where(and(eq(municipes.tenantId, tenantId), inArray(municipes.id, ids)));
+  } else if (segmentType === 'indicacao') {
+    const municipeIds = await db
+      .selectDistinct({ municipeId: demandas.municipeId })
+      .from(demandas)
+      .where(
+        and(
+          eq(demandas.tenantId, tenantId),
+          eq(demandas.isLegislativo, true)
+        )
+      );
+
+    const ids = municipeIds.map(r => r.municipeId);
+    if (ids.length === 0) return [];
+
+    rows = await db
+      .select({ municipeId: municipes.id, phone: municipes.phone })
+      .from(municipes)
+      .where(and(eq(municipes.tenantId, tenantId), inArray(municipes.id, ids)));
   } else if (segmentType === 'custom') {
     const ids: string[] = JSON.parse(segmentValue ?? '[]');
     if (ids.length === 0) return [];
