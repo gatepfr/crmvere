@@ -43,11 +43,10 @@ interface DashboardData {
     dailyTokenLimit: number;
     tokenUsageTotal: number;
   };
-  categoryStats: { name: string; value: number }[];
+  categoryStats: { name: string; value: number; color: string }[];
   dailyStats: { date: string; count: number }[];
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
 export default function DashboardHome() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -259,8 +258,8 @@ export default function DashboardHome() {
                   paddingAngle={8}
                   dataKey="value"
                 >
-                  {categoryStats.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {categoryStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color || '#64748b'} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -268,9 +267,9 @@ export default function DashboardHome() {
             </ResponsiveContainer>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-4">
-            {categoryStats.slice(0, 4).map((item, index) => (
+            {categoryStats.map((item) => (
               <div key={item.name} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color || '#64748b' }} />
                 <span className="text-[10px] font-black text-slate-500 uppercase truncate">{item.name}</span>
               </div>
             ))}

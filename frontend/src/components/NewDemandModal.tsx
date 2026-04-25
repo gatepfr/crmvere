@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../api/client';
 import { X, Save, User, Phone, MapPin, Tag, AlertTriangle, Search, Loader2 } from 'lucide-react';
+import { formatPhone } from '../utils/formatPhone';
 
 interface NewDemandModalProps {
   onClose: () => void;
@@ -70,13 +71,7 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
       municipeCep: m.cep || ''
     });
     
-    // Formata o telefone para exibição
-    const raw = m.phone.replace(/\D/g, '');
-    const truncated = raw.startsWith('55') ? raw.slice(2) : raw;
-    let masked = truncated;
-    if (truncated.length > 2) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
-    if (truncated.length > 7) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
-    setDisplayPhone(masked);
+    setDisplayPhone(formatPhone(m.phone));
 
     setSearchResults([]);
     setSearchMunicipe(m.name);
@@ -180,7 +175,7 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
                           className="w-full px-5 py-3 text-left hover:bg-blue-50 flex flex-col border-b border-slate-50 last:border-0"
                         >
                           <span className="font-bold text-slate-900 text-sm">{m.name}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{m.phone} - {m.bairro || 'Sem bairro'}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{formatPhone(m.phone)} - {m.bairro || 'Sem bairro'}</span>
                         </button>
                       ))}
                     </div>

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
-import { municipes, tenants, atendimentos } from '../db/schema';
+import { municipes, tenants, atendimentos, globalCategories } from '../db/schema';
 import { eq, sql, and } from 'drizzle-orm';
 import { redisService } from '../services/redisService';
 
@@ -29,8 +29,13 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
     const categoryStats = await db.select({
       name: atendimentos.categoria,
-      value: sql<number>`count(*)::int`
-    }).from(atendimentos).where(eq(atendimentos.tenantId, tenantId)).groupBy(atendimentos.categoria);
+      value: sql<number>`count(*)::int`,
+      color: sql<string>`COALESCE(MAX(${globalCategories.color}), '#64748b')`
+    })
+    .from(atendimentos)
+    .leftJoin(globalCategories, sql`UPPER(${atendimentos.categoria}) = UPPER(${globalCategories.name})`)
+    .where(eq(atendimentos.tenantId, tenantId))
+    .groupBy(atendimentos.categoria);
 
     const last7Days = await db.select({
       date: sql<string>`TO_CHAR(${atendimentos.createdAt}, 'DD/MM')`,
