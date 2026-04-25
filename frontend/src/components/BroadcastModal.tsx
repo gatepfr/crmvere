@@ -8,7 +8,7 @@ interface Props {
   onSuccess: () => void;
 }
 
-type SegmentType = 'todos' | 'bairro' | 'lideranca' | 'aniversariantes' | 'categoria_demanda';
+type SegmentType = 'todos' | 'bairro' | 'lideranca' | 'aniversariantes' | 'categoria_demanda' | 'indicacao';
 type SendMode = 'agora' | 'agendar';
 
 interface PreviewData {
@@ -22,6 +22,7 @@ const SEGMENT_OPTIONS: { value: SegmentType; label: string }[] = [
   { value: 'lideranca', label: 'Lideranças' },
   { value: 'aniversariantes', label: 'Aniversariantes do Mês' },
   { value: 'categoria_demanda', label: 'Categoria de Demanda' },
+  { value: 'indicacao', label: 'Indicações Legislativas' },
 ];
 
 export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
