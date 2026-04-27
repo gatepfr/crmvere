@@ -3,6 +3,7 @@ import { db } from '../db';
 import { tenants, demandas, municipes, atendimentos } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { EvolutionService } from '../services/evolutionService';
+import { redisService } from '../services/redisService';
 
 const router = Router();
 
@@ -84,6 +85,29 @@ router.get('/instance/qrcode', async (req, res) => {
     res.json(qr);
   } catch (err: any) {
     res.status(200).json({ error: 'api_unavailable' });
+  }
+});
+
+router.get('/connection-health', async (req, res) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'Sessão inválida' });
+
+  try {
+    const cached = await redisService.getWhatsAppStatus(tenantId);
+    if (cached) return res.json(cached);
+
+    // Fallback: consultar Evolution API se não há cache
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    if (!tenant?.whatsappInstanceId) return res.json({ status: 'not_created', updatedAt: new Date().toISOString() });
+
+    const config = getEvolutionConfig(tenant);
+    const evo = new EvolutionService(config.url, config.token);
+    const evoStatus = await evo.getStatus(tenant.whatsappInstanceId);
+    const data = evoStatus?.instance || evoStatus;
+    const status = (data?.state === 'open' || data?.status === 'CONNECTED') ? 'connected' : 'disconnected';
+    return res.json({ status, updatedAt: new Date().toISOString() });
+  } catch {
+    return res.json({ status: 'unknown', updatedAt: new Date().toISOString() });
   }
 });
 

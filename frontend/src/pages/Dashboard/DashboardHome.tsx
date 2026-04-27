@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
-import { 
-  Users, 
-  MessageSquare, 
-  Clock, 
-  CheckCircle2, 
-  BarChart3, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Users,
+  MessageSquare,
+  Clock,
+  CheckCircle2,
+  BarChart3,
   PieChart as PieChartIcon,
   TrendingUp,
   AlertCircle,
@@ -14,15 +15,18 @@ import {
   Loader2,
   ChevronRight,
   ArrowUpRight,
-  Zap
+  Zap,
+  Smartphone,
+  WifiOff,
+  X
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -30,7 +34,6 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { useNavigate } from 'react-router-dom';
 
 interface DashboardData {
   summary: {
@@ -48,11 +51,25 @@ interface DashboardData {
 }
 
 
+type WaStatus = 'connected' | 'connecting' | 'disconnected' | 'needs_reconnect' | 'not_created' | 'unknown' | null;
+
 export default function DashboardHome() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [waStatus, setWaStatus] = useState<WaStatus>(null);
+  const [alertDismissed, setAlertDismissed] = useState(false);
   const navigate = useNavigate();
+
+  const fetchWaStatus = useCallback(async () => {
+    try {
+      const res = await api.get('/whatsapp/connection-health');
+      setWaStatus(res.data.status as WaStatus);
+      if (res.data.status !== 'needs_reconnect') setAlertDismissed(false);
+    } catch {
+      // silencioso — não crítico
+    }
+  }, []);
 
   useEffect(() => {
     api.get('/metrics')
@@ -69,6 +86,12 @@ export default function DashboardHome() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchWaStatus();
+    const interval = setInterval(fetchWaStatus, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchWaStatus]);
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -96,6 +119,26 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
+      {/* Banner: WhatsApp precisa reconectar */}
+      {waStatus === 'needs_reconnect' && !alertDismissed && (
+        <div className="flex items-center gap-4 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
+          <WifiOff size={20} className="text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-black text-red-700">WhatsApp desconectado — reconexão necessária</p>
+            <p className="text-xs text-red-500 mt-0.5">A sessão expirou. O atendimento automático está pausado até reconectar.</p>
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/whatsapp')}
+            className="px-4 py-2 bg-red-600 text-white text-xs font-black rounded-xl hover:bg-red-700 transition-colors flex-shrink-0"
+          >
+            Reconectar agora
+          </button>
+          <button onClick={() => setAlertDismissed(true)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header com Saudação */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -121,6 +164,35 @@ export default function DashboardHome() {
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Sincronizado</span>
           </div>
+          {waStatus && waStatus !== 'not_created' && (
+            <button
+              onClick={() => navigate('/dashboard/whatsapp')}
+              className={`px-4 py-2 rounded-2xl border shadow-sm flex items-center gap-2 transition-colors ${
+                waStatus === 'connected'
+                  ? 'bg-green-50 border-green-100 hover:border-green-300'
+                  : waStatus === 'connecting'
+                  ? 'bg-amber-50 border-amber-100 hover:border-amber-300'
+                  : 'bg-red-50 border-red-200 hover:border-red-400'
+              }`}
+            >
+              {waStatus === 'connected' ? (
+                <Smartphone size={13} className="text-green-500" />
+              ) : waStatus === 'connecting' ? (
+                <Loader2 size={13} className="text-amber-500 animate-spin" />
+              ) : (
+                <WifiOff size={13} className="text-red-500" />
+              )}
+              <span className={`text-xs font-black uppercase tracking-widest ${
+                waStatus === 'connected' ? 'text-green-600'
+                : waStatus === 'connecting' ? 'text-amber-600'
+                : 'text-red-600'
+              }`}>
+                {waStatus === 'connected' ? 'WhatsApp: conectado'
+                  : waStatus === 'connecting' ? 'WhatsApp: conectando...'
+                  : 'WhatsApp: reconectar'}
+              </span>
+            </button>
+          )}
         </div>
       </header>
 

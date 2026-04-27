@@ -72,7 +72,25 @@ export const redisService = {
   async invalidateCache(tenantId: string): Promise<void> {
     await redis.del(`limit:${tenantId}`);
     await redis.del(`blocked:${tenantId}`);
-  }
+  },
+
+  /**
+   * Store WhatsApp connection status for a tenant
+   * status: 'connected' | 'connecting' | 'disconnected' | 'needs_reconnect'
+   */
+  async setWhatsAppStatus(tenantId: string, status: string): Promise<void> {
+    const key = `wa_status:${tenantId}`;
+    await redis.set(key, JSON.stringify({ status, updatedAt: new Date().toISOString() }), 'EX', 604800);
+  },
+
+  /**
+   * Get WhatsApp connection status for a tenant
+   */
+  async getWhatsAppStatus(tenantId: string): Promise<{ status: string; updatedAt: string } | null> {
+    const key = `wa_status:${tenantId}`;
+    const val = await redis.get(key);
+    return val ? JSON.parse(val) : null;
+  },
 };
 
 export default redis;

@@ -12,8 +12,43 @@ const formatName = (name: string) => {
   return name.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 };
 
+const NEEDS_RECONNECT_CODES = [401, 403, 402, 406];
+
+async function handleConnectionEvent(payload: any, tenantId: string): Promise<boolean> {
+  const event = payload?.event;
+  if (event !== 'connection.update' && event !== 'status.instance') return false;
+
+  try {
+    if (event === 'connection.update') {
+      const state = payload?.data?.state;
+      if (state === 'open') {
+        await redisService.setWhatsAppStatus(tenantId, 'connected');
+      } else if (state === 'close') {
+        await redisService.setWhatsAppStatus(tenantId, 'disconnected');
+      } else if (state === 'connecting') {
+        await redisService.setWhatsAppStatus(tenantId, 'connecting');
+      }
+    }
+
+    if (event === 'status.instance') {
+      const code = payload?.data?.disconnectionReasonCode;
+      if (NEEDS_RECONNECT_CODES.includes(code)) {
+        await redisService.setWhatsAppStatus(tenantId, 'needs_reconnect');
+        console.log(`[WHATSAPP] Tenant ${tenantId} needs reconnect (code ${code})`);
+      }
+    }
+  } catch (err: any) {
+    console.error('[WHATSAPP STATUS ERROR]', err.message);
+  }
+
+  return true;
+}
+
 export async function orchestrateWebhook(payload: any, tenantId: string) {
   try {
+    const handled = await handleConnectionEvent(payload, tenantId);
+    if (handled) return { status: 'connection_event' };
+
     const normalized = normalizeEvolution(payload, tenantId);
     if (!normalized) return { status: 'ignored' };
 
