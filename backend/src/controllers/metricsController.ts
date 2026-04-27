@@ -41,7 +41,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       date: sql<string>`TO_CHAR(${atendimentos.createdAt}, 'DD/MM')`,
       count: sql<number>`count(*)::int`,
       day: sql`DATE_TRUNC('day', ${atendimentos.createdAt})`
-    }).from(atendimentos).where(and(eq(atendimentos.tenantId, tenantId), sql`${atendimentos.createdAt}::date >= (NOW() AT TIME ZONE 'America/Sao_Paulo')::date - INTERVAL '7 days'`)).groupBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt}), TO_CHAR(${atendimentos.createdAt}, 'DD/MM')`).orderBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt}) ASC`);
+    }).from(atendimentos).where(and(eq(atendimentos.tenantId, tenantId), sql`${atendimentos.createdAt}::date >= (NOW() AT TIME ZONE 'America/Sao_Paulo')::date - INTERVAL '6 days'`)).groupBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt}), TO_CHAR(${atendimentos.createdAt}, 'DD/MM')`).orderBy(sql`DATE_TRUNC('day', ${atendimentos.createdAt}) ASC`);
 
     res.json({
       summary: {
