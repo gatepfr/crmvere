@@ -21,7 +21,10 @@ import {
   X,
   Tag,
   Pencil,
-  Check
+  Check,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown
 } from 'lucide-react';
 
 interface Stats {
@@ -76,6 +79,20 @@ export default function Tenants() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Ordenacao
+  const [sortField, setSortField] = useState<'name' | 'dailyTokenLimit' | 'subscriptionStatus' | null>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: 'name' | 'dailyTokenLimit' | 'subscriptionStatus') => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+    setCurrentPage(1);
+  };
 
   // Edit Modal State
   const [editingTenant, setEditingTenant] = useState<any>(null);
@@ -320,13 +337,28 @@ export default function Tenants() {
     }
   };
 
-  const filteredTenants = tenants.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredTenants = tenants.filter(t =>
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.slug.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
-  const paginatedTenants = filteredTenants.slice(
+  const sortedTenants = sortField
+    ? [...filteredTenants].sort((a, b) => {
+        let va = a[sortField];
+        let vb = b[sortField];
+        if (sortField === 'dailyTokenLimit') {
+          return sortDir === 'asc' ? va - vb : vb - va;
+        }
+        va = (va || '').toLowerCase();
+        vb = (vb || '').toLowerCase();
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      })
+    : filteredTenants;
+
+  const totalPages = Math.ceil(sortedTenants.length / itemsPerPage);
+  const paginatedTenants = sortedTenants.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -540,9 +572,27 @@ export default function Tenants() {
                   <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b border-slate-100">
                       <tr>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Gabinete</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Quota</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Plano</th>
+                        {([
+                          { field: 'name', label: 'Gabinete', align: 'left' },
+                          { field: 'dailyTokenLimit', label: 'Quota', align: 'center' },
+                          { field: 'subscriptionStatus', label: 'Plano', align: 'left' },
+                        ] as const).map(col => (
+                          <th
+                            key={col.field}
+                            className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer select-none hover:text-slate-600 transition-colors ${col.align === 'center' ? 'text-center' : ''}`}
+                            onClick={() => handleSort(col.field)}
+                          >
+                            <span className={`inline-flex items-center gap-1 ${col.align === 'center' ? 'justify-center w-full' : ''}`}>
+                              {col.label}
+                              {sortField === col.field
+                                ? sortDir === 'asc'
+                                  ? <ChevronUp size={12} className="text-blue-500" />
+                                  : <ChevronDown size={12} className="text-blue-500" />
+                                : <ChevronsUpDown size={12} className="opacity-30" />
+                              }
+                            </span>
+                          </th>
+                        ))}
                         <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Ações</th>
                       </tr>
                     </thead>
