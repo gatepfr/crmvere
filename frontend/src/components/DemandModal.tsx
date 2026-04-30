@@ -156,10 +156,10 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
     if (!manualMessage.trim()) return;
     setSendingMessage(true);
     try {
-      await api.post('/whatsapp/send', {
-        demandId: demand.demandas.id,
-        message: manualMessage
-      });
+      const payload = demand.atendimentoId
+        ? { atendimentoId: demand.atendimentoId, message: manualMessage }
+        : { demandId: demand.demandas.id, message: manualMessage };
+      await api.post('/whatsapp/send', payload);
       setResumoIa((prev: string) => `${prev}\n\nGabinete: ${manualMessage}`);
       setManualMessage('');
       onUpdate();
@@ -204,13 +204,20 @@ export default function DemandModal({ demand, onClose, onUpdate, onOpenCreateDem
                     {municipe.isLideranca && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Liderança</span>}
                   </div>
                   {isEditing ? (
-                    <input 
+                    <input
                       className="mt-1 px-3 py-1 bg-white border border-blue-200 rounded-lg text-sm font-bold w-full outline-none focus:ring-2 focus:ring-blue-500"
                       value={municipe.name}
                       onChange={e => setMunicipe({...municipe, name: e.target.value})}
                     />
                   ) : (
-                    <h4 className="text-lg font-bold text-slate-900">{municipe.name}</h4>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <h4 className="text-lg font-bold text-slate-900">{municipe.name}</h4>
+                      {demand.municipes.demandCount > 0 && (
+                        <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full" title={`${demand.municipes.demandCount} atendimento${demand.municipes.demandCount !== 1 ? 's' : ''} no gabinete`}>
+                          {demand.municipes.demandCount}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

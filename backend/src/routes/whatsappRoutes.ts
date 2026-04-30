@@ -184,29 +184,50 @@ router.post('/send-direct', async (req, res) => {
 router.post('/send', async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
-    const { demandId, message } = req.body;
+    const { atendimentoId, demandId, message } = req.body;
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId!));
+
+    if (!tenant?.whatsappInstanceId) return res.status(404).json({ error: 'WhatsApp não conectado.' });
+
+    const { url, token } = getEvolutionConfig(tenant);
+    const evo = new EvolutionService(url, token);
+
+    // Fluxo via atendimentoId (página de Atendimentos/Demands)
+    if (atendimentoId) {
+      const [atend] = await db.select({ atend: atendimentos, municipe: municipes })
+        .from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id))
+        .where(and(eq(atendimentos.id, atendimentoId), eq(atendimentos.tenantId, tenantId!)));
+
+      if (!atend) return res.status(404).json({ error: 'Atendimento não encontrado.' });
+
+      await evo.sendMessage(tenant.whatsappInstanceId, atend.municipe.phone, message);
+
+      await db.update(atendimentos).set({
+        updatedAt: new Date(),
+        lastHumanInteractionAt: new Date(),
+        resumoIa: sql`${atendimentos.resumoIa} || '\n\nGabinete: ' || ${message}`
+      }).where(eq(atendimentos.id, atendimentoId));
+
+      return res.json({ success: true });
+    }
+
+    // Fluxo legado via demandId
     const [demand] = await db.select({ demand: demandas, municipe: municipes })
       .from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id))
       .where(and(eq(demandas.id, demandId), eq(demandas.tenantId, tenantId!)));
 
-    if (!tenant?.whatsappInstanceId || !demand) return res.status(404).json({ error: 'Não encontrado' });
+    if (!demand) return res.status(404).json({ error: 'Demanda não encontrada.' });
 
-    const { url, token } = getEvolutionConfig(tenant);
-    const evo = new EvolutionService(url, token);
     await evo.sendMessage(tenant.whatsappInstanceId, demand.municipe.phone, message);
 
-    // 1. Atualiza o histórico da demanda
-    await db.update(demandas).set({ 
+    await db.update(demandas).set({
         descricao: `${demand.demand.descricao}\n\nGabinete: ${message}`,
-        updatedAt: new Date() 
+        updatedAt: new Date()
     }).where(eq(demandas.id, demandId));
 
-    // 2. Atualiza o atendimento (para calar a IA por 10 min)
-    // Buscamos o atendimento de hoje deste munícipe
     await db.update(atendimentos).set({
-        updatedAt: new Date(), 
-        lastHumanInteractionAt: new Date(), // MARCAÇÃO HUMANA AQUI
+        updatedAt: new Date(),
+        lastHumanInteractionAt: new Date(),
         resumoIa: sql`${atendimentos.resumoIa} || '\n\nGabinete: ' || ${message}`
     }).where(and(
         eq(atendimentos.municipeId, demand.municipe.id),

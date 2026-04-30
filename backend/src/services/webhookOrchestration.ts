@@ -144,7 +144,9 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       categoria: aiRes.categoria,
       prioridade: aiRes.prioridade,
       precisaRetorno: aiRes.precisa_retorno,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      // Inicia a janela de 30 min de pausa quando a IA escala para humano
+      ...(aiRes.precisa_retorno ? { lastHumanInteractionAt: new Date() } : {})
     }).where(eq(atendimentos.id, existingAtendimento.id));
 
     // 8. Configuração da Evolution API (Usa URL do banco se disponível)

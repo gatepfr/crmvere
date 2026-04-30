@@ -142,8 +142,13 @@ export const listAtendimentos = async (req: Request, res: Response) => {
       conditions.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`), ilike(municipes.bairro, `%${search}%`)) as any);
     }
     const [totalCount] = await db.select({ count: count() }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions));
-    const results = await db.select({ atendimentos: atendimentos, municipes: municipes }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions)).orderBy(orderExpr).limit(limit).offset(offset);
-    res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / limit) } });
+    const results = await db.select({
+      atendimentos: atendimentos,
+      municipes: municipes,
+      demandCount: sql<number>`(SELECT count(*) FROM atendimentos a2 WHERE a2.municipe_id = ${municipes.id})::int`
+    }).from(atendimentos).innerJoin(municipes, eq(atendimentos.municipeId, municipes.id)).where(and(...conditions)).orderBy(orderExpr).limit(limit).offset(offset);
+    const mapped = results.map(r => ({ atendimentos: r.atendimentos, municipes: { ...r.municipes, demandCount: r.demandCount } }));
+    res.json({ data: mapped, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / limit) } });
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
