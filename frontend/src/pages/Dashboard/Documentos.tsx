@@ -95,7 +95,7 @@ export default function Documentos() {
       })
       .catch(err => console.error(err))
       .finally(() => { if (!isBackground) setLoading(false); });
-  }, [pagination.page, search, filterTipo, filterStatus, filterOrigem]);
+  }, [pagination.page, pagination.limit, search, filterTipo, filterStatus, filterOrigem]);
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
@@ -252,7 +252,7 @@ export default function Documentos() {
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5">
                       {d.numeroDocumento && <span className="text-xs font-bold text-slate-700">{d.numeroDocumento}</span>}
-                      {d.documentUrl && (
+                      {d.documentUrl && /^https?:\/\//i.test(d.documentUrl) && (
                         <a href={d.documentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
                           <ExternalLink size={10} /> Ver doc
                         </a>
