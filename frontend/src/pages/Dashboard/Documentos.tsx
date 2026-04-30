@@ -178,7 +178,7 @@ export default function Documentos() {
       setModalOpen(false);
       fetchDocs();
       api.get('/demands/categories').then(res => setCategorias((res.data || []).map((c: { name: string }) => c.name).sort((a: string, b: string) => a.localeCompare(b, 'pt-BR')))).catch(() => {});
-    } catch { alert('Erro ao salvar documento'); }
+    } catch (err: any) { alert(`Erro ao salvar documento: ${err?.response?.data?.error || err?.message || 'Erro desconhecido'}`); }
     finally { setSaving(false); }
   };
 
