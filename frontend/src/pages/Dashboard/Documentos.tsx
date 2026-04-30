@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
-import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown, ChevronLeft, ChevronRight, Users, MapPin } from 'lucide-react';
+import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown, ChevronLeft, ChevronRight, Users, MapPin, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -28,7 +28,7 @@ const TIPO_LABELS: Record<string, string> = {
   oficio: 'Ofício',
   requerimento: 'Requerimento',
   projeto_lei: 'Proj. Lei',
-  encaminhamento_formal: 'Encaminh.',
+  encaminhamento_formal: 'Encaminhamento',
   outro: 'Outro',
 };
 
@@ -38,6 +38,14 @@ const TIPO_COLORS: Record<string, string> = {
   projeto_lei: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   encaminhamento_formal: 'bg-amber-50 text-amber-600 border-amber-100',
   outro: 'bg-slate-50 text-slate-500 border-slate-100',
+};
+
+const TIPO_ROW_BG: Record<string, string> = {
+  oficio: 'bg-blue-50/40',
+  requerimento: 'bg-purple-50/40',
+  projeto_lei: 'bg-emerald-50/40',
+  encaminhamento_formal: 'bg-amber-50/40',
+  outro: '',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -83,6 +91,28 @@ export default function Documentos() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<'name' | 'date' | 'categoria'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const toggleSort = (field: 'name' | 'date' | 'categoria') => {
+    if (sortField === field) setSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortOrder('asc'); }
+  };
+
+  const SortIcon = ({ field }: { field: 'name' | 'date' | 'categoria' }) => {
+    if (sortField !== field) return <ArrowUpDown size={11} className="text-slate-300 group-hover:text-slate-400" />;
+    return sortOrder === 'asc' ? <ArrowUp size={11} className="text-blue-600" /> : <ArrowDown size={11} className="text-blue-600" />;
+  };
+
+  const sortedDocs = useMemo(() => [...docs].sort((a, b) => {
+    let valA: any, valB: any;
+    if (sortField === 'name') { valA = a.municipe?.name?.toLowerCase() ?? ''; valB = b.municipe?.name?.toLowerCase() ?? ''; }
+    else if (sortField === 'categoria') { valA = a.documento.categoria?.toLowerCase() ?? ''; valB = b.documento.categoria?.toLowerCase() ?? ''; }
+    else { valA = new Date(a.documento.createdAt).getTime(); valB = new Date(b.documento.createdAt).getTime(); }
+    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  }), [docs, sortField, sortOrder]);
 
   const fetchDocs = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -335,17 +365,23 @@ export default function Documentos() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <th className="px-6 py-4 w-1/5">Munícipe</th>
-                  <th className="px-6 py-4 w-2/5">Categoria / Descrição</th>
+                  <th className="px-6 py-4 w-1/5 cursor-pointer group" onClick={() => toggleSort('name')}>
+                    <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">Munícipe <SortIcon field="name" /></div>
+                  </th>
+                  <th className="px-6 py-4 w-2/5 cursor-pointer group" onClick={() => toggleSort('categoria')}>
+                    <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">Categoria / Descrição <SortIcon field="categoria" /></div>
+                  </th>
                   <th className="px-6 py-4">Nº / Link</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Data</th>
+                  <th className="px-6 py-4 cursor-pointer group" onClick={() => toggleSort('date')}>
+                    <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">Data <SortIcon field="date" /></div>
+                  </th>
                   <th className="px-6 py-4 text-right w-24">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {docs.map(({ documento: d, municipe }) => (
-                  <tr key={d.id} className="group hover:bg-slate-50/30 transition-all align-top">
+                {sortedDocs.map(({ documento: d, municipe }) => (
+                  <tr key={d.id} className={`group hover:brightness-95 transition-all align-top ${TIPO_ROW_BG[d.tipo] || ''}`}>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
