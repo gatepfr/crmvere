@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword';
 import Tenants from './pages/SuperAdmin/Tenants';
 import Demands from './pages/Dashboard/Demands';
 import Legislativo from './pages/Dashboard/Legislativo';
+import Documentos from './pages/Dashboard/Documentos';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
 import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
@@ -98,6 +99,7 @@ function AppContent() {
             <Route path="ai-lab" element={<IALab />} />
             <Route path="demands" element={<Demands />} />
             <Route path="legislativo" element={<Legislativo />} />
+            <Route path="documentos" element={<Documentos />} />
             <Route path="my-tasks" element={<MyTasks />} />
             <Route path="broadcasts" element={<Broadcasts />} />
             <Route path="reports" element={<Reports />} />

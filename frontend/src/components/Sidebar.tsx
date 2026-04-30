@@ -21,6 +21,7 @@ import {
   ListTodo,
   Megaphone,
   FileText,
+  File,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
@@ -57,6 +58,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { name: 'Atendimento On Line', icon: MessageSquare, path: '/dashboard/demands' },
       { name: 'Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
+      { name: 'Documentos', icon: File, path: '/dashboard/documentos' },
       { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
       { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
       { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
