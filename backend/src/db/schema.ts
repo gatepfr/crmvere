@@ -352,7 +352,7 @@ export const documentos = pgTable("documentos", {
   tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
   municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "set null" }),
   tipo: documentoTipoEnum("tipo").notNull(),
-  titulo: varchar("titulo", { length: 500 }).notNull(),
+  categoria: varchar("categoria", { length: 255 }),
   descricao: varchar("descricao", { length: 5000 }),
   origem: documentoOrigemEnum("origem").notNull(),
   status: documentoStatusEnum("status").default("criado").notNull(),

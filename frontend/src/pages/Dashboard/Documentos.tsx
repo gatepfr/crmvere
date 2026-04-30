@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown } from 'lucide-react';
+import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -10,7 +10,7 @@ interface Documento {
   documento: {
     id: string;
     tipo: string;
-    titulo: string;
+    categoria: string | null;
     descricao: string | null;
     origem: string;
     status: string;
@@ -27,23 +27,23 @@ interface Pagination { page: number; limit: number; total: number; totalPages: n
 const TIPO_LABELS: Record<string, string> = {
   oficio: 'Ofício',
   requerimento: 'Requerimento',
-  projeto_lei: 'Projeto de Lei',
-  encaminhamento_formal: 'Encaminhamento Formal',
+  projeto_lei: 'Proj. Lei',
+  encaminhamento_formal: 'Encaminh.',
   outro: 'Outro',
 };
 
 const TIPO_COLORS: Record<string, string> = {
-  oficio: 'bg-blue-100 text-blue-700',
-  requerimento: 'bg-purple-100 text-purple-700',
-  projeto_lei: 'bg-emerald-100 text-emerald-700',
-  encaminhamento_formal: 'bg-amber-100 text-amber-700',
-  outro: 'bg-slate-100 text-slate-600',
+  oficio: 'bg-blue-50 text-blue-600 border-blue-100',
+  requerimento: 'bg-purple-50 text-purple-600 border-purple-100',
+  projeto_lei: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  encaminhamento_formal: 'bg-amber-50 text-amber-600 border-amber-100',
+  outro: 'bg-slate-50 text-slate-500 border-slate-100',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  criado: 'bg-slate-100 text-slate-600',
-  enviado: 'bg-blue-100 text-blue-700',
-  concluido: 'bg-green-100 text-green-700',
+  criado: 'bg-slate-50 text-slate-500 border-slate-100',
+  enviado: 'bg-blue-50 text-blue-600 border-blue-100',
+  concluido: 'bg-green-50 text-green-600 border-green-100',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -54,7 +54,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const emptyForm = {
   tipo: 'oficio',
-  titulo: '',
+  categoria: '',
   descricao: '',
   origem: 'gabinete',
   municipeId: '',
@@ -63,6 +63,9 @@ const emptyForm = {
   documentUrl: '',
   status: 'criado',
 };
+
+const firstName = (name: string) => name.split(' ')[0];
+const restName = (name: string) => name.split(' ').slice(1).join(' ');
 
 export default function Documentos() {
   const [docs, setDocs] = useState<Documento[]>([]);
@@ -81,6 +84,7 @@ export default function Documentos() {
   const [searchingMunicipe, setSearchingMunicipe] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [categorias, setCategorias] = useState<string[]>([]);
 
   const fetchDocs = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -102,6 +106,10 @@ export default function Documentos() {
   }, [pagination.page, pagination.limit, search, filterTipo, filterStatus, filterOrigem]);
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
+
+  useEffect(() => {
+    api.get('/documentos/categorias').then(res => setCategorias(res.data || [])).catch(() => {});
+  }, []);
 
   const handleMunicipeSearch = async (term: string) => {
     setMunicipeSearch(term);
@@ -133,7 +141,7 @@ export default function Documentos() {
     setEditing(d);
     setForm({
       tipo: d.documento.tipo,
-      titulo: d.documento.titulo,
+      categoria: d.documento.categoria || '',
       descricao: d.documento.descricao || '',
       origem: d.documento.origem,
       municipeId: d.municipe?.id || '',
@@ -148,13 +156,13 @@ export default function Documentos() {
   };
 
   const handleSave = async () => {
-    if (!form.titulo.trim()) { alert('Título é obrigatório'); return; }
+    if (!form.categoria.trim()) { alert('Categoria é obrigatória'); return; }
     if (form.origem === 'municipe' && !form.municipeId) { alert('Selecione um munícipe'); return; }
     setSaving(true);
     try {
       const payload = {
         tipo: form.tipo,
-        titulo: form.titulo,
+        categoria: form.categoria,
         descricao: form.descricao || null,
         origem: form.origem,
         municipeId: form.origem === 'municipe' ? form.municipeId : null,
@@ -169,6 +177,7 @@ export default function Documentos() {
       }
       setModalOpen(false);
       fetchDocs();
+      api.get('/documentos/categorias').then(res => setCategorias(res.data || [])).catch(() => {});
     } catch { alert('Erro ao salvar documento'); }
     finally { setSaving(false); }
   };
@@ -201,7 +210,6 @@ export default function Documentos() {
       }
 
       const doc = new jsPDF();
-
       doc.setFillColor(30, 41, 59);
       doc.rect(0, 0, 210, 40, 'F');
       doc.setTextColor(255, 255, 255);
@@ -215,8 +223,8 @@ export default function Documentos() {
 
       const tableData = dataToExport.map(({ documento: d, municipe }) => [
         TIPO_LABELS[d.tipo] || d.tipo,
-        d.titulo,
-        municipe?.name || '—',
+        d.categoria || '—',
+        municipe ? firstName(municipe.name) : '—',
         d.numeroDocumento || '—',
         STATUS_LABELS[d.status] || d.status,
         formatDate(d.createdAt),
@@ -224,13 +232,13 @@ export default function Documentos() {
 
       autoTable(doc, {
         startY: 45,
-        head: [['TIPO', 'TÍTULO', 'MUNÍCIPE', 'Nº PROTOCOLO', 'STATUS', 'DATA']],
+        head: [['TIPO', 'CATEGORIA', 'MUNÍCIPE', 'Nº PROTOCOLO', 'STATUS', 'DATA']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold', halign: 'left' },
         bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
         alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: { 1: { cellWidth: 70 } },
+        columnStyles: { 1: { cellWidth: 60 } },
         didDrawPage: () => {
           doc.setFontSize(8);
           doc.setTextColor(148, 163, 184);
@@ -249,45 +257,53 @@ export default function Documentos() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-700 pb-10">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Documentos do Gabinete</h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Ofícios, Requerimentos e mais</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <File className="text-blue-600" size={32} />
+            Documentos do Gabinete
+          </h1>
+          <div className="flex items-center gap-4 mt-1">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Ofícios, Requerimentos e mais</p>
+            <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black border border-blue-100 uppercase">
+              {pagination.total} TOTAL
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setExportModalOpen(true)} className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm" title="Exportar PDF">
-            <FileDown size={20} />
+            <FileDown size={24} />
           </button>
-          <button onClick={openCreate} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
-            <Plus size={18} /> NOVO DOCUMENTO
+          <button onClick={openCreate} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">
+            <Plus size={20} /> NOVO DOCUMENTO
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Filtros */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Buscar por título ou munícipe..."
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-200 transition-all"
+            placeholder="Buscar por categoria ou munícipe..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
           />
         </div>
-        <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none" value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
+        <select className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl text-xs font-bold outline-none" value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
           <option value="">Todos os tipos</option>
           {Object.entries(TIPO_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
+        <select className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl text-xs font-bold outline-none" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
           <option value="">Todos os status</option>
           <option value="criado">Criado</option>
           <option value="enviado">Enviado</option>
           <option value="concluido">Concluído</option>
         </select>
-        <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none" value={filterOrigem} onChange={e => { setFilterOrigem(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
+        <select className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl text-xs font-bold outline-none" value={filterOrigem} onChange={e => { setFilterOrigem(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
           <option value="">Todas as origens</option>
           <option value="gabinete">Gabinete</option>
           <option value="municipe">Munícipe</option>
@@ -295,7 +311,7 @@ export default function Documentos() {
         <select
           value={pagination.limit}
           onChange={e => setPagination(p => ({ ...p, page: 1, limit: Number(e.target.value) }))}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none"
+          className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl text-xs font-bold outline-none"
         >
           <option value={25}>25 / pág</option>
           <option value={50}>50 / pág</option>
@@ -305,78 +321,105 @@ export default function Documentos() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-16"><Loader2 size={32} className="animate-spin text-blue-500" /></div>
-        ) : docs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[300px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center">
+            <Loader2 size={32} className="animate-spin text-blue-600" />
+          </div>
+        )}
+        {!loading && docs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <File size={40} className="mb-3 opacity-30" />
-            <p className="font-bold text-sm uppercase tracking-widest">Nenhum documento encontrado</p>
+            <p className="font-black text-sm uppercase tracking-widest">Nenhum documento encontrado</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                {['Tipo', 'Título', 'Munícipe', 'Nº / Link', 'Status', 'Data', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map(({ documento: d, municipe }) => (
-                <tr key={d.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase ${TIPO_COLORS[d.tipo] || 'bg-slate-100 text-slate-600'}`}>
-                      {TIPO_LABELS[d.tipo] || d.tipo}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-slate-800 max-w-xs truncate">{d.titulo}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{municipe?.name || <span className="text-slate-300">—</span>}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-0.5">
-                      {d.numeroDocumento && <span className="text-xs font-bold text-slate-700">{d.numeroDocumento}</span>}
-                      {d.documentUrl && /^https?:\/\//i.test(d.documentUrl) && (
-                        <a href={d.documentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                          <ExternalLink size={10} /> Ver doc
-                        </a>
-                      )}
-                      {!d.numeroDocumento && !d.documentUrl && <span className="text-slate-300 text-xs">—</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase ${STATUS_COLORS[d.status] || 'bg-slate-100 text-slate-600'}`}>
-                      {STATUS_LABELS[d.status] || d.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{formatDate(d.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button onClick={() => openEdit({ documento: d, municipe })} className="p-1.5 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(d.id)} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <th className="px-6 py-4 w-1/5">Munícipe</th>
+                  <th className="px-6 py-4 w-2/5">Categoria / Descrição</th>
+                  <th className="px-6 py-4">Nº / Link</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Data</th>
+                  <th className="px-6 py-4 text-right w-24">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {docs.map(({ documento: d, municipe }) => (
+                  <tr key={d.id} className="group hover:bg-slate-50/30 transition-all align-top">
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                          {municipe ? firstName(municipe.name) : <span className="text-slate-300 font-normal">—</span>}
+                        </span>
+                        {municipe && restName(municipe.name) && (
+                          <span className="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[140px]">{restName(municipe.name)}</span>
+                        )}
+                        <div className="mt-2">
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase ${TIPO_COLORS[d.tipo] || 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                            {TIPO_LABELS[d.tipo] || d.tipo}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="font-semibold text-slate-800 text-sm">{d.categoria || '—'}</div>
+                      {d.descricao && (
+                        <div className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{d.descricao}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col gap-0.5">
+                        {d.numeroDocumento && <span className="text-xs font-bold text-slate-700">{d.numeroDocumento}</span>}
+                        {d.documentUrl && /^https?:\/\//i.test(d.documentUrl) && (
+                          <a href={d.documentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                            <ExternalLink size={10} /> Ver doc
+                          </a>
+                        )}
+                        {!d.numeroDocumento && !d.documentUrl && <span className="text-slate-300 text-xs">—</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`text-[9px] font-black px-2 py-1 rounded border uppercase ${STATUS_COLORS[d.status] || 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                        {STATUS_LABELS[d.status] || d.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-xs text-slate-400 whitespace-nowrap">{formatDate(d.createdAt)}</td>
+                    <td className="px-6 py-5">
+                      <div className="flex justify-end items-center gap-1">
+                        <button onClick={() => openEdit({ documento: d, municipe })} className="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition-all"><Edit2 size={16} /></button>
+                        <button onClick={() => handleDelete(d.id)} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-all"><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Paginação */}
+        {!loading && (
+          <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {pagination.total} DOCUMENTO{pagination.total !== 1 ? 'S' : ''} • PÁGINA {pagination.page} DE {pagination.totalPages || 1}
+            </p>
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                  className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm">
+                  <ChevronLeft size={16} />
+                </button>
+                <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                  className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
-
-      {/* Paginação */}
-      {!loading && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400 font-medium">{pagination.total} documento{pagination.total !== 1 ? 's' : ''}</span>
-          {pagination.totalPages > 1 && (
-            <div className="flex gap-2">
-              <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">←</button>
-              <span className="px-3 py-1.5 font-bold text-slate-600">{pagination.page} / {pagination.totalPages}</span>
-              <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">→</button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Export Modal */}
       {exportModalOpen && (
@@ -387,26 +430,29 @@ export default function Documentos() {
               <button onClick={() => setExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={18} className="text-slate-500" /></button>
             </div>
             <div className="p-6 space-y-3">
-              <button
-                onClick={() => exportToPDF('page')}
-                disabled={exporting}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:bg-blue-50 hover:border-blue-200 transition-all disabled:opacity-50"
-              >
-                <p className="font-black text-sm text-slate-800">Página atual</p>
-                <p className="text-xs text-slate-400 mt-0.5">Exporta os {docs.length} documentos visíveis agora</p>
+              <button onClick={() => exportToPDF('page')} disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors"><FileDown size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Página Atual</p>
+                    <p className="text-xs text-slate-500">Exportar registros visíveis na tela</p>
+                  </div>
+                </div>
               </button>
-              <button
-                onClick={() => exportToPDF('all')}
-                disabled={exporting}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:bg-blue-50 hover:border-blue-200 transition-all disabled:opacity-50"
-              >
-                <p className="font-black text-sm text-slate-800">Todos os resultados</p>
-                <p className="text-xs text-slate-400 mt-0.5">Exporta todos os {pagination.total} documentos com os filtros atuais</p>
+              <button onClick={() => exportToPDF('all')} disabled={exporting}
+                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors"><Users size={20} /></div>
+                  <div>
+                    <p className="font-bold text-slate-900">Todos os Documentos</p>
+                    <p className="text-xs text-slate-500">Exportar todos os {pagination.total} documentos</p>
+                  </div>
+                </div>
               </button>
               {exporting && (
-                <div className="flex items-center justify-center gap-2 py-2 text-blue-600">
-                  <Loader2 size={16} className="animate-spin" />
-                  <span className="text-sm font-medium">Gerando PDF...</span>
+                <div className="flex items-center justify-center gap-2 py-2 text-blue-600 font-bold text-sm">
+                  <Loader2 size={16} className="animate-spin" /> Gerando PDF...
                 </div>
               )}
             </div>
@@ -414,7 +460,7 @@ export default function Documentos() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal Criar/Editar */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -423,7 +469,6 @@ export default function Documentos() {
               <button onClick={() => setModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={18} className="text-slate-500" /></button>
             </div>
             <div className="p-8 space-y-4 max-h-[70vh] overflow-y-auto">
-              {/* Tipo */}
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo *</label>
                 <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
@@ -431,21 +476,25 @@ export default function Documentos() {
                   {Object.entries(TIPO_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
-              {/* Título */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Título *</label>
-                <input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Assunto do documento"
-                  value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Categoria *</label>
+                <input
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: Saúde, Infraestrutura, Educação..."
+                  list="categorias-list"
+                  value={form.categoria}
+                  onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                />
+                <datalist id="categorias-list">
+                  {categorias.map(c => <option key={c} value={c} />)}
+                </datalist>
               </div>
-              {/* Descrição */}
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Descrição</label>
                 <textarea className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={3} placeholder="Detalhes adicionais (opcional)"
                   value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
               </div>
-              {/* Origem */}
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Origem *</label>
                 <div className="flex gap-4">
@@ -458,7 +507,6 @@ export default function Documentos() {
                   ))}
                 </div>
               </div>
-              {/* Munícipe (conditional) */}
               {form.origem === 'municipe' && (
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Munícipe *</label>
@@ -483,21 +531,18 @@ export default function Documentos() {
                   {form.municipeId && <p className="text-xs text-green-600 font-medium">✓ {form.municipeName} selecionado</p>}
                 </div>
               )}
-              {/* Nº Protocolo */}
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Protocolo</label>
                 <input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Ex: 001/2026 (opcional)"
                   value={form.numeroDocumento} onChange={e => setForm(f => ({ ...f, numeroDocumento: e.target.value }))} />
               </div>
-              {/* Link */}
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Link do Documento</label>
                 <input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://drive.google.com/... (opcional)"
                   value={form.documentUrl} onChange={e => setForm(f => ({ ...f, documentUrl: e.target.value }))} />
               </div>
-              {/* Status */}
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</label>
                 <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"

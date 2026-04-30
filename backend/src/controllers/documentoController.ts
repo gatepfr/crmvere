@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { documentos, municipes } from '../db/schema';
-import { eq, and, ilike, desc, count, or } from 'drizzle-orm';
+import { eq, and, ilike, desc, count, or, isNotNull } from 'drizzle-orm';
 
 export const listDocumentos = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
@@ -21,7 +21,7 @@ export const listDocumentos = async (req: Request, res: Response) => {
     if (origem) conditions.push(eq(documentos.origem, origem as any));
     if (search) {
       conditions.push(or(
-        ilike(documentos.titulo, `%${search}%`),
+        ilike(documentos.categoria, `%${search}%`),
         ilike(municipes.name, `%${search}%`)
       ) as any);
     }
@@ -51,18 +51,31 @@ export const listDocumentos = async (req: Request, res: Response) => {
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
+export const getCategorias = async (req: Request, res: Response) => {
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  try {
+    const results = await db
+      .selectDistinct({ categoria: documentos.categoria })
+      .from(documentos)
+      .where(and(eq(documentos.tenantId, tenantId), isNotNull(documentos.categoria)));
+    const categorias = results.map(r => r.categoria).filter(Boolean).sort();
+    res.json(categorias);
+  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+};
+
 export const createDocumento = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   const userId = req.user?.id;
   if (!tenantId || !userId) return res.status(403).json({ error: 'No tenant context' });
-  const { tipo, titulo, descricao, origem, municipeId, numeroDocumento, documentUrl, status } = req.body;
-  if (!tipo || !titulo || !origem) return res.status(400).json({ error: 'tipo, titulo e origem são obrigatórios' });
+  const { tipo, categoria, descricao, origem, municipeId, numeroDocumento, documentUrl, status } = req.body;
+  if (!tipo || !categoria || !origem) return res.status(400).json({ error: 'tipo, categoria e origem são obrigatórios' });
   try {
     const [newDoc] = await db.insert(documentos).values({
       tenantId,
       criadoPor: userId,
       tipo,
-      titulo,
+      categoria,
       descricao: descricao || null,
       origem,
       municipeId: municipeId || null,
@@ -78,11 +91,11 @@ export const updateDocumento = async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
-  const { tipo, titulo, descricao, origem, municipeId, numeroDocumento, documentUrl, status } = req.body;
+  const { tipo, categoria, descricao, origem, municipeId, numeroDocumento, documentUrl, status } = req.body;
   try {
     const updateData: any = { updatedAt: new Date() };
     if (tipo !== undefined) updateData.tipo = tipo;
-    if (titulo !== undefined) updateData.titulo = titulo;
+    if (categoria !== undefined) updateData.categoria = categoria;
     if (descricao !== undefined) updateData.descricao = descricao;
     if (origem !== undefined) updateData.origem = origem;
     if (municipeId !== undefined) updateData.municipeId = municipeId || null;
