@@ -342,3 +342,23 @@ export const optouts = pgTable("optouts", {
 }, (table) => ({
   tenantPhoneUnq: unique("optout_tenant_phone_unq").on(table.tenantId, table.phone),
 }));
+
+export const documentoTipoEnum = pgEnum("documento_tipo", ["oficio", "requerimento", "projeto_lei", "encaminhamento_formal", "outro"]);
+export const documentoOrigemEnum = pgEnum("documento_origem", ["gabinete", "municipe"]);
+export const documentoStatusEnum = pgEnum("documento_status", ["criado", "enviado", "concluido"]);
+
+export const documentos = pgTable("documentos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  municipeId: uuid("municipe_id").references(() => municipes.id, { onDelete: "set null" }),
+  tipo: documentoTipoEnum("tipo").notNull(),
+  titulo: varchar("titulo", { length: 500 }).notNull(),
+  descricao: varchar("descricao", { length: 5000 }),
+  origem: documentoOrigemEnum("origem").notNull(),
+  status: documentoStatusEnum("status").default("criado").notNull(),
+  numeroDocumento: varchar("numero_documento", { length: 50 }),
+  documentUrl: varchar("document_url", { length: 500 }),
+  criadoPor: uuid("criado_por").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
