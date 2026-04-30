@@ -81,8 +81,8 @@ export const listMunicipes = async (req: Request, res: Response) => {
       id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro,
       birthDate: municipes.birthDate, createdAt: municipes.createdAt, isLideranca: municipes.isLideranca,
       demandCount: sql<number>`count(distinct ${demandas.id})::int`,
-      documentCount: sql<number>`(select count(*)::int from documentos where documentos.municipe_id = ${municipes.id} and documentos.tenant_id = ${tenantId!})`,
-      indicacaoCount: sql<number>`(select count(*)::int from demandas d2 where d2.municipe_id = ${municipes.id} and d2.tenant_id = ${tenantId!} and d2.is_legislative = true)`,
+      documentCount: sql<number>`(select count(*)::int from documentos where documentos.municipe_id = "municipes"."id" and documentos.tenant_id = ${tenantId!})`,
+      indicacaoCount: sql<number>`(select count(*)::int from demandas d2 where d2.municipe_id = "municipes"."id" and d2.tenant_id = ${tenantId!} and d2.is_legislative = true)`,
     }).from(municipes).leftJoin(demandas, eq(municipes.id, demandas.municipeId)).where(and(...conds)).groupBy(municipes.id).orderBy(orderExpr).limit(limit).offset(offset);
 
     res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit === 10000 ? 1 : limit)) } });
