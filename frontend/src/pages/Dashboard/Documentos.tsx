@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown, ChevronLeft, ChevronRight, Users, MapPin } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -19,7 +19,7 @@ interface Documento {
     createdAt: string;
     updatedAt: string;
   };
-  municipe: { id: string; name: string; phone: string } | null;
+  municipe: { id: string; name: string; phone: string; bairro: string | null } | null;
 }
 
 interface Pagination { page: number; limit: number; total: number; totalPages: number; }
@@ -64,8 +64,6 @@ const emptyForm = {
   status: 'criado',
 };
 
-const firstName = (name: string) => name.split(' ')[0];
-const restName = (name: string) => name.split(' ').slice(1).join(' ');
 
 export default function Documentos() {
   const [docs, setDocs] = useState<Documento[]>([]);
@@ -351,10 +349,12 @@ export default function Documentos() {
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          {municipe ? firstName(municipe.name) : <span className="text-slate-300 font-normal">—</span>}
+                          {municipe ? municipe.name : <span className="text-slate-300 font-normal">—</span>}
                         </span>
-                        {municipe && restName(municipe.name) && (
-                          <span className="text-[10px] font-medium text-slate-400 mt-0.5 truncate max-w-[140px]">{restName(municipe.name)}</span>
+                        {municipe && (
+                          <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mt-1">
+                            <MapPin size={10} /> {municipe.bairro || 'Centro'}
+                          </span>
                         )}
                         <div className="mt-2">
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase ${TIPO_COLORS[d.tipo] || 'bg-slate-50 text-slate-500 border-slate-100'}`}>

@@ -35,7 +35,7 @@ export const listDocumentos = async (req: Request, res: Response) => {
     const results = await db
       .select({
         documento: documentos,
-        municipe: { id: municipes.id, name: municipes.name, phone: municipes.phone },
+        municipe: { id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro },
       })
       .from(documentos)
       .leftJoin(municipes, eq(documentos.municipeId, municipes.id))
