@@ -84,7 +84,10 @@ export const createDocumento = async (req: Request, res: Response) => {
       status: status || 'criado',
     }).returning();
     res.status(201).json(newDoc);
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+  } catch (error: any) {
+    console.error('[createDocumento] DB error:', error?.message || error);
+    res.status(500).json({ error: error?.message || 'Failed' });
+  }
 };
 
 export const updateDocumento = async (req: Request, res: Response) => {
@@ -108,7 +111,10 @@ export const updateDocumento = async (req: Request, res: Response) => {
       .returning();
     if (!updated) return res.status(404).json({ error: 'Documento não encontrado' });
     res.json(updated);
-  } catch (error) { res.status(500).json({ error: 'Failed' }); }
+  } catch (error: any) {
+    console.error('[updateDocumento] DB error:', error?.message || error);
+    res.status(500).json({ error: error?.message || 'Failed' });
+  }
 };
 
 export const deleteDocumento = async (req: Request, res: Response) => {
