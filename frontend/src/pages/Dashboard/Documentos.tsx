@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File } from 'lucide-react';
+import { Plus, Search, Loader2, Edit2, Trash2, X, ExternalLink, File, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface MunicipeResult { id: string; name: string; phone: string; bairro: string | null; }
 
@@ -77,6 +79,8 @@ export default function Documentos() {
   const [municipeSearch, setMunicipeSearch] = useState('');
   const [municipeResults, setMunicipeResults] = useState<MunicipeResult[]>([]);
   const [searchingMunicipe, setSearchingMunicipe] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const fetchDocs = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -180,6 +184,70 @@ export default function Documentos() {
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
+  const exportToPDF = async (mode: 'page' | 'all') => {
+    setExporting(true);
+    try {
+      let dataToExport = docs;
+      if (mode === 'all') {
+        const params = new URLSearchParams({
+          page: '1', limit: '1000',
+          search,
+          ...(filterTipo && { tipo: filterTipo }),
+          ...(filterStatus && { status: filterStatus }),
+          ...(filterOrigem && { origem: filterOrigem }),
+        });
+        const res = await api.get(`/documentos?${params}`);
+        dataToExport = res.data.data || [];
+      }
+
+      const doc = new jsPDF();
+
+      doc.setFillColor(30, 41, 59);
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DOCUMENTOS DO GABINETE', 14, 20);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('CRM DO VERÊ - GESTÃO LEGISLATIVA', 14, 28);
+      doc.text(`GERADO EM: ${new Date().toLocaleString('pt-BR')}`, 120, 28);
+
+      const tableData = dataToExport.map(({ documento: d, municipe }) => [
+        TIPO_LABELS[d.tipo] || d.tipo,
+        d.titulo,
+        municipe?.name || '—',
+        d.numeroDocumento || '—',
+        STATUS_LABELS[d.status] || d.status,
+        formatDate(d.createdAt),
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['TIPO', 'TÍTULO', 'MUNÍCIPE', 'Nº PROTOCOLO', 'STATUS', 'DATA']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold', halign: 'left' },
+        bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 1: { cellWidth: 70 } },
+        didDrawPage: () => {
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`Página ${doc.getNumberOfPages()}`, 14, doc.internal.pageSize.height - 10);
+          doc.text('CRM do Verê - Sistema de Gestão', 150, doc.internal.pageSize.height - 10);
+        },
+      });
+
+      doc.save(`documentos-${mode}-${new Date().getTime()}.pdf`);
+      setExportModalOpen(false);
+    } catch {
+      alert('Erro ao exportar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -188,9 +256,14 @@ export default function Documentos() {
           <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Documentos do Gabinete</h1>
           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Ofícios, Requerimentos e mais</p>
         </div>
-        <button onClick={openCreate} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
-          <Plus size={18} /> NOVO DOCUMENTO
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setExportModalOpen(true)} className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm" title="Exportar PDF">
+            <FileDown size={20} />
+          </button>
+          <button onClick={openCreate} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+            <Plus size={18} /> NOVO DOCUMENTO
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -289,6 +362,42 @@ export default function Documentos() {
             <span className="px-3 py-1.5 font-bold text-slate-600">{pagination.page} / {pagination.totalPages}</span>
             <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
               className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">→</button>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {exportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-lg font-black text-slate-900">Exportar Documentos</h3>
+              <button onClick={() => setExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={18} className="text-slate-500" /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              <button
+                onClick={() => exportToPDF('page')}
+                disabled={exporting}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:bg-blue-50 hover:border-blue-200 transition-all disabled:opacity-50"
+              >
+                <p className="font-black text-sm text-slate-800">Página atual</p>
+                <p className="text-xs text-slate-400 mt-0.5">Exporta os {docs.length} documentos visíveis agora</p>
+              </button>
+              <button
+                onClick={() => exportToPDF('all')}
+                disabled={exporting}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:bg-blue-50 hover:border-blue-200 transition-all disabled:opacity-50"
+              >
+                <p className="font-black text-sm text-slate-800">Todos os resultados</p>
+                <p className="text-xs text-slate-400 mt-0.5">Exporta todos os {pagination.total} documentos com os filtros atuais</p>
+              </button>
+              {exporting && (
+                <div className="flex items-center justify-center gap-2 py-2 text-blue-600">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm font-medium">Gerando PDF...</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
