@@ -29,7 +29,9 @@ import {
   Filter,
   Check,
   Calendar,
-  ShieldCheck
+  ShieldCheck,
+  FileText,
+  Gavel
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -44,6 +46,8 @@ interface Municipe {
   isLideranca: boolean;
   createdAt: string;
   demandCount: number;
+  documentCount: number;
+  indicacaoCount: number;
 }
 
 interface Pagination {
@@ -491,7 +495,12 @@ export default function Municipes() {
                         {m.isLideranca ? <Star size={20} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900 flex items-center gap-2">{m.name} {m.isLideranca && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">Liderança</span>}</div>
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                          {m.name}
+                          {m.isLideranca && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">Liderança</span>}
+                          {m.documentCount > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[8px] font-black rounded uppercase"><FileText size={8} />{m.documentCount} doc{m.documentCount !== 1 ? 's' : ''}</span>}
+                          {m.indicacaoCount > 0 && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[8px] font-black rounded uppercase"><Gavel size={8} />{m.indicacaoCount} ind.</span>}
+                        </div>
                         <p className="text-xs font-bold text-slate-500">{formatPhone(m.phone)}</p>
                       </div>
                     </div>
