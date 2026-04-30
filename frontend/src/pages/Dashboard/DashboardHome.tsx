@@ -320,15 +320,17 @@ export default function DashboardHome() {
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Por Categoria</p>
           </div>
-          <div className="flex-1 h-[250px] mt-4">
+          <div className="h-[260px] mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                 <Pie
                   data={categoryStats}
                   innerRadius={60}
-                  outerRadius={80}
+                  outerRadius={90}
                   paddingAngle={8}
                   dataKey="value"
+                  cx="50%"
+                  cy="50%"
                 >
                   {categoryStats.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color || '#64748b'} />
