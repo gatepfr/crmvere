@@ -108,7 +108,7 @@ export default function Documentos() {
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
   useEffect(() => {
-    api.get('/documentos/categorias').then(res => setCategorias(res.data || [])).catch(() => {});
+    api.get('/demands/categories').then(res => setCategorias((res.data || []).map((c: { name: string }) => c.name))).catch(() => {});
   }, []);
 
   const handleMunicipeSearch = async (term: string) => {
@@ -177,7 +177,7 @@ export default function Documentos() {
       }
       setModalOpen(false);
       fetchDocs();
-      api.get('/documentos/categorias').then(res => setCategorias(res.data || [])).catch(() => {});
+      api.get('/demands/categories').then(res => setCategorias((res.data || []).map((c: { name: string }) => c.name))).catch(() => {});
     } catch { alert('Erro ao salvar documento'); }
     finally { setSaving(false); }
   };
