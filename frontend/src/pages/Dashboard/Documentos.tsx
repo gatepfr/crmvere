@@ -85,6 +85,7 @@ export default function Documentos() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [novaCategoria, setNovaCategoria] = useState(false);
 
   const fetchDocs = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -134,14 +135,17 @@ export default function Documentos() {
     setForm(emptyForm);
     setMunicipeSearch('');
     setMunicipeResults([]);
+    setNovaCategoria(false);
     setModalOpen(true);
   };
 
   const openEdit = (d: Documento) => {
     setEditing(d);
+    const cat = d.documento.categoria || '';
+    setNovaCategoria(cat !== '' && !categorias.includes(cat));
     setForm({
       tipo: d.documento.tipo,
-      categoria: d.documento.categoria || '',
+      categoria: cat,
       descricao: d.documento.descricao || '',
       origem: d.documento.origem,
       municipeId: d.municipe?.id || '',
@@ -478,16 +482,43 @@ export default function Documentos() {
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Categoria *</label>
-                <input
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ex: Saúde, Infraestrutura, Educação..."
-                  list="categorias-list"
-                  value={form.categoria}
-                  onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
-                />
-                <datalist id="categorias-list">
-                  {categorias.map(c => <option key={c} value={c} />)}
-                </datalist>
+                {!novaCategoria ? (
+                  <select
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.categoria}
+                    onChange={e => {
+                      if (e.target.value === '__nova__') {
+                        setNovaCategoria(true);
+                        setForm(f => ({ ...f, categoria: '' }));
+                      } else {
+                        setForm(f => ({ ...f, categoria: e.target.value }));
+                      }
+                    }}
+                  >
+                    <option value="">Selecione uma categoria...</option>
+                    {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value="__nova__">+ Nova categoria...</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      autoFocus
+                      className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Digite a nova categoria..."
+                      value={form.categoria}
+                      onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                    />
+                    {categorias.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setNovaCategoria(false); setForm(f => ({ ...f, categoria: '' })); }}
+                        className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 rounded-xl transition-colors"
+                      >
+                        Voltar
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Descrição</label>
