@@ -89,7 +89,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
       .where(and(...conds)).groupBy(municipes.id).orderBy(orderExpr).limit(limit).offset(offset);
 
     res.json({ data: results, pagination: { page, limit, total: Number(totalCount?.count || 0), totalPages: Math.ceil(Number(totalCount?.count || 0) / (limit === 10000 ? 1 : limit)) } });
-  } catch (error: any) { res.status(500).json({ error: 'Failed' }); }
+  } catch (error: any) { console.error('[listMunicipes]', error?.message, error?.code); res.status(500).json({ error: error?.message || 'Failed' }); }
 };
 
 export const updateMunicipe = async (req: Request, res: Response) => {
