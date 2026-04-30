@@ -8,7 +8,7 @@
     "dev": "nodemon src/app.ts",
     "build": "swc src -d dist --strip-leading-paths",
     "db:migrate": "drizzle-kit push",
-    "db:migrate:force": "drizzle-kit push",
+    "db:migrate:force": "drizzle-kit push --force",
     "db:cleanup:municipes": "ts-node -O '{\"module\":\"commonjs\"}' src/scripts/cleanupMunicipes.ts",
     "seed": "node dist/scripts/seed.js",
     "start": "node dist/app.js"
