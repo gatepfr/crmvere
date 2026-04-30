@@ -60,8 +60,6 @@ const menuGroups: MenuGroup[] = [
       { name: 'Indicações', icon: ClipboardList, path: '/dashboard/legislativo' },
       { name: 'Documentos', icon: File, path: '/dashboard/documentos' },
       { name: 'Munícipes', icon: Users, path: '/dashboard/municipes' },
-      { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
-      { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
     ],
   },
   {
@@ -72,6 +70,8 @@ const menuGroups: MenuGroup[] = [
       { name: 'Inteligência Eleitoral', icon: Zap, path: '/dashboard/eleicoes' },
       { name: 'Estratégia Territorial', icon: Target, path: '/dashboard/strategic-intelligence' },
       { name: 'Prestação de Contas', icon: FileText, path: '/dashboard/reports' },
+      { name: 'Mapa de Demandas', icon: Map, path: '/dashboard/map' },
+      { name: 'Funil de Leads', icon: KanbanIcon, path: '/dashboard/kanban' },
     ],
   },
   {
