@@ -355,7 +355,19 @@ export default function Documentos() {
       {/* Paginação */}
       {!loading && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400 font-medium">{pagination.total} documento{pagination.total !== 1 ? 's' : ''}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400 font-medium">{pagination.total} documento{pagination.total !== 1 ? 's' : ''}</span>
+            <select
+              value={pagination.limit}
+              onChange={e => setPagination(p => ({ ...p, page: 1, limit: Number(e.target.value) }))}
+              className="px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 outline-none hover:bg-slate-50 transition-colors"
+            >
+              <option value={25}>25 / pág</option>
+              <option value={50}>50 / pág</option>
+              <option value={100}>100 / pág</option>
+              <option value={9999}>Todos</option>
+            </select>
+          </div>
           {pagination.totalPages > 1 && (
             <div className="flex gap-2">
               <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
