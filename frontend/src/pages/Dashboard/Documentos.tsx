@@ -353,16 +353,18 @@ export default function Documentos() {
       </div>
 
       {/* Paginação */}
-      {pagination.totalPages > 1 && (
+      {!loading && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-400 font-medium">{pagination.total} documentos</span>
-          <div className="flex gap-2">
-            <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">←</button>
-            <span className="px-3 py-1.5 font-bold text-slate-600">{pagination.page} / {pagination.totalPages}</span>
-            <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">→</button>
-          </div>
+          <span className="text-slate-400 font-medium">{pagination.total} documento{pagination.total !== 1 ? 's' : ''}</span>
+          {pagination.totalPages > 1 && (
+            <div className="flex gap-2">
+              <button disabled={pagination.page === 1} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">←</button>
+              <span className="px-3 py-1.5 font-bold text-slate-600">{pagination.page} / {pagination.totalPages}</span>
+              <button disabled={pagination.page === pagination.totalPages} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-bold disabled:opacity-40 hover:bg-slate-50 transition-colors">→</button>
+            </div>
+          )}
         </div>
       )}
 
