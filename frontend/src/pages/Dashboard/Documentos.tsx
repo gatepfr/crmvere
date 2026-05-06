@@ -385,7 +385,7 @@ export default function Documentos() {
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          {municipe ? municipe.name : <span className="text-slate-300 font-normal">—</span>}
+                          {municipe ? municipe.name : d.origem === 'gabinete' ? <span className="text-slate-500">Gabinete</span> : <span className="text-slate-300 font-normal">—</span>}
                         </span>
                         {municipe && (
                           <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mt-1">
