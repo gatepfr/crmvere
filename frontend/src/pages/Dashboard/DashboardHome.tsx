@@ -3,37 +3,35 @@ import api from '../../api/client';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
-  MessageSquare,
   Clock,
-  CheckCircle2,
-  BarChart3,
-  PieChart as PieChartIcon,
-  TrendingUp,
   AlertCircle,
   CalendarDays,
   MapPin,
   Loader2,
-  ChevronRight,
-  ArrowUpRight,
+  TrendingUp,
+  PieChart as PieChartIcon,
   Zap,
   Smartphone,
   WifiOff,
-  X
+  X,
+  ArrowUpRight,
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
   LineChart,
-  Line
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
 } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface DashboardData {
   summary: {
@@ -49,7 +47,6 @@ interface DashboardData {
   categoryStats: { name: string; value: number; color: string }[];
   dailyStats: { date: string; count: number }[];
 }
-
 
 type WaStatus = 'connected' | 'connecting' | 'disconnected' | 'needs_reconnect' | 'not_created' | 'unknown' | null;
 
@@ -67,23 +64,17 @@ export default function DashboardHome() {
       setWaStatus(res.data.status as WaStatus);
       if (res.data.status !== 'needs_reconnect') setAlertDismissed(false);
     } catch {
-      // silencioso — não crítico
+      // silencioso
     }
   }, []);
 
   useEffect(() => {
     api.get('/metrics')
       .then(res => {
-        if (res.data && res.data.summary) {
-          setData(res.data);
-        } else {
-          setError(true);
-        }
+        if (res.data && res.data.summary) setData(res.data);
+        else setError(true);
       })
-      .catch(err => {
-        console.error(err);
-        setError(true);
-      })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -94,262 +85,317 @@ export default function DashboardHome() {
   }, [fetchWaStatus]);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-      <Loader2 className="animate-spin text-blue-600" size={40} />
-      <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Carregando inteligência...</p>
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+      <Loader2 className="animate-spin text-primary" size={36} />
+      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest">
+        Carregando inteligência...
+      </p>
     </div>
   );
 
   if (error || !data) return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-10">
-      <AlertCircle size={48} className="text-red-500 mb-4" />
-      <h3 className="text-lg font-black text-slate-900">Falha ao carregar indicadores</h3>
-      <p className="text-slate-500 mt-2">Verifique sua conexão ou tente novamente mais tarde.</p>
-      <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">Recarregar</button>
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-10 gap-4">
+      <AlertCircle size={44} className="text-destructive" />
+      <div>
+        <h3 className="text-lg font-bold text-foreground">Falha ao carregar indicadores</h3>
+        <p className="text-muted-foreground text-sm mt-1">Verifique sua conexão ou tente novamente.</p>
+      </div>
+      <Button onClick={() => window.location.reload()}>Recarregar</Button>
     </div>
   );
 
-  const summary = data.summary || {
-    total: 0, pending: 0, needsAttention: 0, municipesTotal: 0, birthdaysToday: 0, uniqueBairros: 0,
-    dailyTokenLimit: 0, tokenUsageTotal: 0
+  const summary = data.summary ?? {
+    total: 0, pending: 0, needsAttention: 0, municipesTotal: 0,
+    birthdaysToday: 0, uniqueBairros: 0, dailyTokenLimit: 0, tokenUsageTotal: 0,
   };
+  const dailyStats = data.dailyStats ?? [];
+  const categoryStats = data.categoryStats ?? [];
 
-  const dailyStats = data.dailyStats || [];
-  const categoryStats = data.categoryStats || [];
+  const tokenPct = summary.dailyTokenLimit > 0
+    ? Math.round((summary.tokenUsageTotal / summary.dailyTokenLimit) * 100)
+    : 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Banner: WhatsApp precisa reconectar */}
+    <div className="space-y-6 animate-in fade-in duration-500">
+
+      {/* Banner: reconexão WhatsApp */}
       {waStatus === 'needs_reconnect' && !alertDismissed && (
-        <div className="flex items-center gap-4 bg-red-50 border border-red-200 rounded-2xl px-5 py-4">
-          <WifiOff size={20} className="text-red-500 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-black text-red-700">WhatsApp desconectado — reconexão necessária</p>
-            <p className="text-xs text-red-500 mt-0.5">A sessão expirou. O atendimento automático está pausado até reconectar.</p>
+        <div className="flex items-center gap-3 bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3">
+          <WifiOff size={18} className="text-destructive shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-destructive">WhatsApp desconectado</p>
+            <p className="text-xs text-destructive/70 mt-0.5">
+              A sessão expirou. O atendimento automático está pausado.
+            </p>
           </div>
-          <button
+          <Button
+            size="sm"
+            variant="destructive"
             onClick={() => navigate('/dashboard/whatsapp')}
-            className="px-4 py-2 bg-red-600 text-white text-xs font-black rounded-xl hover:bg-red-700 transition-colors flex-shrink-0"
+            className="shrink-0"
           >
-            Reconectar agora
-          </button>
-          <button onClick={() => setAlertDismissed(true)} className="text-red-400 hover:text-red-600 flex-shrink-0">
-            <X size={16} />
+            Reconectar
+          </Button>
+          <button
+            onClick={() => setAlertDismissed(true)}
+            className="text-destructive/50 hover:text-destructive transition-colors shrink-0"
+          >
+            <X size={15} />
           </button>
         </div>
       )}
 
-      {/* Header com Saudação */}
+      {/* Header */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+            <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-widest">
               Visão Geral
-            </span>
+            </Badge>
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="text-slate-500 mt-1 font-medium italic">Seu gabinete digital em tempo real.</p>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">Seu gabinete digital em tempo real.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100 shadow-sm flex items-center gap-3">
-            <Zap size={14} className="text-amber-500 fill-amber-500" />
-            <div className="flex flex-col">
-              <span className="text-[8px] font-black text-amber-600 uppercase tracking-widest leading-none">Uso de Tokens (Hoje)</span>
-              <span className="text-xs font-black text-slate-700">
-                {(summary.tokenUsageTotal / 1000).toFixed(1)}k <span className="text-slate-400">/ {(summary.dailyTokenLimit / 1000).toFixed(0)}k</span>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Token usage */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card shadow-xs">
+            <Zap size={13} className="text-amber-500 fill-amber-500 shrink-0" />
+            <div className="flex flex-col leading-none">
+              <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Tokens hoje</span>
+              <span className="text-xs font-bold text-foreground mt-0.5">
+                {(summary.tokenUsageTotal / 1000).toFixed(1)}k
+                <span className="text-muted-foreground font-normal"> / {(summary.dailyTokenLimit / 1000).toFixed(0)}k</span>
+                <span className="text-muted-foreground font-normal ml-1">({tokenPct}%)</span>
               </span>
             </div>
           </div>
-          <div className="bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Sincronizado</span>
+
+          {/* Sync status */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Sincronizado</span>
           </div>
+
+          {/* WhatsApp status */}
           {waStatus && waStatus !== 'not_created' && (
             <button
               onClick={() => navigate('/dashboard/whatsapp')}
-              className={`px-4 py-2 rounded-2xl border shadow-sm flex items-center gap-2 transition-colors ${
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg border shadow-xs text-xs font-semibold uppercase tracking-widest transition-colors',
                 waStatus === 'connected'
-                  ? 'bg-green-50 border-green-100 hover:border-green-300'
+                  ? 'bg-green-50 border-green-200 text-green-700 hover:border-green-400'
                   : waStatus === 'connecting'
-                  ? 'bg-amber-50 border-amber-100 hover:border-amber-300'
-                  : 'bg-red-50 border-red-200 hover:border-red-400'
-              }`}
-            >
-              {waStatus === 'connected' ? (
-                <Smartphone size={13} className="text-green-500" />
-              ) : waStatus === 'connecting' ? (
-                <Loader2 size={13} className="text-amber-500 animate-spin" />
-              ) : (
-                <WifiOff size={13} className="text-red-500" />
+                  ? 'bg-amber-50 border-amber-200 text-amber-700 hover:border-amber-400'
+                  : 'bg-destructive/5 border-destructive/20 text-destructive hover:border-destructive/40'
               )}
-              <span className={`text-xs font-black uppercase tracking-widest ${
-                waStatus === 'connected' ? 'text-green-600'
-                : waStatus === 'connecting' ? 'text-amber-600'
-                : 'text-red-600'
-              }`}>
-                {waStatus === 'connected' ? 'WhatsApp: conectado'
-                  : waStatus === 'connecting' ? 'WhatsApp: conectando...'
-                  : 'WhatsApp: reconectar'}
-              </span>
+            >
+              {waStatus === 'connected'
+                ? <Smartphone size={13} />
+                : waStatus === 'connecting'
+                ? <Loader2 size={13} className="animate-spin" />
+                : <WifiOff size={13} />}
+              {waStatus === 'connected' ? 'Conectado'
+                : waStatus === 'connecting' ? 'Conectando...'
+                : 'Reconectar'}
             </button>
           )}
         </div>
       </header>
 
-      {/* Grid de Cards Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card: Munícipes Totais */}
-
-        <div 
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Munícipes"
+          value={summary.municipesTotal}
+          icon={<Users size={20} />}
+          color="blue"
           onClick={() => navigate('/dashboard/municipes')}
-          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all group cursor-pointer relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Users size={80} />
-          </div>
-          <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
-            <Users size={24} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total de Munícipes</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">{summary.municipesTotal || 0}</h3>
-          </div>
-        </div>
-
-        {/* Card: Aniversariantes */}
-        <div 
+        />
+        <StatCard
+          label="Aniversários hoje"
+          value={summary.birthdaysToday}
+          icon={<CalendarDays size={20} />}
+          color={summary.birthdaysToday > 0 ? 'pink' : 'muted'}
+          pulse={summary.birthdaysToday > 0}
           onClick={() => navigate('/dashboard/municipes')}
-          className={`bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden ${summary.birthdaysToday > 0 ? 'border-pink-100 ring-4 ring-pink-50/50' : ''}`}
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-pink-600">
-            <CalendarDays size={80} />
-          </div>
-          <div className={`${summary.birthdaysToday > 0 ? 'bg-pink-100 text-pink-600 animate-bounce' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
-            <CalendarDays size={24} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aniversários</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className={`text-3xl font-black ${summary.birthdaysToday > 0 ? 'text-pink-600' : 'text-slate-900'}`}>{summary.birthdaysToday || 0}</h3>
-          </div>
-        </div>
-
-        {/* Card: Demandas Urgentes */}
-        <div 
+        />
+        <StatCard
+          label="Precisam de atenção"
+          value={summary.needsAttention}
+          icon={<AlertCircle size={20} />}
+          color={summary.needsAttention > 0 ? 'red' : 'muted'}
           onClick={() => navigate('/dashboard/demands')}
-          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-red-200 transition-all group cursor-pointer relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-red-600">
-            <AlertCircle size={80} />
-          </div>
-          <div className={`${summary.needsAttention > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-400'} w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}>
-            <AlertCircle size={24} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Atenção</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">{summary.needsAttention || 0}</h3>
-          </div>
-        </div>
-
-        {/* Card: Bairros */}
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-5 text-indigo-600">
-            <MapPin size={80} />
-          </div>
-          <div className="bg-indigo-50 w-12 h-12 rounded-2xl flex items-center justify-center text-indigo-600 mb-4">
-            <MapPin size={24} />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Bairros</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black text-slate-900">{summary.uniqueBairros || 0}</h3>
-          </div>
-        </div>
+        />
+        <StatCard
+          label="Bairros ativos"
+          value={summary.uniqueBairros}
+          icon={<MapPin size={20} />}
+          color="indigo"
+        />
       </div>
 
-      {/* Gráficos e Listas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Atividade Recente (Gráfico de Linha) */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <TrendingUp className="text-blue-600" size={20} />
-                Volume de Demandas
-              </h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Últimos 7 dias</p>
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Linha: volume de demandas */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={16} className="text-primary" />
+              <CardTitle className="text-base font-semibold">Volume de Demandas</CardTitle>
             </div>
-          </div>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dailyStats}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} 
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} 
-                />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '12px' }}
-                  itemStyle={{ fontWeight: 'black', fontSize: '12px' }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="#3b82f6" 
-                  strokeWidth={4} 
-                  dot={{ r: 6, fill: '#3b82f6', strokeWidth: 3, stroke: '#fff' }} 
-                  activeDot={{ r: 8, strokeWidth: 0 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Últimos 7 dias</p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dailyStats}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fontWeight: 600, fill: 'hsl(var(--muted-foreground))' }}
+                    dy={8}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fontWeight: 600, fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: '1px solid hsl(var(--border))',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Categorias (Gráfico de Pizza) */}
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
-          <div>
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <PieChartIcon className="text-blue-600" size={20} />
-              Segmentação
-            </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Por Categoria</p>
-          </div>
-          <div className="h-[260px] mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                <Pie
-                  data={categoryStats}
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={8}
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                >
-                  {categoryStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color || '#64748b'} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {categoryStats.map((item) => (
-              <div key={item.name} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color || '#64748b' }} />
-                <span className="text-[10px] font-black text-slate-500 uppercase truncate">{item.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Pizza: segmentação */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <PieChartIcon size={16} className="text-primary" />
+              <CardTitle className="text-base font-semibold">Segmentação</CardTitle>
+            </div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Por categoria</p>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col">
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryStats}
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={6}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                  >
+                    {categoryStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || '#64748b'} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: '10px',
+                      border: '1px solid hsl(var(--border))',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-3">
+              {categoryStats.map((item) => (
+                <div key={item.name} className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: item.color || '#64748b' }}
+                  />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide truncate">
+                    {item.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
+  );
+}
+
+/* ── StatCard component ── */
+
+type StatColor = 'blue' | 'pink' | 'red' | 'indigo' | 'muted';
+
+const colorMap: Record<StatColor, { icon: string; ghost: string; value: string }> = {
+  blue:  { icon: 'bg-primary/10 text-primary',       ghost: 'text-primary',     value: 'text-foreground' },
+  pink:  { icon: 'bg-pink-100 text-pink-600',         ghost: 'text-pink-400',    value: 'text-pink-600' },
+  red:   { icon: 'bg-destructive/10 text-destructive', ghost: 'text-destructive', value: 'text-foreground' },
+  indigo:{ icon: 'bg-indigo-50 text-indigo-600',      ghost: 'text-indigo-400',  value: 'text-foreground' },
+  muted: { icon: 'bg-muted text-muted-foreground',    ghost: 'text-muted',       value: 'text-foreground' },
+};
+
+function StatCard({
+  label,
+  value,
+  icon,
+  color,
+  pulse,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  color: StatColor;
+  pulse?: boolean;
+  onClick?: () => void;
+}) {
+  const c = colorMap[color];
+  return (
+    <Card
+      onClick={onClick}
+      className={cn(
+        'relative overflow-hidden transition-all duration-200',
+        onClick && 'cursor-pointer hover:shadow-md hover:-translate-y-0.5',
+        color === 'pink' && value > 0 && 'ring-2 ring-pink-100',
+      )}
+    >
+      {/* ghost icon watermark */}
+      <div className={cn('absolute top-2 right-2 opacity-[0.06]', c.ghost)}>
+        <div className="scale-[3] origin-top-right">{icon}</div>
+      </div>
+
+      <CardContent className="pt-5 pb-4">
+        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', c.icon, pulse && 'animate-bounce')}>
+          {icon}
+        </div>
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+          {label}
+        </p>
+        <p className={cn('text-3xl font-bold tabular-nums', c.value)}>
+          {value}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
