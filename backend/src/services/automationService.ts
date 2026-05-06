@@ -269,26 +269,24 @@ const processWeeklyReport = async () => {
         )
       );
 
-      // Bairro mais ativo na semana (via demandas, onde bairro é preenchido manualmente)
-      const bairroResult = await db.select({
-        bairro: municipes.bairro,
-        total: sql<number>`count(*)::int`
-      })
-      .from(demandas)
-      .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
-      .where(
-        and(
-          eq(demandas.tenantId, tenant.id),
-          sql`${demandas.createdAt} >= ${weekStart}`,
-          sql`${municipes.bairro} is not null`,
-          sql`${municipes.bairro} != ''`
-        )
-      )
-      .groupBy(municipes.bairro)
-      .orderBy(sql`count(*) desc`)
-      .limit(1);
+      // Bairro mais ativo na semana (demandas + documentos com municipe)
+      const bairroResult = await db.execute(sql`
+        SELECT m.bairro, count(*)::int AS total
+        FROM (
+          SELECT municipe_id FROM demandas
+          WHERE tenant_id = ${tenant.id} AND created_at >= ${weekStart}
+          UNION ALL
+          SELECT municipe_id FROM documentos
+          WHERE tenant_id = ${tenant.id} AND created_at >= ${weekStart} AND municipe_id IS NOT NULL
+        ) atividade
+        INNER JOIN municipes m ON m.id = atividade.municipe_id
+        WHERE m.bairro IS NOT NULL AND m.bairro != ''
+        GROUP BY m.bairro
+        ORDER BY count(*) DESC
+        LIMIT 1
+      `);
 
-      const bairroAtivo = bairroResult[0]?.bairro || 'Não identificado';
+      const bairroAtivo = (bairroResult.rows[0] as any)?.bairro || 'Não identificado';
 
       const weekStartStr = weekStart.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
       const weekEndStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
