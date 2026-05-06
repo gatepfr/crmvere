@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { db } from '../db';
-import { tenants, municipes, atendimentos, demandas, users, demandActivityLog } from '../db/schema';
+import { tenants, municipes, atendimentos, demandas, documentos, users, demandActivityLog } from '../db/schema';
 import { eq, sql, and, lt, isNotNull, ne } from 'drizzle-orm';
 import { EvolutionService } from './evolutionService';
 import { processQueue } from './broadcastService';
@@ -259,18 +259,29 @@ const processWeeklyReport = async () => {
         )
       );
 
-      // Bairro mais ativo na semana
+      // Documentos criados na semana
+      const [documentosCount] = await db.select({
+        total: sql<number>`count(*)::int`
+      }).from(documentos).where(
+        and(
+          eq(documentos.tenantId, tenant.id),
+          sql`${documentos.createdAt} >= ${weekStart}`
+        )
+      );
+
+      // Bairro mais ativo na semana (via demandas, onde bairro é preenchido manualmente)
       const bairroResult = await db.select({
         bairro: municipes.bairro,
         total: sql<number>`count(*)::int`
       })
-      .from(atendimentos)
-      .innerJoin(municipes, eq(atendimentos.municipeId, municipes.id))
+      .from(demandas)
+      .innerJoin(municipes, eq(demandas.municipeId, municipes.id))
       .where(
         and(
-          eq(atendimentos.tenantId, tenant.id),
-          sql`${atendimentos.createdAt} >= ${weekStart}`,
-          sql`${municipes.bairro} is not null`
+          eq(demandas.tenantId, tenant.id),
+          sql`${demandas.createdAt} >= ${weekStart}`,
+          sql`${municipes.bairro} is not null`,
+          sql`${municipes.bairro} != ''`
         )
       )
       .groupBy(municipes.bairro)
@@ -288,6 +299,7 @@ const processWeeklyReport = async () => {
         ``,
         `🗣️ Atendimentos na semana: ${atendimentoCount?.total || 0}`,
         `📋 Indicações realizadas: ${indicacoesCount?.total || 0}`,
+        `📄 Documentos criados: ${documentosCount?.total || 0}`,
         `🎂 Aniversariantes nos próximos 7 dias: ${birthdayCount?.total || 0}`,
         `📍 Bairro mais ativo: ${bairroAtivo}`,
         ``,
