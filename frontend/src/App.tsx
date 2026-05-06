@@ -30,23 +30,26 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Sidebar from './components/Sidebar';
 import WhatsAppSupport from './components/WhatsAppSupport';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from './components/ui/sidebar';
 
 function DashboardLayout() {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <SidebarProvider>
       <Sidebar />
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      <SidebarInset className="bg-slate-50">
+        <header className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-200/70 px-4 md:border-0 md:h-10 md:px-6 md:pt-2">
+          <SidebarTrigger className="text-slate-500 hover:bg-slate-100 hover:text-slate-700 -ml-1" />
+          <img src="/logo_site.png" alt="CRM do Verê" className="h-7 w-auto md:hidden" />
+        </header>
         <BillingBanner />
-        <main className="flex-1 p-4 lg:p-10 bg-slate-50">
-          <div className="mt-14 lg:mt-0">
-            <SubscriptionGuard>
-              <Outlet />
-            </SubscriptionGuard>
-          </div>
-        </main>
-      </div>
+        <div className="flex-1 p-4 lg:p-10">
+          <SubscriptionGuard>
+            <Outlet />
+          </SubscriptionGuard>
+        </div>
+      </SidebarInset>
       <WhatsAppSupport />
-    </div>
+    </SidebarProvider>
   );
 }
 

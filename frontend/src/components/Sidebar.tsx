@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -9,8 +9,6 @@ import {
   Map,
   Building2,
   Users,
-  Menu,
-  X,
   Layout as KanbanIcon,
   Calendar,
   Sparkles,
@@ -26,6 +24,20 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import {
+  Sidebar as SidebarUI,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from './ui/sidebar';
+import { cn } from '@/lib/utils';
 
 interface MenuItem {
   name: string;
@@ -98,7 +110,7 @@ const menuGroups: MenuGroup[] = [
 
 export default function Sidebar() {
   const { logout, user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(menuGroups.map((g) => [g.label, g.defaultOpen]))
   );
@@ -107,100 +119,89 @@ export default function Sidebar() {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-
   return (
-    <>
-      {/* Hamburger Menu Mobile */}
-      <div className="lg:hidden fixed top-4 left-4 z-[1001]">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-lg bg-slate-900 text-white shadow-lg"
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {/* Overlay Mobile */}
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-slate-900/50 z-[1000] backdrop-blur-sm"
-          onClick={toggleSidebar}
+    <SidebarUI collapsible="icon">
+      <SidebarHeader className="p-4 pb-2">
+        <img
+          src="/logo_site.png"
+          alt="CRM do Verê"
+          className="h-10 w-auto object-contain group-data-[collapsible=icon]:hidden"
         />
-      )}
-
-      <div
-        className={`
-        fixed inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col z-[1000] transition-transform duration-300
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}
-      >
-        <div className="p-6">
-          <img src="/logo_site.png" alt="CRM do Verê" className="h-12 w-auto object-contain" />
+        <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center size-8">
+          <LayoutDashboard className="size-5 text-sidebar-foreground" />
         </div>
+      </SidebarHeader>
 
-        <nav className="flex-1 px-4 overflow-y-auto space-y-4">
-          {menuGroups.map((group) => (
-            <div key={group.label}>
-              {group.collapsible ? (
-                <button
-                  onClick={() => toggleGroup(group.label)}
-                  className="flex items-center justify-between w-full px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  {group.label}
-                  {openGroups[group.label] ? (
-                    <ChevronDown size={14} />
-                  ) : (
-                    <ChevronRight size={14} />
-                  )}
-                </button>
-              ) : (
-                <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  {group.label}
-                </p>
+      <SidebarContent>
+        {menuGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            {group.collapsible ? (
+              <SidebarGroupLabel
+                className="cursor-pointer select-none hover:text-sidebar-foreground/90"
+                onClick={() => toggleGroup(group.label)}
+              >
+                <span className="flex-1">{group.label}</span>
+                {openGroups[group.label] ? (
+                  <ChevronDown className="ml-auto size-3.5 shrink-0" />
+                ) : (
+                  <ChevronRight className="ml-auto size-3.5 shrink-0" />
+                )}
+              </SidebarGroupLabel>
+            ) : (
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            )}
+
+            <SidebarGroupContent
+              className={cn(
+                !openGroups[group.label] && 'hidden group-data-[collapsible=icon]:block'
               )}
+            >
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const isActive =
+                    item.path === '/dashboard'
+                      ? location.pathname === '/dashboard'
+                      : location.pathname.startsWith(item.path);
 
-              {openGroups[group.label] && (
-                <div className="mt-1 space-y-1">
-                  {group.items.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setIsOpen(false)}
-                      end={item.path === '/dashboard'}
-                      className={({ isActive }) =>
-                        `flex items-center px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-                          isActive
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                        }`
-                      }
-                    >
-                      <item.icon className="mr-3 h-5 w-5" />
-                      {item.name}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      {/* @ts-ignore — NavLink renders <a>, SidebarMenuButton wraps via Slot */}
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
+                        <NavLink to={item.path} end={item.path === '/dashboard'}>
+                          <item.icon />
+                          <span>{item.name}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
 
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center mb-4 px-2">
-            <div className="ml-3">
-              <p className="text-xs text-slate-400 truncate w-32">{user?.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={logout}
-            className="flex items-center w-full px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all duration-200"
-          >
-            <LogOut className="mr-3 h-5 w-5" />
-            Sair
-          </button>
-        </div>
-      </div>
-    </>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="sm"
+              className="opacity-60 cursor-default hover:bg-transparent hover:opacity-60 group-data-[collapsible=icon]:hidden"
+            >
+              <span className="text-xs truncate">{user?.email}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            {/* @ts-ignore */}
+            <SidebarMenuButton tooltip="Sair" onClick={logout}>
+              <LogOut />
+              <span>Sair</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </SidebarUI>
   );
 }
