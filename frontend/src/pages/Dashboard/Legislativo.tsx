@@ -1,17 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
-import { formatPhone } from '../../utils/formatPhone';
 import NewDemandModal from '../../components/NewDemandModal';
-import DemandModal from '../../components/DemandModal';
 import LegislativoEditModal from '../../components/LegislativoEditModal';
-import { 
-  ClipboardList, 
-  Search, 
-  MessageSquare, 
-  CheckCircle2, 
-  Circle, 
-  Loader2, 
-  MapPin, 
+import {
+  ClipboardList,
+  Search,
+  Loader2,
+  MapPin,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -27,6 +23,11 @@ import {
   Users,
   X
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -156,7 +157,7 @@ export default function Legislativo() {
       });
       loadDemands();
     } catch (err) {
-      alert('Erro ao atualizar status legislativo');
+      toast.error('Erro ao atualizar status legislativo');
     }
   };
 
@@ -167,7 +168,7 @@ export default function Legislativo() {
       await api.patch(`/demands/${d.id}/status`, { documentUrl: url });
       loadDemands();
     } catch (err) {
-      alert('Erro ao atualizar link');
+      toast.error('Erro ao atualizar link');
     }
   };
 
@@ -176,16 +177,16 @@ export default function Legislativo() {
     try {
       await api.delete(`/demands/${id}`);
       setDemands(prev => prev.filter(d => d.id !== id));
-      alert('Excluído com sucesso!');
+      toast.success('Excluído com sucesso!');
     } catch (err) {
-      alert('Erro ao excluir.');
+      toast.error('Erro ao excluir.');
     }
   };
 
 
   const sendToWhatsApp = async (d: Demand) => {
     if (!d.documentUrl) {
-      alert('Adicione o link da indicação primeiro!');
+      toast.warning('Adicione o link da indicação primeiro!');
       return;
     }
     const defaultMsg = `Olá ${d.municipes.name}! Gostaria de informar que sua solicitação sobre *${d.categoria.toUpperCase()}* virou a Indicação oficial nº *${d.numeroIndicacao}*. Você pode acompanhar por aqui: ${d.documentUrl}`;
@@ -201,9 +202,9 @@ export default function Legislativo() {
         phone: d.municipes.phone,
         message: msg
       });
-      alert('Link enviado com sucesso!');
+      toast.success('Link enviado com sucesso!');
     } catch (err) {
-      alert('Erro ao enviar WhatsApp.');
+      toast.error('Erro ao enviar WhatsApp.');
     }
   };
 
@@ -326,7 +327,7 @@ export default function Legislativo() {
       doc.save(`indicacoes-${mode}-${new Date().getTime()}.pdf`);
       setIsExportModalOpen(false);
     } catch (err) {
-      alert('Erro ao exportar PDF');
+      toast.error('Erro ao exportar PDF');
     } finally {
       setExporting(false);
     }
@@ -336,241 +337,219 @@ export default function Legislativo() {
     <div className="space-y-6 animate-in fade-in duration-700 pb-10">
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <ClipboardList className="text-blue-600" size={32} />
+          <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+            <ClipboardList className="text-primary" size={32} />
             Indicações Legislativas
           </h1>
           <div className="flex items-center gap-4 mt-1">
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Transformando demandas em proposituras</p>
-            <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black border border-blue-100 uppercase">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Transformando demandas em proposituras</p>
+            <Badge variant="outline" className="text-[10px] font-semibold uppercase rounded-full">
               {pagination.total} TOTAL
-            </span>
+            </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setIsExportModalOpen(true)}
-            className="p-2.5 bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
-            title="Exportar PDF"
-          >
-            <FileDown size={24} />
-          </button>
-          <button 
-            onClick={() => setIsNewModalOpen(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
-          >
-            <Plus size={20} />
-            NOVA INDICAÇÃO
-          </button>
+          <Button variant="outline" size="icon" onClick={() => setIsExportModalOpen(true)} title="Exportar PDF">
+            <FileDown size={20} />
+          </Button>
+          <Button onClick={() => setIsNewModalOpen(true)} className="flex items-center gap-2 font-semibold">
+            <Plus size={18} /> Nova Indicação
+          </Button>
         </div>
       </header>
 
-      <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input
-            type="text"
-            placeholder="Buscar por nome, bairro ou assunto..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-transparent rounded-xl outline-none focus:bg-white focus:border-blue-200 transition-all font-bold text-sm"
-            value={searchTerm}
-            onChange={e => { setSearchTerm(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
-          />
-        </div>
-        <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-100">
-          {(['all', 'mine', 'unassigned', 'overdue'] as FilterMode[]).map(mode => (
-            <button
-              key={mode}
-              onClick={() => { setFilterMode(mode); setPagination(p => ({ ...p, page: 1 })); }}
-              className={`px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${
-                filterMode === mode ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              } ${mode === 'overdue' && filterMode === mode ? 'text-red-600' : ''}`}
-            >
-              {mode === 'all' ? 'Todas' : mode === 'mine' ? 'Minhas' : mode === 'unassigned' ? 'Sem resp.' : 'Vencidas'}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => setOnlyPending(!onlyPending)}
-          className={`px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all border flex items-center gap-2 ${
-            onlyPending ? 'bg-amber-500 border-amber-400 text-white shadow-lg' : 'bg-slate-50 border-transparent text-slate-500'
-          }`}
-        >
-          <AlertCircle size={14} />
-          Pendentes
-        </button>
-        <select
-          className="px-3 py-2.5 bg-slate-50 border border-transparent text-slate-600 rounded-xl outline-none font-bold text-xs"
-          value={pagination.limit === 10000 ? 'all' : pagination.limit}
-          onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
-        >
-          <option value="25">25 / pág</option>
-          <option value="50">50 / pág</option>
-          <option value="all">Ver Todos</option>
-        </select>
-      </div>
+      <Card>
+        <CardContent className="p-3 flex flex-col md:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full group">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={15} />
+            <input
+              type="text"
+              placeholder="Buscar por nome, bairro ou assunto..."
+              className="w-full pl-10 pr-4 py-2.5 bg-muted border border-transparent rounded-lg outline-none focus:bg-background focus:border-border transition-all text-sm font-medium text-foreground placeholder:text-muted-foreground"
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 border border-border/50">
+            {(['all', 'mine', 'unassigned', 'overdue'] as FilterMode[]).map(mode => (
+              <button
+                key={mode}
+                onClick={() => { setFilterMode(mode); setPagination(p => ({ ...p, page: 1 })); }}
+                className={cn(
+                  'px-3 py-1.5 rounded-md font-semibold text-[10px] uppercase tracking-widest transition-all',
+                  filterMode === mode ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  mode === 'overdue' && filterMode === mode && 'text-destructive'
+                )}
+              >
+                {mode === 'all' ? 'Todas' : mode === 'mine' ? 'Minhas' : mode === 'unassigned' ? 'Sem resp.' : 'Vencidas'}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setOnlyPending(!onlyPending)}
+            className={cn(
+              'px-4 py-2.5 rounded-lg font-semibold text-[10px] uppercase tracking-widest transition-all border flex items-center gap-2',
+              onlyPending ? 'bg-amber-500 border-amber-400 text-white shadow-sm' : 'bg-muted border-transparent text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            <AlertCircle size={14} /> Pendentes
+          </button>
+          <select
+            className="px-3 py-2.5 bg-muted border border-transparent text-muted-foreground rounded-lg outline-none text-xs font-medium focus:border-border transition-all"
+            value={pagination.limit === 10000 ? 'all' : pagination.limit}
+            onChange={e => setPagination(prev => ({ ...prev, limit: e.target.value === 'all' ? 10000 : parseInt(e.target.value), page: 1 }))}
+          >
+            <option value="25">25 / pág</option>
+            <option value="50">50 / pág</option>
+            <option value="all">Ver Todos</option>
+          </select>
+        </CardContent>
+      </Card>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative min-h-[300px]">
-        {loading && <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={32} /></div>}
+      <Card className="overflow-hidden relative">
+        {loading && <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={28} /></div>}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-6 py-4 w-1/5 cursor-pointer group" onClick={() => toggleSort('name')}>
-                  <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
-                    Munícipe <SortIcon field="name" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 w-2/5 cursor-pointer group" onClick={() => toggleSort('subject')}>
-                  <div className="flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
-                    Assunto Detalhado <SortIcon field="subject" />
-                  </div>
-                </th>
-                <th className="px-6 py-4">Responsável</th>
-                <th className="px-6 py-4 text-center cursor-pointer group" onClick={() => toggleSort('number')}>
-                  <div className="flex items-center justify-center gap-1.5 group-hover:text-blue-600 transition-colors">
-                    Nº Indicação <SortIcon field="number" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-center w-32">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {sortedDemands.map(d => {
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="pl-5 cursor-pointer group" onClick={() => toggleSort('name')}>
+                  <div className="flex items-center gap-1.5 group-hover:text-primary transition-colors">Munícipe <SortIcon field="name" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer group" onClick={() => toggleSort('subject')}>
+                  <div className="flex items-center gap-1.5 group-hover:text-primary transition-colors">Assunto Detalhado <SortIcon field="subject" /></div>
+                </TableHead>
+                <TableHead>Responsável</TableHead>
+                <TableHead className="text-center cursor-pointer group" onClick={() => toggleSort('number')}>
+                  <div className="flex items-center justify-center gap-1.5 group-hover:text-primary transition-colors">Nº Indicação <SortIcon field="number" /></div>
+                </TableHead>
+                <TableHead className="text-center w-32">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedDemands.length === 0 && !loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-20 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">
+                    Nenhuma indicação encontrada
+                  </TableCell>
+                </TableRow>
+              ) : sortedDemands.map(d => {
                 const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'concluida';
                 const assignedEmail = (d as any).assignedToEmail as string | null;
                 return (
-                <tr key={d.id} className={`group hover:bg-slate-50/30 transition-all align-top ${isOverdue ? 'bg-red-50/20' : ''}`}>
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{d.municipes.name}</span>
-                        {isOverdue && <span className="bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Vencida</span>}
-                      </div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mt-1">
-                        <MapPin size={10} /> {d.municipes.bairro || 'Centro'}
-                      </span>
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase border border-blue-100">
-                          {d.categoria}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap font-medium">
-                      {d.descricao}
-                    </div>
-                    {d.documentUrl && (
-                      <a
-                        href={d.documentUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 mt-3 text-blue-600 font-bold text-[10px] uppercase hover:underline"
-                      >
-                        <FileText size={12} /> Ver documento oficial
-                      </a>
-                    )}
-                    {d.dueDate && (
-                      <div className={`mt-2 text-[10px] font-black uppercase ${isOverdue ? 'text-red-500' : 'text-slate-400'}`}>
-                        Prazo: {new Date(d.dueDate).toLocaleDateString('pt-BR')}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-5">
-                    {assignedEmail ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs">
-                          {assignedEmail[0].toUpperCase()}
+                  <TableRow key={d.id} className={cn('align-top', isOverdue && 'bg-destructive/5')}>
+                    <TableCell className="pl-5">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">{d.municipes.name}</span>
+                          {isOverdue && <Badge className="bg-destructive text-destructive-foreground text-[8px] px-1.5 py-0">Vencida</Badge>}
                         </div>
-                        <span className="text-xs font-bold text-slate-600 truncate max-w-[100px]">{assignedEmail.split('@')[0]}</span>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1 mt-1">
+                          <MapPin size={10} /> {d.municipes.bairro || 'Centro'}
+                        </span>
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-[9px] font-semibold uppercase bg-primary/10 text-primary border-primary/20">
+                            {d.categoria}
+                          </Badge>
+                        </div>
                       </div>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 font-black uppercase">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-5 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <button 
-                        onClick={() => toggleLegislativo(d.id, d.isLegislativo)}
-                        className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-black uppercase border transition-all ${
-                          d.isLegislativo 
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
-                            : 'bg-white border-slate-200 text-slate-400 hover:border-blue-400 hover:text-blue-500'
-                        }`}
-                      >
-                        {d.isLegislativo ? `Indicação ${d.numeroIndicacao || 'S/N'}` : 'Não protocolada'}
-                      </button>
-                      
-                      <div className="flex items-center gap-3">
-                        <button 
-                          onClick={() => updateDocUrl(d)}
-                          className={`flex items-center gap-1.5 font-bold text-[10px] uppercase transition-colors ${
-                            d.documentUrl ? 'text-emerald-600 hover:text-emerald-700' : 'text-slate-400 hover:text-blue-600'
-                          }`}
-                          title="Anexar Link PDF"
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium">
+                        {d.descricao}
+                      </div>
+                      {d.documentUrl && (
+                        <a href={d.documentUrl} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 mt-3 text-primary font-semibold text-[10px] uppercase hover:underline">
+                          <FileText size={12} /> Ver documento oficial
+                        </a>
+                      )}
+                      {d.dueDate && (
+                        <div className={cn('mt-2 text-[10px] font-semibold uppercase', isOverdue ? 'text-destructive' : 'text-muted-foreground')}>
+                          Prazo: {new Date(d.dueDate).toLocaleDateString('pt-BR')}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {assignedEmail ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
+                            {assignedEmail[0].toUpperCase()}
+                          </div>
+                          <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{assignedEmail.split('@')[0]}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/40 font-semibold uppercase">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          onClick={() => toggleLegislativo(d.id, d.isLegislativo)}
+                          className={cn(
+                            'w-full py-1.5 px-3 rounded-lg text-[10px] font-semibold uppercase border transition-all',
+                            d.isLegislativo
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                              : 'bg-muted border-border text-muted-foreground hover:border-primary hover:text-primary'
+                          )}
                         >
-                          <FileText size={12} /> {d.documentUrl ? 'Editar Link' : 'Link PDF'}
+                          {d.isLegislativo ? `Indicação ${d.numeroIndicacao || 'S/N'}` : 'Não protocolada'}
                         </button>
-
-                        {d.isLegislativo && (
-                          <button 
-                            onClick={() => sendToWhatsApp(d)}
-                            className="flex items-center gap-1.5 text-blue-500 hover:text-blue-700 font-bold text-[10px] uppercase transition-colors"
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => updateDocUrl(d)}
+                            className={cn(
+                              'flex items-center gap-1.5 font-semibold text-[10px] uppercase transition-colors',
+                              d.documentUrl ? 'text-emerald-600 hover:text-emerald-700' : 'text-muted-foreground hover:text-primary'
+                            )}
+                            title="Anexar Link PDF"
                           >
-                            <Send size={12} /> Avisar
+                            <FileText size={12} /> {d.documentUrl ? 'Editar Link' : 'Link PDF'}
                           </button>
-                        )}
+                          {d.isLegislativo && (
+                            <button
+                              onClick={() => sendToWhatsApp(d)}
+                              className="flex items-center gap-1.5 text-primary hover:text-primary/70 font-semibold text-[10px] uppercase transition-colors"
+                            >
+                              <Send size={12} /> Avisar
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="flex justify-end items-center gap-1">
-                      <button
-                        onClick={() => setSelectedDemand({ demandas: d, municipes: d.municipes })}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                        title="Editar Detalhes"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(d.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                        title="Excluir Indicação"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => setSelectedDemand({ demandas: d, municipes: d.municipes })} title="Editar Detalhes">
+                          <Edit2 size={16} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDelete(d.id)} title="Excluir Indicação">
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination */}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {pagination.total} DEMANDAS • PÁGINA {pagination.page} DE {pagination.totalPages}
+        <div className="px-5 py-3 bg-muted/30 border-t border-border flex flex-col md:flex-row justify-between items-center gap-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {pagination.total} demandas · pág. {pagination.page}/{pagination.totalPages}
           </p>
           <div className="flex items-center gap-1">
-            <button 
-              disabled={pagination.page === 1 || loading}
-              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button 
-              disabled={pagination.page === pagination.totalPages || loading}
-              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-              className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm"
-            >
-              <ChevronRight size={16} />
-            </button>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={pagination.page === 1 || loading} onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}>
+              <ChevronLeft size={15} />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8" disabled={pagination.page === pagination.totalPages || loading} onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}>
+              <ChevronRight size={15} />
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
       {isNewModalOpen && (
         <NewDemandModal 
@@ -589,55 +568,29 @@ export default function Legislativo() {
 
       {/* Export Modal */}
       {isExportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900">Exportar Indicações</h3>
-              <button onClick={() => setIsExportModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                <X size={18} className="text-slate-500" />
-              </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-border">
+            <div className="px-6 py-5 border-b border-border flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-foreground">Exportar Indicações</h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground"><X size={18} /></button>
             </div>
-            <div className="p-6 space-y-3">
-              <button 
-                onClick={() => exportToPDF('page')}
-                disabled={exporting}
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors">
-                    <FileDown size={20} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">Página Atual</p>
-                    <p className="text-xs text-slate-500">Exportar registros visíveis na tela</p>
-                  </div>
+            <div className="p-5 space-y-2">
+              {[
+                { mode: 'page' as const, icon: <FileDown size={18} />, label: 'Página Atual', sub: 'Exportar registros visíveis na tela' },
+                { mode: 'all' as const, icon: <Users size={18} />, label: 'Todas Indicações', sub: 'Exportar todo o histórico (máx 1000)' },
+              ].map(opt => (
+                <button key={opt.mode} onClick={() => exportToPDF(opt.mode)} disabled={exporting}
+                  className="w-full p-4 bg-muted border border-border rounded-xl text-left hover:border-primary hover:bg-primary/5 transition-all group flex items-center gap-3">
+                  <div className="bg-background p-2 rounded-lg text-muted-foreground group-hover:text-primary shadow-xs transition-colors">{opt.icon}</div>
+                  <div><p className="font-semibold text-foreground text-sm">{opt.label}</p><p className="text-xs text-muted-foreground mt-0.5">{opt.sub}</p></div>
+                </button>
+              ))}
+              {exporting && (
+                <div className="flex items-center justify-center gap-2 py-2 text-primary font-semibold text-sm">
+                  <Loader2 className="animate-spin" size={16} /> Gerando PDF...
                 </div>
-              </button>
-
-              <button 
-                onClick={() => exportToPDF('all')}
-                disabled={exporting}
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left hover:border-blue-500 hover:bg-blue-50 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-blue-600 shadow-sm transition-colors">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">Todas Indicações</p>
-                    <p className="text-xs text-slate-500">Exportar todo o histórico (máx 1000)</p>
-                  </div>
-                </div>
-              </button>
+              )}
             </div>
-            {exporting && (
-              <div className="px-6 pb-6 text-center">
-                <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
-                  <Loader2 className="animate-spin" size={16} />
-                  Gerando PDF...
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
