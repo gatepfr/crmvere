@@ -410,7 +410,7 @@ export default function Documentos() {
                   <TableCell className="max-w-[260px]">
                     <div className="font-semibold text-foreground text-sm break-words">{d.categoria || '—'}</div>
                     {d.descricao && (
-                      <div className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3 break-words">{d.descricao}</div>
+                      <div className="text-xs text-muted-foreground mt-1 leading-relaxed break-words">{d.descricao}</div>
                     )}
                   </TableCell>
                   <TableCell>

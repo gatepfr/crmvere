@@ -453,8 +453,8 @@ export default function Legislativo() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium">
+                    <TableCell className="max-w-[320px]">
+                      <div className="text-sm text-foreground leading-relaxed break-words font-medium">
                         {d.descricao}
                       </div>
                       {d.documentUrl && (
