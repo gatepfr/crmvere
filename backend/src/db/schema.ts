@@ -301,7 +301,7 @@ export const tsePerfilEleitorado = pgTable("tse_perfil_eleitorado", {
 // --- MÓDULO DE DISPARO EM MASSA (FASE 2) ---
 
 export const broadcastStatusEnum = pgEnum("broadcast_status", ["rascunho", "enfileirado", "enviando", "concluido", "cancelado"]);
-export const segmentTypeEnum = pgEnum("segment_type", ["bairro", "lideranca", "aniversariantes", "categoria_demanda", "custom", "todos"]);
+export const segmentTypeEnum = pgEnum("segment_type", ["bairro", "lideranca", "aniversariantes", "categoria_demanda", "custom", "todos", "indicacao"]);
 export const recipientStatusEnum = pgEnum("recipient_status", ["pendente", "enviado", "erro", "opt_out"]);
 
 export const broadcasts = pgTable("broadcasts", {

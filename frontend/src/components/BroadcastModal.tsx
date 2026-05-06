@@ -35,7 +35,6 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
   const [segmentType, setSegmentType] = useState<SegmentType>('todos');
   const [segmentValue, setSegmentValue] = useState('');
 
-  const [broadcastId, setBroadcastId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
 
   const [sendMode, setSendMode] = useState<SendMode>('agora');
@@ -65,7 +64,6 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
     setMediaUrl('');
     setSegmentType('todos');
     setSegmentValue('');
-    setBroadcastId(null);
     setPreview(null);
     setSendMode('agora');
     setScheduledFor('');
@@ -77,36 +75,20 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
     onClose();
   };
 
-  const goStep1to2 = async () => {
+  const goStep1to2 = () => {
     if (!name.trim()) { setError('Nome do disparo é obrigatório.'); return; }
     if (!message.trim()) { setError('Mensagem é obrigatória.'); return; }
     setError('');
-    setLoading(true);
-    try {
-      const body: Record<string, string> = {
-        name: name.trim(),
-        message: message.trim(),
-        segmentType,
-      };
-      if (mediaUrl.trim()) body.mediaUrl = mediaUrl.trim();
-      if (segmentValue.trim()) body.segmentValue = segmentValue.trim();
-      const res = await api.post('/broadcasts', body);
-      const created = res.data as { id: string };
-      setBroadcastId(created.id);
-      setStep(2);
-    } catch { setError('Erro ao criar disparo. Tente novamente.'); }
-    finally { setLoading(false); }
+    setStep(2);
   };
 
   const goStep2to3 = async () => {
-    if (!broadcastId) return;
     setError('');
     setLoading(true);
     try {
-      const body: Record<string, string> = { segmentType };
-      if (segmentValue.trim()) body.segmentValue = segmentValue.trim();
-      await api.patch(`/broadcasts/${broadcastId}`, body);
-      const res = await api.get(`/broadcasts/${broadcastId}/preview`);
+      const params = new URLSearchParams({ segmentType });
+      if (segmentValue.trim()) params.append('segmentValue', segmentValue.trim());
+      const res = await api.get(`/broadcasts/preview-segment?${params}`);
       setPreview(res.data as PreviewData);
       setStep(3);
     } catch { setError('Erro ao carregar pré-visualização.'); }
@@ -118,15 +100,25 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
   };
 
   const handleSend = async () => {
-    if (!broadcastId) return;
     setError('');
     setLoading(true);
     try {
-      const body: Record<string, string> = {};
+      const createBody: Record<string, string> = {
+        name: name.trim(),
+        message: message.trim(),
+        segmentType,
+      };
+      if (mediaUrl.trim()) createBody.mediaUrl = mediaUrl.trim();
+      if (segmentValue.trim()) createBody.segmentValue = segmentValue.trim();
+
+      const res = await api.post('/broadcasts', createBody);
+      const created = res.data as { id: string };
+
+      const sendBody: Record<string, string> = {};
       if (sendMode === 'agendar' && scheduledFor) {
-        body.scheduledFor = new Date(scheduledFor).toISOString();
+        sendBody.scheduledFor = new Date(scheduledFor).toISOString();
       }
-      await api.post(`/broadcasts/${broadcastId}/send`, body);
+      await api.post(`/broadcasts/${created.id}/send`, sendBody);
       onSuccess();
       handleClose();
     } catch { setError('Erro ao enviar disparo. Tente novamente.'); }
@@ -198,19 +190,22 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
                   rows={6}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
-                <p className="text-right text-[10px] text-slate-400 font-medium mt-1">
-                  {message.length}/4000
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-[11px] text-slate-400">
+                    Use <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-600">{'{nome}'}</code> para inserir o nome de cada pessoa
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">{message.length}/4000</p>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
-                  URL de Mídia <span className="text-slate-400 font-normal normal-case">(opcional)</span>
+                  URL de Imagem <span className="text-slate-400 font-normal normal-case">(opcional — enviada junto com a mensagem)</span>
                 </label>
                 <input
                   type="url"
                   value={mediaUrl}
                   onChange={e => setMediaUrl(e.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://... (jpg, png, mp4, pdf...)"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

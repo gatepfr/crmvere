@@ -172,8 +172,13 @@ export async function processQueue(): Promise<void> {
     const evolutionService = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
 
     const pendingRecipients = await db
-      .select()
+      .select({
+        id: broadcastRecipients.id,
+        phone: broadcastRecipients.phone,
+        name: municipes.name,
+      })
       .from(broadcastRecipients)
+      .leftJoin(municipes, eq(broadcastRecipients.municipeId, municipes.id))
       .where(
         and(
           eq(broadcastRecipients.broadcastId, broadcast.id),
@@ -187,11 +192,21 @@ export async function processQueue(): Promise<void> {
 
     for (const recipient of pendingRecipients) {
       try {
-        await evolutionService.sendMessage(
-          tenant.whatsappInstanceId,
-          recipient.phone,
-          broadcast.message
-        );
+        const personalizedMessage = broadcast.message.replace(/\{nome\}/gi, recipient.name ?? '');
+        if (broadcast.mediaUrl) {
+          await evolutionService.sendMediaMessage(
+            tenant.whatsappInstanceId,
+            recipient.phone,
+            broadcast.mediaUrl,
+            personalizedMessage
+          );
+        } else {
+          await evolutionService.sendMessage(
+            tenant.whatsappInstanceId,
+            recipient.phone,
+            personalizedMessage
+          );
+        }
 
         await db
           .update(broadcastRecipients)

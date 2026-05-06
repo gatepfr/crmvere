@@ -41,11 +41,25 @@ router.get('/segment-values', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/broadcasts/preview-segment?segmentType=X&segmentValue=Y
+router.get('/preview-segment', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const { segmentType, segmentValue } = req.query;
+    if (!segmentType) return res.status(400).json({ error: 'segmentType obrigatório' });
+    const result = await previewSegment(tenantId, String(segmentType), segmentValue ? String(segmentValue) : undefined);
+    return res.json(result);
+  } catch (err: any) {
+    console.error('[BROADCAST] Erro ao gerar preview-segment:', err);
+    return res.status(500).json({ error: 'Erro interno ao gerar preview' });
+  }
+});
+
 // POST /api/broadcasts — cria rascunho
 router.post('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { name, message, segmentType, segmentValue } = req.body;
+    const { name, message, segmentType, segmentValue, mediaUrl } = req.body;
 
     if (!name || !message || !segmentType) {
       return res.status(400).json({ error: 'Campos obrigatórios: name, message, segmentType' });
@@ -57,6 +71,7 @@ router.post('/', async (req: Request, res: Response) => {
         tenantId,
         name,
         message,
+        mediaUrl: mediaUrl ?? null,
         segmentType,
         segmentValue: segmentValue ?? null,
         status: 'rascunho',
