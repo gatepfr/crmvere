@@ -125,7 +125,7 @@ export default function Sidebar() {
         <img
           src="/logo_site.png"
           alt="CRM do Verê"
-          className="h-10 w-auto object-contain group-data-[collapsible=icon]:hidden"
+          className="h-10 w-auto object-contain self-start group-data-[collapsible=icon]:hidden"
         />
         <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center size-8">
           <LayoutDashboard className="size-5 text-sidebar-foreground" />
