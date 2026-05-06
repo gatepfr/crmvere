@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
 import { 
   DndContext, 
@@ -34,6 +35,8 @@ import {
   X
 } from 'lucide-react';
 import { formatPhone } from '../../utils/formatPhone';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface Lead {
   id: string;
@@ -89,31 +92,33 @@ function SortableLeadCard({ lead, onDelete }: { lead: Lead, onDelete: (id: strin
   };
 
   return (
-    <div
+    <Card
       ref={setNodeRef}
       style={style}
-      className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-grab active:cursor-grabbing mb-3 group relative"
+      className="hover:border-primary/50 hover:shadow-md transition-all cursor-grab active:cursor-grabbing mb-3 group relative"
     >
-      <div {...attributes} {...listeners}>
-        <div className="flex justify-between items-start mb-2">
-          <h4 className="font-bold text-slate-900 leading-tight pr-6">{lead.name}</h4>
+      <CardContent className="p-4">
+        <div {...attributes} {...listeners}>
+          <div className="flex justify-between items-start mb-2">
+            <h4 className="font-semibold text-card-foreground leading-tight pr-6">{lead.name}</h4>
+          </div>
+          <div className="space-y-1">
+            {lead.phone && (
+              <div className="flex items-center text-xs text-muted-foreground">
+                <Phone size={12} className="mr-1.5" />
+                {formatPhone(lead.phone)}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-1">
-          {lead.phone && (
-            <div className="flex items-center text-xs text-slate-500">
-              <Phone size={12} className="mr-1.5 text-slate-400" />
-              {formatPhone(lead.phone)}
-            </div>
-          )}
-        </div>
-      </div>
-      <button 
-        onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
-        className="absolute top-3 right-3 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-      >
-        <Trash2 size={14} />
-      </button>
-    </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
+          className="absolute top-3 right-3 p-1.5 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+        >
+          <Trash2 size={14} />
+        </button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -231,7 +236,7 @@ export default function KanbanLeads() {
       fetchBoard();
       fetchPendingDemands();
     } catch (err) {
-      alert('Falha ao importar lead');
+      toast.error('Falha ao importar lead');
     }
   };
 
@@ -307,7 +312,7 @@ export default function KanbanLeads() {
       setCampaigns([...campaigns, res.data]);
       setSelectedCampaignId(res.data.id);
     } catch (err) {
-      alert('Falha ao criar campanha');
+      toast.error('Falha ao criar campanha');
     }
   };
 
@@ -318,7 +323,7 @@ export default function KanbanLeads() {
       await api.post(`/kanban/campaigns/${selectedCampaignId}/leads`, { name });
       fetchBoard();
     } catch (err) {
-      alert('Falha ao adicionar lead');
+      toast.error('Falha ao adicionar lead');
     }
   };
 
@@ -329,7 +334,7 @@ export default function KanbanLeads() {
       await api.post(`/kanban/campaigns/${selectedCampaignId}/columns`, { name });
       fetchBoard();
     } catch (err) {
-      alert('Falha ao adicionar coluna');
+      toast.error('Falha ao adicionar coluna');
     }
   };
 
@@ -339,7 +344,7 @@ export default function KanbanLeads() {
       await api.delete(`/kanban/columns/${id}`);
       fetchBoard();
     } catch (err) {
-      alert('Falha ao excluir coluna');
+      toast.error('Falha ao excluir coluna');
     }
   };
 
@@ -349,7 +354,7 @@ export default function KanbanLeads() {
       await api.delete(`/kanban/leads/${id}`);
       setLeads(prev => prev.filter(l => l.id !== id));
     } catch (err) {
-      alert('Falha ao excluir lead');
+      toast.error('Falha ao excluir lead');
     }
   };
 
@@ -369,9 +374,9 @@ export default function KanbanLeads() {
       } else {
         setSelectedCampaignId('');
       }
-      alert('Quadro excluído com sucesso');
+      toast.success('Quadro excluído com sucesso');
     } catch (err) {
-      alert('Falha ao excluir quadro');
+      toast.error('Falha ao excluir quadro');
     }
   };
 
@@ -494,10 +499,12 @@ export default function KanbanLeads() {
                   }),
                 }}>
                   {activeId ? (
-                    <div className="bg-white p-4 rounded-xl shadow-2xl border-2 border-blue-500 w-80 rotate-3 cursor-grabbing scale-105 transition-transform">
-                      <h4 className="font-bold text-slate-900">{leads.find(l => l.id === activeId)?.name}</h4>
-                      <p className="text-xs text-slate-500 mt-1">{formatPhone(leads.find(l => l.id === activeId)?.phone || '')}</p>
-                    </div>
+                    <Card className="w-80 rotate-3 cursor-grabbing scale-105 border-2 border-primary shadow-2xl">
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold text-card-foreground">{leads.find(l => l.id === activeId)?.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{formatPhone(leads.find(l => l.id === activeId)?.phone || '')}</p>
+                      </CardContent>
+                    </Card>
                   ) : null}
                 </DragOverlay>
               </DndContext>
@@ -541,26 +548,25 @@ export default function KanbanLeads() {
                   </div>
                 ) : (
                   pendingDemands.map((demand) => (
-                    <div 
-                      key={demand.id} 
-                      className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 transition-all group relative"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-bold text-slate-900 text-sm pr-8">{demand.municipe.name}</h4>
-                        <button 
-                          onClick={() => handleImportDemand(demand)}
-                          className="absolute top-3 right-3 p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
-                          title="Importar como Lead"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <p className="text-xs text-slate-500 line-clamp-3 italic mb-3 leading-relaxed">"{demand.resumoIa}"</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase">{demand.categoria}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{formatPhone(demand.municipe.phone)}</span>
-                      </div>
-                    </div>
+                    <Card key={demand.id} className="hover:border-primary/40 transition-all group relative">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-semibold text-card-foreground text-sm pr-8">{demand.municipe.name}</h4>
+                          <button
+                            onClick={() => handleImportDemand(demand)}
+                            className="absolute top-3 right-3 p-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all shadow-sm"
+                            title="Importar como Lead"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-3 italic mb-3 leading-relaxed">"{demand.resumoIa}"</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[10px] uppercase">{demand.categoria}</Badge>
+                          <span className="text-[10px] text-muted-foreground">{formatPhone(demand.municipe.phone)}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))
                 )}
               </div>

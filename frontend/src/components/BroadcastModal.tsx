@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../api/client';
-import { X, Loader2, ChevronRight, ChevronLeft, Send, Clock } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft, Send, Clock } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 interface Props {
   isOpen: boolean;
@@ -27,19 +34,14 @@ const SEGMENT_OPTIONS: { value: SegmentType; label: string }[] = [
 
 export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
   const [step, setStep] = useState(1);
-
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
-
   const [segmentType, setSegmentType] = useState<SegmentType>('todos');
   const [segmentValue, setSegmentValue] = useState('');
-
   const [preview, setPreview] = useState<PreviewData | null>(null);
-
   const [sendMode, setSendMode] = useState<SendMode>('agora');
   const [scheduledFor, setScheduledFor] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [segmentOptions, setSegmentOptions] = useState<string[]>([]);
@@ -55,36 +57,22 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
       .catch(() => setSegmentOptions([]));
   }, [isOpen, segmentType]);
 
-  if (!isOpen) return null;
-
   const reset = () => {
-    setStep(1);
-    setName('');
-    setMessage('');
-    setMediaUrl('');
-    setSegmentType('todos');
-    setSegmentValue('');
-    setPreview(null);
-    setSendMode('agora');
-    setScheduledFor('');
-    setError('');
+    setStep(1); setName(''); setMessage(''); setMediaUrl('');
+    setSegmentType('todos'); setSegmentValue(''); setPreview(null);
+    setSendMode('agora'); setScheduledFor(''); setError('');
   };
 
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
+  const handleClose = () => { reset(); onClose(); };
 
   const goStep1to2 = () => {
     if (!name.trim()) { setError('Nome do disparo é obrigatório.'); return; }
     if (!message.trim()) { setError('Mensagem é obrigatória.'); return; }
-    setError('');
-    setStep(2);
+    setError(''); setStep(2);
   };
 
   const goStep2to3 = async () => {
-    setError('');
-    setLoading(true);
+    setError(''); setLoading(true);
     try {
       const params = new URLSearchParams({ segmentType });
       if (segmentValue.trim()) params.append('segmentValue', segmentValue.trim());
@@ -95,29 +83,16 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
     finally { setLoading(false); }
   };
 
-  const goStep3to4 = () => {
-    setStep(4);
-  };
-
   const handleSend = async () => {
-    setError('');
-    setLoading(true);
+    setError(''); setLoading(true);
     try {
-      const createBody: Record<string, string> = {
-        name: name.trim(),
-        message: message.trim(),
-        segmentType,
-      };
+      const createBody: Record<string, string> = { name: name.trim(), message: message.trim(), segmentType };
       if (mediaUrl.trim()) createBody.mediaUrl = mediaUrl.trim();
       if (segmentValue.trim()) createBody.segmentValue = segmentValue.trim();
-
       const res = await api.post('/broadcasts', createBody);
       const created = res.data as { id: string };
-
       const sendBody: Record<string, string> = {};
-      if (sendMode === 'agendar' && scheduledFor) {
-        sendBody.scheduledFor = new Date(scheduledFor).toISOString();
-      }
+      if (sendMode === 'agendar' && scheduledFor) sendBody.scheduledFor = new Date(scheduledFor).toISOString();
       await api.post(`/broadcasts/${created.id}/send`, sendBody);
       onSuccess();
       handleClose();
@@ -126,41 +101,34 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
   };
 
   const needsSegmentValue = segmentType === 'bairro' || segmentType === 'categoria_demanda';
-
   const stepLabels = ['Mensagem', 'Segmento', 'Preview', 'Confirmar'];
+  const inputCls = "w-full px-4 py-2.5 border border-input rounded-xl text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl border border-slate-200 flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
-          <div>
-            <h2 className="text-lg font-black text-slate-900">Novo Disparo em Massa</h2>
-            <div className="flex items-center gap-1 mt-2">
-              {stepLabels.map((label, i) => (
-                <div key={label} className="flex items-center gap-1">
-                  <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    step === i + 1
-                      ? 'bg-blue-600 text-white'
-                      : step > i + 1
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-400'
-                  }`}>
-                    <span>{i + 1}</span>
-                    <span className="hidden sm:inline">{label}</span>
-                  </div>
-                  {i < 3 && <div className="w-4 h-px bg-slate-200" />}
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="max-w-xl p-0 flex flex-col max-h-[90vh] gap-0">
+        <DialogHeader className="p-6 border-b border-border shrink-0">
+          <DialogTitle>Novo Disparo em Massa</DialogTitle>
+          <div className="flex items-center gap-1 mt-2">
+            {stepLabels.map((label, i) => (
+              <div key={label} className="flex items-center gap-1">
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                  step === i + 1 ? 'bg-primary text-primary-foreground'
+                  : step > i + 1 ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-muted text-muted-foreground'
+                }`}>
+                  <span>{i + 1}</span>
+                  <span className="hidden sm:inline">{label}</span>
                 </div>
-              ))}
-            </div>
+                {i < 3 && <div className="w-4 h-px bg-border" />}
+              </div>
+            ))}
           </div>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-700 transition-colors ml-4 shrink-0">
-            <X size={20} />
-          </button>
-        </div>
+        </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-xl text-sm text-destructive font-medium">
               {error}
             </div>
           )}
@@ -168,46 +136,30 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
-                  Nome do Disparo *
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Ex: Convite Audiência Pública"
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-1.5">Nome do Disparo *</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Convite Audiência Pública" className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
-                  Mensagem *
-                </label>
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-1.5">Mensagem *</label>
                 <textarea
                   value={message}
                   onChange={e => setMessage(e.target.value.slice(0, 4000))}
                   placeholder="Digite a mensagem que será enviada..."
                   rows={6}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className={`${inputCls} resize-none`}
                 />
                 <div className="flex items-center justify-between mt-1">
-                  <p className="text-[11px] text-slate-400">
-                    Use <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-600">{'{nome}'}</code> para inserir o nome de cada pessoa
+                  <p className="text-[11px] text-muted-foreground">
+                    Use <code className="bg-muted px-1 py-0.5 rounded font-mono text-foreground">{'{nome}'}</code> para inserir o nome de cada pessoa
                   </p>
-                  <p className="text-[10px] text-slate-400 font-medium">{message.length}/4000</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">{message.length}/4000</p>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
-                  URL de Imagem <span className="text-slate-400 font-normal normal-case">(opcional — enviada junto com a mensagem)</span>
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-1.5">
+                  URL de Imagem <span className="text-muted-foreground font-normal normal-case">(opcional)</span>
                 </label>
-                <input
-                  type="url"
-                  value={mediaUrl}
-                  onChange={e => setMediaUrl(e.target.value)}
-                  placeholder="https://... (jpg, png, mp4, pdf...)"
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="url" value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="https://... (jpg, png, mp4, pdf...)" className={inputCls} />
               </div>
             </div>
           )}
@@ -215,58 +167,32 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
           {step === 2 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-2">
-                  Selecione o Segmento
-                </label>
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Selecione o Segmento</label>
                 <div className="space-y-2">
                   {SEGMENT_OPTIONS.map(opt => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        segmentType === opt.value
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="segment"
-                        value={opt.value}
-                        checked={segmentType === opt.value}
-                        onChange={() => { setSegmentType(opt.value); setSegmentValue(''); }}
-                        className="accent-blue-600"
-                      />
-                      <span className={`text-sm font-bold ${segmentType === opt.value ? 'text-blue-700' : 'text-slate-700'}`}>
-                        {opt.label}
-                      </span>
+                    <label key={opt.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      segmentType === opt.value ? 'border-primary bg-primary/5' : 'border-border hover:border-border/80'
+                    }`}>
+                      <input type="radio" name="segment" value={opt.value} checked={segmentType === opt.value}
+                        onChange={() => { setSegmentType(opt.value); setSegmentValue(''); }} className="accent-primary" />
+                      <span className={`text-sm font-bold ${segmentType === opt.value ? 'text-primary' : 'text-foreground'}`}>{opt.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
               {needsSegmentValue && (
                 <div>
-                  <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
+                  <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-1.5">
                     {segmentType === 'bairro' ? 'Bairro' : 'Categoria da Demanda'}
                   </label>
                   {segmentOptions.length > 0 ? (
-                    <select
-                      value={segmentValue}
-                      onChange={e => setSegmentValue(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    >
+                    <select value={segmentValue} onChange={e => setSegmentValue(e.target.value)} className={inputCls}>
                       <option value="">Selecione...</option>
-                      {segmentOptions.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
+                      {segmentOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   ) : (
-                    <input
-                      type="text"
-                      value={segmentValue}
-                      onChange={e => setSegmentValue(e.target.value)}
-                      placeholder={segmentType === 'bairro' ? 'Ex: Centro' : 'Ex: Saúde'}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <input type="text" value={segmentValue} onChange={e => setSegmentValue(e.target.value)}
+                      placeholder={segmentType === 'bairro' ? 'Ex: Centro' : 'Ex: Saúde'} className={inputCls} />
                   )}
                 </div>
               )}
@@ -275,24 +201,22 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
 
           {step === 3 && preview && (
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-                <p className="text-3xl font-black text-blue-700">{preview.total}</p>
-                <p className="text-sm font-bold text-blue-600 mt-1">munícipes serão atingidos</p>
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+                <p className="text-3xl font-black text-primary">{preview.total}</p>
+                <p className="text-sm font-bold text-primary/80 mt-1">munícipes serão atingidos</p>
               </div>
               {preview.sample.length > 0 && (
                 <div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
-                    Amostra de destinatários
-                  </p>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+                  <p className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Amostra de destinatários</p>
+                  <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
                     {preview.sample.slice(0, 20).map((s, i) => (
                       <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500 shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-black text-muted-foreground shrink-0">
                           {s.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
-                          <p className="text-xs text-slate-400">{s.phone}</p>
+                          <p className="text-sm font-bold text-foreground truncate">{s.name}</p>
+                          <p className="text-xs text-muted-foreground">{s.phone}</p>
                         </div>
                       </div>
                     ))}
@@ -304,113 +228,48 @@ export default function BroadcastModal({ isOpen, onClose, onSuccess }: Props) {
 
           {step === 4 && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-600">Escolha quando o disparo será enviado:</p>
+              <p className="text-sm text-muted-foreground">Escolha quando o disparo será enviado:</p>
               <div className="space-y-2">
-                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                  sendMode === 'agora' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="sendMode"
-                    value="agora"
-                    checked={sendMode === 'agora'}
-                    onChange={() => setSendMode('agora')}
-                    className="accent-blue-600"
-                  />
-                  <Send size={16} className={sendMode === 'agora' ? 'text-blue-600' : 'text-slate-400'} />
-                  <span className={`text-sm font-bold ${sendMode === 'agora' ? 'text-blue-700' : 'text-slate-700'}`}>
-                    Enviar Agora
-                  </span>
-                </label>
-                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                  sendMode === 'agendar' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="sendMode"
-                    value="agendar"
-                    checked={sendMode === 'agendar'}
-                    onChange={() => setSendMode('agendar')}
-                    className="accent-blue-600"
-                  />
-                  <Clock size={16} className={sendMode === 'agendar' ? 'text-blue-600' : 'text-slate-400'} />
-                  <span className={`text-sm font-bold ${sendMode === 'agendar' ? 'text-blue-700' : 'text-slate-700'}`}>
-                    Agendar
-                  </span>
-                </label>
+                {(['agora', 'agendar'] as SendMode[]).map((mode) => (
+                  <label key={mode} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    sendMode === mode ? 'border-primary bg-primary/5' : 'border-border hover:border-border/80'
+                  }`}>
+                    <input type="radio" name="sendMode" value={mode} checked={sendMode === mode}
+                      onChange={() => setSendMode(mode)} className="accent-primary" />
+                    {mode === 'agora' ? <Send size={16} className={sendMode === 'agora' ? 'text-primary' : 'text-muted-foreground'} /> : <Clock size={16} className={sendMode === 'agendar' ? 'text-primary' : 'text-muted-foreground'} />}
+                    <span className={`text-sm font-bold ${sendMode === mode ? 'text-primary' : 'text-foreground'}`}>
+                      {mode === 'agora' ? 'Enviar Agora' : 'Agendar'}
+                    </span>
+                  </label>
+                ))}
               </div>
               {sendMode === 'agendar' && (
                 <div>
-                  <label className="block text-xs font-black text-slate-600 uppercase tracking-widest mb-1.5">
-                    Data e Hora
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={scheduledFor}
-                    onChange={e => setScheduledFor(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-1.5">Data e Hora</label>
+                  <input type="datetime-local" value={scheduledFor} onChange={e => setScheduledFor(e.target.value)} className={inputCls} />
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between p-6 border-t border-slate-100 shrink-0">
+        <div className="flex items-center justify-between p-6 border-t border-border shrink-0">
           {step > 1 ? (
-            <button
-              onClick={() => setStep(s => s - 1)}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              <ChevronLeft size={16} />
-              Voltar
-            </button>
-          ) : (
-            <div />
-          )}
+            <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={loading}>
+              <ChevronLeft size={16} /> Voltar
+            </Button>
+          ) : <div />}
 
-          {step === 1 && (
-            <button
-              onClick={goStep1to2}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-              Próximo
-            </button>
-          )}
-          {step === 2 && (
-            <button
-              onClick={goStep2to3}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-              Pré-visualizar
-            </button>
-          )}
-          {step === 3 && (
-            <button
-              onClick={goStep3to4}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-colors"
-            >
-              <ChevronRight size={16} />
-              Continuar
-            </button>
-          )}
+          {step === 1 && <Button onClick={goStep1to2} disabled={loading}>{loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />} Próximo</Button>}
+          {step === 2 && <Button onClick={goStep2to3} disabled={loading}>{loading ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />} Pré-visualizar</Button>}
+          {step === 3 && <Button onClick={() => setStep(4)}><ChevronRight size={16} /> Continuar</Button>}
           {step === 4 && (
-            <button
-              onClick={handleSend}
-              disabled={loading || (sendMode === 'agendar' && !scheduledFor)}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              Confirmar e Enviar
-            </button>
+            <Button onClick={handleSend} disabled={loading || (sendMode === 'agendar' && !scheduledFor)}>
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Confirmar e Enviar
+            </Button>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

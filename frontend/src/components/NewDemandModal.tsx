@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import api from '../api/client';
-import { X, Save, User, Phone, MapPin, Tag, AlertTriangle, Search, Loader2 } from 'lucide-react';
+import { Save, User, MapPin, Tag, Search, Loader2 } from 'lucide-react';
 import { formatPhone } from '../utils/formatPhone';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 interface NewDemandModalProps {
   onClose: () => void;
@@ -37,7 +46,6 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
     resumoIa: ''
   });
 
-  // Preenchimento automático se vier do atendimento
   React.useEffect(() => {
     if (prefilledMunicipe) {
       selectMunicipe(prefilledMunicipe);
@@ -46,33 +54,18 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
 
   const handleSearch = async (term: string) => {
     setSearchMunicipe(term);
-    if (term.length < 3) {
-      setSearchResults([]);
-      return;
-    }
+    if (term.length < 3) { setSearchResults([]); return; }
     setIsSearching(true);
     try {
       const res = await api.get(`/demands/municipes/list?search=${term}&limit=5`);
       setSearchResults(res.data.data || []);
-    } catch (err) {
-      console.error('Erro na busca');
-    } finally {
-      setIsSearching(false);
-    }
+    } catch { console.error('Erro na busca'); }
+    finally { setIsSearching(false); }
   };
 
   const selectMunicipe = (m: any) => {
-    setFormData({
-      ...formData,
-      municipeId: m.id,
-      municipeName: m.name,
-      municipePhone: m.phone,
-      municipeBairro: m.bairro || '',
-      municipeCep: m.cep || ''
-    });
-    
+    setFormData({ ...formData, municipeId: m.id, municipeName: m.name, municipePhone: m.phone, municipeBairro: m.bairro || '', municipeCep: m.cep || '' });
     setDisplayPhone(formatPhone(m.phone));
-
     setSearchResults([]);
     setSearchMunicipe(m.name);
   };
@@ -80,17 +73,12 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
   const handleCepChange = async (value: string) => {
     const cep = value.replace(/\D/g, '').substring(0, 8);
     setFormData(prev => ({ ...prev, municipeCep: cep }));
-
     if (cep.length === 8) {
       try {
         const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const data = await response.json();
-        if (!data.erro && data.bairro) {
-          setFormData(prev => ({ ...prev, municipeBairro: data.bairro.toUpperCase() }));
-        }
-      } catch (err) {
-        console.error('Erro ao buscar CEP:', err);
-      }
+        if (!data.erro && data.bairro) setFormData(prev => ({ ...prev, municipeBairro: data.bairro.toUpperCase() }));
+      } catch { /* noop */ }
     }
   };
 
@@ -101,81 +89,73 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
     if (truncated.length > 2) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
     if (truncated.length > 7) masked = `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
     setDisplayPhone(masked);
-    if (truncated.length > 0) {
-      setFormData({ ...formData, municipePhone: `55${truncated}` });
-    } else {
-      setFormData({ ...formData, municipePhone: '' });
-    }
+    setFormData({ ...formData, municipePhone: truncated.length > 0 ? `55${truncated}` : '' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.municipePhone.length < 12) {
-      alert('Por favor, insira um telefone válido com DDD.');
-      return;
-    }
-    
+    if (formData.municipePhone.length < 12) { toast.warning('Por favor, insira um telefone válido com DDD.'); return; }
     setLoading(true);
     try {
       await api.post('/demands', formData);
-      alert('Demanda registrada com sucesso!');
+      toast.success('Demanda registrada com sucesso!');
       onUpdate();
       onClose();
-    } catch (err) {
-      console.error('Erro ao criar demanda:', err);
-      alert('Falha ao registrar demanda.');
+    } catch {
+      toast.error('Falha ao registrar demanda.');
     } finally {
       setLoading(false);
     }
   };
 
+  const inputCls = "w-full px-4 py-3 bg-muted border border-input rounded-2xl focus:ring-2 focus:ring-ring focus:bg-background outline-none transition-all font-medium text-sm text-foreground";
+  const labelCls = "block text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1.5 ml-1";
+
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="bg-slate-900 p-6 flex justify-between items-center text-white">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        <div className="bg-slate-900 p-6 flex justify-between items-center text-white rounded-t-xl">
           <div>
-            <h2 className="text-xl font-black">Nova Demanda Oficial</h2>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Protocolo Manual do Gabinete</p>
+            <DialogTitle className="text-xl font-black text-white">Nova Demanda Oficial</DialogTitle>
+            <DialogDescription className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+              Protocolo Manual do Gabinete
+            </DialogDescription>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-xl transition-colors">
-            <X size={24} />
-          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <div className="space-y-4">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <User size={14} className="text-blue-500" />
+            <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+              <User size={14} className="text-primary" />
               Informações do Munícipe
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="relative">
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Buscar ou Nome Completo</label>
+                <label className={labelCls}>Buscar ou Nome Completo</label>
                 <div className="relative">
                   <input
                     type="text"
                     required
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                    className={inputCls}
                     placeholder="Pesquise por nome..."
                     value={searchMunicipe}
                     onChange={e => {
                       handleSearch(e.target.value);
-                      setFormData({...formData, municipeName: e.target.value, municipeId: ''});
+                      setFormData({ ...formData, municipeName: e.target.value, municipeId: '' });
                     }}
                   />
-                  {isSearching && <Loader2 className="absolute right-4 top-3.5 animate-spin text-blue-500" size={16} />}
-                  
+                  {isSearching && <Loader2 className="absolute right-4 top-3.5 animate-spin text-primary" size={16} />}
                   {searchResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-2xl shadow-xl z-20 overflow-hidden">
                       {searchResults.map(m => (
                         <button
                           key={m.id}
                           type="button"
                           onClick={() => selectMunicipe(m)}
-                          className="w-full px-5 py-3 text-left hover:bg-blue-50 flex flex-col border-b border-slate-50 last:border-0"
+                          className="w-full px-5 py-3 text-left hover:bg-accent flex flex-col border-b border-border last:border-0"
                         >
-                          <span className="font-bold text-slate-900 text-sm">{m.name}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{formatPhone(m.phone)} - {m.bairro || 'Sem bairro'}</span>
+                          <span className="font-bold text-popover-foreground text-sm">{m.name}</span>
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase">{formatPhone(m.phone)} - {m.bairro || 'Sem bairro'}</span>
                         </button>
                       ))}
                     </div>
@@ -183,71 +163,48 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">WhatsApp (DDD + Número)</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                  placeholder="(43) 99999-9999"
-                  value={displayPhone}
-                  onChange={e => handlePhoneChange(e.target.value)}
-                />
+                <label className={labelCls}>WhatsApp (DDD + Número)</label>
+                <input type="text" required className={inputCls} placeholder="(43) 99999-9999" value={displayPhone} onChange={e => handlePhoneChange(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">CEP (Opcional)</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
-                  placeholder="00000-000"
-                  value={formData.municipeCep}
-                  onChange={e => handleCepChange(e.target.value)}
-                />
+                <label className={labelCls}>CEP (Opcional)</label>
+                <input type="text" className={inputCls} placeholder="00000-000" value={formData.municipeCep} onChange={e => handleCepChange(e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                <label className={labelCls}>Bairro</label>
                 <div className="relative">
-                  <MapPin size={16} className="absolute left-4 top-3.5 text-slate-400" />
+                  <MapPin size={16} className="absolute left-4 top-3.5 text-muted-foreground" />
                   <input
                     type="text"
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm"
+                    className={`${inputCls} pl-12`}
                     placeholder="Bairro do atendimento"
                     value={formData.municipeBairro}
-                    onChange={e => setFormData({...formData, municipeBairro: e.target.value.toUpperCase()})}
+                    onChange={e => setFormData({ ...formData, municipeBairro: e.target.value.toUpperCase() })}
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <hr className="border-slate-100" />
+          <hr className="border-border" />
 
           <div className="space-y-4">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
               <Tag size={14} className="text-purple-500" />
               Detalhes da Solicitação
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Categoria</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm appearance-none"
-                  value={formData.categoria}
-                  onChange={e => setFormData({...formData, categoria: e.target.value})}
-                >
-                  {categories.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
+                <label className={labelCls}>Categoria</label>
+                <select className={inputCls} value={formData.categoria} onChange={e => setFormData({ ...formData, categoria: e.target.value })}>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Prioridade</label>
-                <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-bold text-sm appearance-none"
-                  value={formData.prioridade}
-                  onChange={e => setFormData({...formData, prioridade: e.target.value})}
-                >
+                <label className={labelCls}>Prioridade</label>
+                <select className={inputCls} value={formData.prioridade} onChange={e => setFormData({ ...formData, prioridade: e.target.value })}>
                   <option value="baixa">Baixa</option>
                   <option value="media">Média</option>
                   <option value="alta">Alta</option>
@@ -256,41 +213,28 @@ export default function NewDemandModal({ onClose, onUpdate, prefilledMunicipe }:
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Assunto / Descrição</label>
+              <label className={labelCls}>Assunto / Descrição</label>
               <textarea
                 required
                 rows={4}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium text-sm"
+                className={inputCls}
                 placeholder="Descreva o que o munícipe solicitou..."
                 value={formData.resumoIa}
-                onChange={e => setFormData({...formData, resumoIa: e.target.value})}
+                onChange={e => setFormData({ ...formData, resumoIa: e.target.value })}
               />
             </div>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black transition-all"
-            >
+            <Button type="button" variant="secondary" className="flex-1 py-6 text-base font-black rounded-2xl" onClick={onClose}>
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-[2] py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? 'Salvando...' : (
-                <>
-                  <Save size={20} />
-                  Salvar Demanda
-                </>
-              )}
-            </button>
+            </Button>
+            <Button type="submit" disabled={loading} className="flex-[2] py-6 text-base font-black rounded-2xl">
+              {loading ? <><Loader2 className="animate-spin" size={18} /> Salvando...</> : <><Save size={18} /> Salvar Demanda</>}
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

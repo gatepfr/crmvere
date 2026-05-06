@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 interface EventModalProps {
   event?: {
@@ -60,35 +67,33 @@ export default function EventModal({ event, defaultStart, defaultEnd, onSave, on
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex justify-between items-center p-6 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900">{event ? 'Editar Compromisso' : 'Novo Compromisso'}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            <X size={20} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{event ? 'Editar Compromisso' : 'Novo Compromisso'}</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Título *</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">Título *</label>
             <input
               autoFocus
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="Ex: Reunião com associação de bairro"
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+              className="w-full px-4 py-2.5 border border-input rounded-xl bg-background text-foreground focus:ring-2 focus:ring-ring outline-none text-sm"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Descrição</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">Descrição</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={2}
               placeholder="Detalhes adicionais..."
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"
+              className="w-full px-4 py-2.5 border border-input rounded-xl bg-background text-foreground focus:ring-2 focus:ring-ring outline-none text-sm resize-none"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -99,55 +104,44 @@ export default function EventModal({ event, defaultStart, defaultEnd, onSave, on
               onChange={e => setAllDay(e.target.checked)}
               className="rounded"
             />
-            <label htmlFor="allDay" className="text-sm font-medium text-slate-700">Dia inteiro</label>
+            <label htmlFor="allDay" className="text-sm font-medium text-foreground">Dia inteiro</label>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Início</label>
+              <label className="block text-sm font-semibold text-foreground mb-1">Início</label>
               <input
                 type={allDay ? 'date' : 'datetime-local'}
                 value={start}
                 onChange={e => setStart(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                className="w-full px-3 py-2.5 border border-input rounded-xl bg-background text-foreground focus:ring-2 focus:ring-ring outline-none text-sm"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Fim</label>
+              <label className="block text-sm font-semibold text-foreground mb-1">Fim</label>
               <input
                 type={allDay ? 'date' : 'datetime-local'}
                 value={end}
                 onChange={e => setEnd(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                className="w-full px-3 py-2.5 border border-input rounded-xl bg-background text-foreground focus:ring-2 focus:ring-ring outline-none text-sm"
                 required
               />
             </div>
           </div>
           <div className="flex justify-between pt-2">
             {onDelete && (
-              <button
-                type="button"
-                onClick={onDelete}
-                className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-sm font-medium"
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={onDelete} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                 <Trash2 size={16} />
                 Excluir
-              </button>
+              </Button>
             )}
             <div className="flex gap-3 ml-auto">
-              <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 font-medium">
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors"
-              >
-                {event ? 'Salvar' : 'Criar'}
-              </button>
+              <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+              <Button type="submit">{event ? 'Salvar' : 'Criar'}</Button>
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
