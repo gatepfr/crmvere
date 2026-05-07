@@ -235,8 +235,6 @@ export default function InstagramConfig() {
     setConfig(prev => ({ ...prev, instagramWebhookVerifyToken: token }));
   };
 
-  const backendUrl = (import.meta.env.VITE_API_URL || window.location.origin.replace(':5173', ':3001')).replace('/api', '');
-  const webhookUrl = `${backendUrl}/api/webhook/instagram/SEU_TENANT_ID`;
 
   const copyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
