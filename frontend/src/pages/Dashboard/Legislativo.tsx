@@ -453,8 +453,7 @@ export default function Legislativo() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="max-w-[320px] overflow-hidden">
+                    <TableCell className="w-[40%]">
                       <div className="text-sm text-foreground leading-relaxed break-words whitespace-normal font-medium">
                         {d.descricao}
                       </div>
@@ -469,7 +468,6 @@ export default function Legislativo() {
                           Prazo: {new Date(d.dueDate).toLocaleDateString('pt-BR')}
                         </div>
                       )}
-                      </div>
                     </TableCell>
                     <TableCell>
                       {assignedEmail ? (

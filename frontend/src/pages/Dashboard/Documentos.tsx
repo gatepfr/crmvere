@@ -407,13 +407,11 @@ export default function Documentos() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="max-w-[260px] overflow-hidden">
-                      <div className="font-semibold text-foreground text-sm break-words whitespace-normal">{d.categoria || '—'}</div>
-                      {d.descricao && (
-                        <div className="text-xs text-muted-foreground mt-1 leading-relaxed break-words whitespace-normal">{d.descricao}</div>
-                      )}
-                    </div>
+                  <TableCell className="w-[35%]">
+                    <div className="font-semibold text-foreground text-sm break-words whitespace-normal">{d.categoria || '—'}</div>
+                    {d.descricao && (
+                      <div className="text-xs text-muted-foreground mt-1 leading-relaxed break-words whitespace-normal">{d.descricao}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
