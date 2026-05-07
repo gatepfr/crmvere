@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
 import { Megaphone, Loader2, Plus, Trash2 } from 'lucide-react';
 import BroadcastModal from '../../components/BroadcastModal';
@@ -20,7 +21,7 @@ interface Broadcast {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  rascunho: 'bg-slate-100 text-slate-600 border-slate-200',
+  rascunho: 'bg-muted text-muted-foreground border-border',
   enfileirado: 'bg-blue-50 text-blue-700 border-blue-200',
   enviando: 'bg-amber-50 text-amber-700 border-amber-200',
   concluido: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -58,7 +59,7 @@ export default function Broadcasts() {
       await api.delete(`/broadcasts/${id}`);
       setBroadcasts(prev => prev.filter(b => b.id !== id));
     } catch (err: any) {
-      alert(err?.response?.data?.error ?? 'Erro ao excluir disparo.');
+      toast.error(err?.response?.data?.error ?? 'Erro ao excluir disparo.');
     } finally {
       setDeletingId(null);
     }
@@ -95,11 +96,11 @@ export default function Broadcasts() {
     <div className="space-y-6 animate-in fade-in duration-700">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
             <Megaphone className="text-blue-600" size={32} />
             Disparo em Massa
           </h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">
             Envio de mensagens para munícipes
           </p>
         </div>
@@ -113,25 +114,25 @@ export default function Broadcasts() {
       </header>
 
       {broadcasts.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center border border-slate-100 shadow-sm">
-          <Megaphone size={48} className="text-slate-200 mx-auto mb-4" />
-          <p className="text-slate-400 font-black text-sm uppercase tracking-widest">Nenhum disparo encontrado</p>
-          <p className="text-slate-300 text-sm mt-1">Crie seu primeiro disparo em massa</p>
+        <div className="bg-card rounded-2xl p-16 text-center border border-border shadow-sm">
+          <Megaphone size={48} className="text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground font-black text-sm uppercase tracking-widest">Nenhum disparo encontrado</p>
+          <p className="text-muted-foreground/50 text-sm mt-1">Crie seu primeiro disparo em massa</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100">
-                <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</th>
-                <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Segmento</th>
-                <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Progresso</th>
-                <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="text-left px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+              <tr className="border-b border-border">
+                <th className="text-left px-5 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Nome</th>
+                <th className="text-left px-5 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Segmento</th>
+                <th className="text-left px-5 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Progresso</th>
+                <th className="text-left px-5 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status</th>
+                <th className="text-left px-5 py-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Data</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-border">
               {broadcasts.map(b => {
                 const pct = b.totalRecipients > 0
                   ? Math.round((b.sentCount / b.totalRecipients) * 100)
@@ -144,23 +145,23 @@ export default function Broadcasts() {
                   <tr
                     key={b.id}
                     onClick={() => setDetailId(b.id)}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                    className="hover:bg-muted cursor-pointer transition-colors"
                   >
                     <td className="px-5 py-3.5">
-                      <p className="font-bold text-slate-800 truncate max-w-[180px]">{b.name}</p>
+                      <p className="font-bold text-foreground truncate max-w-[180px]">{b.name}</p>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-slate-600">{segLabel}</span>
+                      <span className="text-muted-foreground">{segLabel}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2 min-w-[120px]">
-                        <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
                           <div
                             className="h-full bg-blue-500 rounded-full transition-all"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-slate-500 shrink-0">
+                        <span className="text-xs font-bold text-muted-foreground shrink-0">
                           {b.sentCount}/{b.totalRecipients}
                         </span>
                       </div>
@@ -173,7 +174,7 @@ export default function Broadcasts() {
                         {STATUS_LABEL[b.status]}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-slate-500 text-xs whitespace-nowrap">
+                    <td className="px-5 py-3.5 text-muted-foreground text-xs whitespace-nowrap">
                       {new Date(b.createdAt).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-3 py-3.5" onClick={e => e.stopPropagation()}>
@@ -181,7 +182,7 @@ export default function Broadcasts() {
                         onClick={e => handleDelete(b.id, e)}
                         disabled={deletingId === b.id || b.status === 'enviando' || b.status === 'enfileirado'}
                         title={b.status === 'enviando' || b.status === 'enfileirado' ? 'Cancele antes de excluir' : 'Excluir disparo'}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         {deletingId === b.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                       </button>

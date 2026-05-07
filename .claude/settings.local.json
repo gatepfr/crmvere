@@ -39,7 +39,26 @@
       "Bash(gh pr *)",
       "Bash(docker compose *)",
       "Bash(xargs grep *)",
-      "Skill(gsd-code-review)"
+      "Skill(gsd-code-review)",
+      "Bash(C:\\\\Users\\\\User\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.0.7\\\\scripts\\\\start-server.sh *)",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "Bash(nc -z localhost 5432)",
+      "Bash(powershell *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts\\)$\")",
+      "Bash(xargs cat *)",
+      "Bash(Get-ChildItem -Path . -Recurse -Depth 2)",
+      "Bash(Select-Object FullName)",
+      "Bash(npx shadcn@latest init --yes)",
+      "Bash(Get-Content \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--projetos-crm-vere-v3\\\\38c6726c-b9a9-4bab-a2c6-185cab30cd3d\\\\tasks\\\\bpwot6a00.output\" -Wait)",
+      "Bash(Select-String -Pattern \".\")",
+      "Bash(Get-ChildItem -Path \"backend/src\" -Recurse -ErrorAction SilentlyContinue)",
+      "Bash(find C:\\\\\\\\projetos\\\\\\\\crm_vere_v3\\\\\\\\backend\\\\\\\\src -type f -name \"*.ts\" -o -name \"*.js\")",
+      "Bash(cd C:\\\\\\\\projetos\\\\\\\\crm_vere_v3)",
+      "Bash(Get-ChildItem -Path \"C:\\\\projetos\\\\crm_vere_v3\" -Recurse -Depth 2 -Directory)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }

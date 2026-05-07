@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -155,7 +156,7 @@ export default function Tenants() {
       await api.post('/superadmin/categories', newCat);
       setNewCat({ name: '', color: '#2563eb' });
       loadData();
-    } catch { alert('Erro ao criar categoria.'); }
+    } catch { toast.error('Erro ao criar categoria.'); }
   };
 
   const handleSaveCat = async () => {
@@ -164,7 +165,7 @@ export default function Tenants() {
       await api.patch(`/superadmin/categories/${editingCat.id}`, { name: editingCat.name, color: editingCat.color });
       setEditingCat(null);
       loadData();
-    } catch { alert('Erro ao salvar categoria.'); }
+    } catch { toast.error('Erro ao salvar categoria.'); }
   };
 
   const handleDeleteCat = async (id: string) => {
@@ -172,7 +173,7 @@ export default function Tenants() {
     try {
       await api.delete(`/superadmin/categories/${id}`);
       loadData();
-    } catch { alert('Erro ao excluir categoria.'); }
+    } catch { toast.error('Erro ao excluir categoria.'); }
   };
 
   useEffect(() => {
@@ -193,10 +194,10 @@ export default function Tenants() {
     setLoading(true);
     try {
       await api.patch('/superadmin/config', aiConfig);
-      alert('Hub de IA Global atualizado com sucesso!');
+      toast.success('Hub de IA Global atualizado com sucesso!');
       loadData();
     } catch (err) {
-      alert('Erro ao salvar config global de IA.');
+      toast.error('Erro ao salvar config global de IA.');
     } finally {
       setLoading(false);
     }
@@ -208,9 +209,9 @@ export default function Tenants() {
     try {
       await api.patch('/superadmin/config', { defaultDailyTokenLimit: parseInt(newVal) });
       loadData();
-      alert('Limite padrão atualizado!');
+      toast.success('Limite padrão atualizado!');
     } catch (err) {
-      alert('Erro ao atualizar limite padrão.');
+      toast.error('Erro ao atualizar limite padrão.');
     }
   };
 
@@ -220,9 +221,9 @@ export default function Tenants() {
     try {
       await api.patch(`/superadmin/tenants/${id}`, { tokenAdjustment: parseInt(adjustment) });
       loadData();
-      alert('Quota ajustada com sucesso!');
+      toast.success('Quota ajustada com sucesso!');
     } catch (err) {
-      alert('Falha ao ajustar tokens.');
+      toast.error('Falha ao ajustar tokens.');
     }
   };
 
@@ -232,7 +233,7 @@ export default function Tenants() {
       await api.delete(`/superadmin/tenants/${id}`);
       loadData();
     } catch (err) {
-      alert('Falha ao excluir gabinete.');
+      toast.error('Falha ao excluir gabinete.');
     }
   };
 
@@ -241,7 +242,7 @@ export default function Tenants() {
       await api.patch(`/superadmin/tenants/${tenant.id}`, { active: !tenant.active });
       loadData();
     } catch (err) {
-      alert('Falha ao atualizar status.');
+      toast.error('Falha ao atualizar status.');
     }
   };
 
@@ -249,9 +250,9 @@ export default function Tenants() {
     try {
       await api.patch(`/superadmin/tenants/${tenant.id}`, { blocked: !tenant.blocked });
       loadData();
-      alert(`IA ${!tenant.blocked ? 'Bloqueada' : 'Desbloqueada'} para este gabinete.`);
+      toast.success(`IA ${!tenant.blocked ? 'Bloqueada' : 'Desbloqueada'} para este gabinete.`);
     } catch (err) {
-      alert('Falha ao atualizar Kill Switch.');
+      toast.error('Falha ao atualizar Kill Switch.');
     }
   };
 
@@ -273,9 +274,9 @@ export default function Tenants() {
     try {
       await api.patch(`/superadmin/tenants/${id}/subscription`, { status, trialEndsAt });
       loadData();
-      alert('Assinatura atualizada!');
+      toast.success('Assinatura atualizada!');
     } catch (err) {
-      alert('Falha ao atualizar assinatura.');
+      toast.error('Falha ao atualizar assinatura.');
     }
   };
 
@@ -289,10 +290,10 @@ export default function Tenants() {
     setLoading(true);
     try {
       await api.post('/superadmin/reset-database');
-      alert('Banco de dados zerado com sucesso!');
+      toast.success('Banco de dados zerado com sucesso!');
       loadData();
     } catch (err) {
-      alert('Falha ao zerar banco de dados.');
+      toast.error('Falha ao zerar banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -310,7 +311,7 @@ export default function Tenants() {
       setEmail('');
       setShowCreateModal(false);
       loadData();
-      alert('Gabinete criado com sucesso! Senha padrão: admin123');
+      toast.success('Gabinete criado com sucesso! Senha padrão: admin123');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Falha ao criar gabinete.');
     } finally {
@@ -332,11 +333,11 @@ export default function Tenants() {
     setLoading(true);
     try {
       await api.patch(`/superadmin/tenants/${editingTenant.id}`, editForm);
-      alert('Configurações do gabinete atualizadas!');
+      toast.success('Configurações do gabinete atualizadas!');
       setEditingTenant(null);
       loadData();
     } catch (err) {
-      alert('Falha ao atualizar gabinete.');
+      toast.error('Falha ao atualizar gabinete.');
     } finally {
       setLoading(false);
     }
@@ -369,7 +370,7 @@ export default function Tenants() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Navbar */}
       <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-10">
         <div className="px-6 py-4 mx-auto max-w-7xl flex justify-between items-center">
@@ -396,60 +397,60 @@ export default function Tenants() {
 
         {/* Stats em linha */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3 hover:border-amber-200 transition-colors">
-            <div className="bg-amber-50 p-3 rounded-xl text-amber-600 flex-shrink-0"><Zap size={20} /></div>
+          <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex items-center gap-3 hover:border-amber-200 transition-colors">
+            <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl text-amber-600 flex-shrink-0"><Zap size={20} /></div>
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Quota Padrão</p>
+              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Quota Padrão</p>
               <div className="flex items-center gap-1.5">
-                <h4 className="text-2xl font-black text-slate-900">{(globalConfig.defaultDailyTokenLimit / 1000).toFixed(0)}k</h4>
-                <button onClick={updateGlobalTokenLimit} className="p-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors">
+                <h4 className="text-2xl font-black text-foreground">{(globalConfig.defaultDailyTokenLimit / 1000).toFixed(0)}k</h4>
+                <button onClick={updateGlobalTokenLimit} className="p-1 bg-muted hover:bg-muted/80 rounded-lg text-muted-foreground transition-colors">
                   <PlusCircle size={12} />
                 </button>
               </div>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className="bg-blue-50 p-3 rounded-xl text-blue-600 flex-shrink-0"><Building2 size={20} /></div>
+          <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex items-center gap-3">
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-xl text-blue-600 flex-shrink-0"><Building2 size={20} /></div>
             <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Gabinetes</p>
-              <h4 className="text-2xl font-black text-slate-900">{stats.tenants}</h4>
+              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Gabinetes</p>
+              <h4 className="text-2xl font-black text-foreground">{stats.tenants}</h4>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className="bg-purple-50 p-3 rounded-xl text-purple-600 flex-shrink-0"><Users size={20} /></div>
+          <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex items-center gap-3">
+            <div className="bg-purple-50 dark:bg-purple-950/30 p-3 rounded-xl text-purple-600 flex-shrink-0"><Users size={20} /></div>
             <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Usuários</p>
-              <h4 className="text-2xl font-black text-slate-900">{stats.users}</h4>
+              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Usuários</p>
+              <h4 className="text-2xl font-black text-foreground">{stats.users}</h4>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className="bg-green-50 p-3 rounded-xl text-green-600 flex-shrink-0"><MessageSquare size={20} /></div>
+          <div className="bg-card p-4 rounded-2xl shadow-sm border border-border flex items-center gap-3">
+            <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-xl text-green-600 flex-shrink-0"><MessageSquare size={20} /></div>
             <div>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Demandas</p>
-              <h4 className="text-2xl font-black text-slate-900">{stats.demandas}</h4>
+              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Demandas</p>
+              <h4 className="text-2xl font-black text-foreground">{stats.demandas}</h4>
             </div>
           </div>
         </div>
 
         {/* Hub de IA colapsável */}
-        <div className="bg-white rounded-2xl shadow-sm border-2 border-blue-100 overflow-hidden">
+        <div className="bg-card rounded-2xl shadow-sm border-2 border-blue-100 dark:border-blue-900/40 overflow-hidden">
           <button
-            className="w-full px-5 py-4 flex items-center justify-between hover:bg-blue-50/50 transition-colors"
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors"
             onClick={() => setShowAIHub(v => !v)}
           >
-            <span className="text-sm font-black text-blue-900 flex items-center gap-2 uppercase tracking-tighter">
+            <span className="text-sm font-black text-blue-700 dark:text-blue-400 flex items-center gap-2 uppercase tracking-tighter">
               <Zap className="text-amber-500" size={15} />
               Hub de IA Centralizado
             </span>
-            <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${showAIHub ? 'rotate-180' : ''}`} />
+            <ChevronDown size={15} className={`text-muted-foreground transition-transform duration-200 ${showAIHub ? 'rotate-180' : ''}`} />
           </button>
           {showAIHub && (
-            <div className="border-t border-blue-100 p-5">
+            <div className="border-t border-blue-100 dark:border-blue-900/40 p-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Provedor de IA</label>
+                  <label className="block text-[9px] font-black text-muted-foreground uppercase mb-1 ml-1">Provedor de IA</label>
                   <select
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                    className="w-full px-3 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs text-foreground"
                     value={aiConfig.aiProvider}
                     onChange={e => handleProviderChange(e.target.value)}
                   >
@@ -462,21 +463,21 @@ export default function Tenants() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1 flex justify-between">
+                  <label className="block text-[9px] font-black text-muted-foreground uppercase mb-1 ml-1 flex justify-between">
                     Modelo
                     {aiConfig.aiProvider !== 'custom' && <span className="text-blue-500 flex items-center gap-0.5"><Cpu size={8} /> Oficial</span>}
                   </label>
                   {aiConfig.aiProvider === 'custom' ? (
                     <input
                       type="text"
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                      className="w-full px-3 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs text-foreground"
                       placeholder="Nome do modelo..."
                       value={aiConfig.aiModel}
                       onChange={e => setAIConfig({ ...aiConfig, aiModel: e.target.value })}
                     />
                   ) : (
                     <select
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                      className="w-full px-3 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs text-foreground"
                       value={aiConfig.aiModel}
                       onChange={e => setAIConfig({ ...aiConfig, aiModel: e.target.value })}
                     >
@@ -488,12 +489,12 @@ export default function Tenants() {
                 </div>
                 {(aiConfig.aiProvider === 'openrouter' || aiConfig.aiProvider === 'custom') && (
                   <div>
-                    <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1 flex items-center gap-1">
+                    <label className="block text-[9px] font-black text-muted-foreground uppercase mb-1 ml-1 flex items-center gap-1">
                       <Globe size={10} /> Base URL da API
                     </label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                      className="w-full px-3 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs text-foreground"
                       placeholder="https://api..."
                       value={aiConfig.aiBaseUrl}
                       onChange={e => setAIConfig({ ...aiConfig, aiBaseUrl: e.target.value })}
@@ -501,10 +502,10 @@ export default function Tenants() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">Chave de API</label>
+                  <label className="block text-[9px] font-black text-muted-foreground uppercase mb-1 ml-1">Chave de API</label>
                   <input
                     type="password"
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs"
+                    className="w-full px-3 py-2.5 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xs text-foreground"
                     placeholder="sk-..."
                     value={aiConfig.aiApiKey}
                     onChange={e => setAIConfig({ ...aiConfig, aiApiKey: e.target.value })}
@@ -525,21 +526,21 @@ export default function Tenants() {
         </div>
 
         {/* Abas */}
-        <nav className="flex gap-2 p-1.5 bg-slate-200 rounded-2xl w-fit">
-          <button onClick={() => setActiveTab('tenants')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'tenants' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Gabinetes</button>
-          <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Usuários</button>
-          <button onClick={() => setActiveTab('categories')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'categories' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>Categorias</button>
+        <nav className="flex gap-2 p-1.5 bg-muted rounded-2xl w-fit">
+          <button onClick={() => setActiveTab('tenants')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'tenants' ? 'bg-background text-blue-600 shadow-sm' : 'text-muted-foreground'}`}>Gabinetes</button>
+          <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'users' ? 'bg-background text-blue-600 shadow-sm' : 'text-muted-foreground'}`}>Usuários</button>
+          <button onClick={() => setActiveTab('categories')} className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'categories' ? 'bg-background text-blue-600 shadow-sm' : 'text-muted-foreground'}`}>Categorias</button>
         </nav>
 
         {/* Aba Gabinetes */}
         {activeTab === 'tenants' && (
           <div className="space-y-4">
-            <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-3">
-              <Search className="text-slate-400 flex-shrink-0" size={18} />
+            <div className="bg-card p-3 rounded-2xl shadow-sm border border-border flex items-center gap-3">
+              <Search className="text-muted-foreground flex-shrink-0" size={18} />
               <input
                 type="text"
                 placeholder="Buscar gabinete por nome ou slug..."
-                className="flex-1 outline-none font-bold text-sm text-slate-600"
+                className="flex-1 outline-none font-bold text-sm text-foreground bg-transparent"
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
@@ -552,10 +553,10 @@ export default function Tenants() {
               </button>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-card rounded-3xl shadow-sm border border-border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
+                  <thead className="bg-muted border-b border-border">
                     <tr>
                       {([
                         { field: 'name', label: 'Gabinete', align: 'left' },
@@ -564,7 +565,7 @@ export default function Tenants() {
                       ] as const).map(col => (
                         <th
                           key={col.field}
-                          className={`px-6 py-4 text-[10px] font-black text-slate-400 uppercase cursor-pointer select-none hover:text-slate-600 transition-colors ${col.align === 'center' ? 'text-center' : ''}`}
+                          className={`px-6 py-4 text-[10px] font-black text-muted-foreground uppercase cursor-pointer select-none hover:text-foreground transition-colors ${col.align === 'center' ? 'text-center' : ''}`}
                           onClick={() => handleSort(col.field)}
                         >
                           <span className={`inline-flex items-center gap-1 ${col.align === 'center' ? 'justify-center w-full' : ''}`}>
@@ -578,18 +579,18 @@ export default function Tenants() {
                           </span>
                         </th>
                       ))}
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Ações</th>
+                      <th className="px-6 py-4 text-right text-[10px] font-black text-muted-foreground uppercase">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {paginatedTenants.map(tenant => (
-                      <tr key={tenant.id} className="hover:bg-slate-50">
+                      <tr key={tenant.id} className="hover:bg-muted">
                         <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900">{tenant.name}</p>
-                          <code className="text-[9px] text-slate-400">/{tenant.slug}</code>
+                          <p className="font-bold text-foreground">{tenant.name}</p>
+                          <code className="text-[9px] text-muted-foreground">/{tenant.slug}</code>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <button onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)} className="px-3 py-1 bg-slate-100 rounded-lg font-black text-[10px]" title="Ajustar limite de tokens">{(tenant.dailyTokenLimit / 1000).toFixed(0)}k</button>
+                          <button onClick={() => adjustTokens(tenant.id, tenant.dailyTokenLimit)} className="px-3 py-1 bg-muted rounded-lg font-black text-[10px] text-foreground" title="Ajustar limite de tokens">{(tenant.dailyTokenLimit / 1000).toFixed(0)}k</button>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
@@ -606,8 +607,8 @@ export default function Tenants() {
                             <button onClick={() => setTrial(tenant.id)} className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100" title="Definir dias de Trial gratuito"><Clock size={16} /></button>
                             <button onClick={() => setLifetime(tenant.id)} className="p-2 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100" title="Ativar acesso Vitalício (Lifetime)"><Infinity size={16} /></button>
                             <button onClick={() => handleEditTenant(tenant)} className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100" title="Configurar Gabinete"><Settings size={16} /></button>
-                            <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'}`} title={tenant.blocked ? 'Desbloquear IA' : 'Bloquear IA (Kill Switch)'}>{tenant.blocked ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}</button>
-                            <button onClick={() => toggleStatus(tenant)} className="p-2 bg-slate-100 rounded-xl" title={tenant.active ? 'Desativar Gabinete' : 'Ativar Gabinete'}><Power size={16} /></button>
+                            <button onClick={() => toggleBlockIA(tenant)} className={`p-2 rounded-xl ${tenant.blocked ? 'bg-red-600 text-white' : 'bg-muted text-muted-foreground'}`} title={tenant.blocked ? 'Desbloquear IA' : 'Bloquear IA (Kill Switch)'}>{tenant.blocked ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}</button>
+                            <button onClick={() => toggleStatus(tenant)} className="p-2 bg-muted rounded-xl text-muted-foreground" title={tenant.active ? 'Desativar Gabinete' : 'Ativar Gabinete'}><Power size={16} /></button>
                             <button onClick={() => handleDelete(tenant.id)} className="p-2 bg-red-50 text-red-600 rounded-xl" title="Excluir Gabinete Permanentemente"><Trash2 size={16} /></button>
                           </div>
                         </td>
@@ -615,7 +616,7 @@ export default function Tenants() {
                     ))}
                     {paginatedTenants.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-6 py-10 text-center text-slate-400 font-bold text-sm">
+                        <td colSpan={4} className="px-6 py-10 text-center text-muted-foreground font-bold text-sm">
                           Nenhum gabinete encontrado.
                         </td>
                       </tr>
@@ -624,11 +625,11 @@ export default function Tenants() {
                 </table>
               </div>
               {totalPages > 1 && (
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                  <p className="text-[10px] font-black text-slate-400 uppercase">Página {currentPage} de {totalPages} — {sortedTenants.length} gabinetes</p>
+                <div className="p-4 bg-muted/50 border-t border-border flex items-center justify-between">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase">Página {currentPage} de {totalPages} — {sortedTenants.length} gabinetes</p>
                   <div className="flex gap-2">
-                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black disabled:opacity-50 hover:bg-slate-50 transition-all">ANTERIOR</button>
-                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black disabled:opacity-50 hover:bg-slate-50 transition-all">PRÓXIMA</button>
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-3 py-1 bg-background border border-border rounded-lg text-[10px] font-black disabled:opacity-50 hover:bg-muted transition-all">ANTERIOR</button>
+                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="px-3 py-1 bg-background border border-border rounded-lg text-[10px] font-black disabled:opacity-50 hover:bg-muted transition-all">PRÓXIMA</button>
                   </div>
                 </div>
               )}
@@ -639,49 +640,49 @@ export default function Tenants() {
         {/* Aba Categorias */}
         {activeTab === 'categories' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><Tag size={18} className="text-blue-600" /> Nova Categoria</h3>
+            <div className="lg:col-span-1 bg-card rounded-3xl shadow-sm border border-border overflow-hidden">
+              <div className="p-6 border-b border-border bg-muted/30">
+                <h3 className="text-lg font-black text-foreground flex items-center gap-2"><Tag size={18} className="text-blue-600" /> Nova Categoria</h3>
               </div>
               <div className="p-6 space-y-4">
                 <input
                   type="text"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm uppercase"
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-2xl outline-none font-bold text-sm uppercase text-foreground"
                   placeholder="Nome da categoria"
                   value={newCat.name}
                   onChange={e => setNewCat({ ...newCat, name: e.target.value })}
                 />
                 <div className="flex items-center gap-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase">Cor</label>
-                  <input type="color" className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer" value={newCat.color} onChange={e => setNewCat({ ...newCat, color: e.target.value })} />
-                  <span className="font-mono text-xs text-slate-500">{newCat.color}</span>
+                  <label className="text-[10px] font-black text-muted-foreground uppercase">Cor</label>
+                  <input type="color" className="w-10 h-10 rounded-xl border border-border cursor-pointer" value={newCat.color} onChange={e => setNewCat({ ...newCat, color: e.target.value })} />
+                  <span className="font-mono text-xs text-muted-foreground">{newCat.color}</span>
                 </div>
                 <button onClick={handleAddCat} className="w-full py-3 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg">Adicionar Categoria</button>
               </div>
             </div>
-            <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-                <h3 className="text-sm font-black text-slate-700 uppercase tracking-tighter flex items-center gap-2">
-                  <Tag size={16} className="text-slate-400" /> Categorias Globais ({globalCats.length})
+            <div className="lg:col-span-2 bg-card rounded-3xl shadow-sm border border-border overflow-hidden">
+              <div className="p-5 border-b border-border bg-muted/30">
+                <h3 className="text-sm font-black text-muted-foreground uppercase tracking-tighter flex items-center gap-2">
+                  <Tag size={16} className="text-muted-foreground" /> Categorias Globais ({globalCats.length})
                 </h3>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-border">
                 {globalCats.map(cat => (
-                  <div key={cat.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50">
+                  <div key={cat.id} className="flex items-center gap-4 px-6 py-4 hover:bg-muted">
                     <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                     {editingCat?.id === cat.id ? (
                       <div className="flex-1 flex items-center gap-3">
-                        <input className="flex-1 px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl font-bold text-sm uppercase outline-none focus:ring-2 focus:ring-blue-500" value={editingCat.name} onChange={e => setEditingCat({ ...editingCat, name: e.target.value })} />
-                        <input type="color" className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer" value={editingCat.color} onChange={e => setEditingCat({ ...editingCat, color: e.target.value })} />
+                        <input className="flex-1 px-3 py-1.5 bg-muted border border-border rounded-xl font-bold text-sm uppercase outline-none focus:ring-2 focus:ring-blue-500 text-foreground" value={editingCat.name} onChange={e => setEditingCat({ ...editingCat, name: e.target.value })} />
+                        <input type="color" className="w-8 h-8 rounded-lg border border-border cursor-pointer" value={editingCat.color} onChange={e => setEditingCat({ ...editingCat, color: e.target.value })} />
                       </div>
                     ) : (
-                      <span className="flex-1 font-bold text-sm text-slate-800">{cat.name}</span>
+                      <span className="flex-1 font-bold text-sm text-foreground">{cat.name}</span>
                     )}
                     <div className="flex gap-1.5 flex-shrink-0">
                       {editingCat?.id === cat.id ? (
                         <>
                           <button onClick={handleSaveCat} className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100"><Check size={15} /></button>
-                          <button onClick={() => setEditingCat(null)} className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200"><X size={15} /></button>
+                          <button onClick={() => setEditingCat(null)} className="p-2 bg-muted text-muted-foreground rounded-xl hover:bg-muted/80"><X size={15} /></button>
                         </>
                       ) : (
                         <>
@@ -692,7 +693,7 @@ export default function Tenants() {
                     </div>
                   </div>
                 ))}
-                {globalCats.length === 0 && <p className="px-6 py-10 text-center text-slate-400 font-bold text-sm">Nenhuma categoria cadastrada.</p>}
+                {globalCats.length === 0 && <p className="px-6 py-10 text-center text-muted-foreground font-bold text-sm">Nenhuma categoria cadastrada.</p>}
               </div>
             </div>
           </div>
@@ -700,20 +701,20 @@ export default function Tenants() {
 
         {/* Aba Usuários */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-card rounded-3xl shadow-sm border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-100">
+                <thead className="bg-muted border-b border-border">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Usuário</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Gabinete</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Ações</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase">Usuário</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase">Gabinete</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-black text-muted-foreground uppercase">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {allUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 font-bold text-slate-900">{u.email}</td>
+                    <tr key={u.id} className="hover:bg-muted">
+                      <td className="px-6 py-4 font-bold text-foreground">{u.email}</td>
                       <td className="px-6 py-4 text-blue-600 font-bold">{u.tenantName || '---'}</td>
                       <td className="px-6 py-4 text-right">
                         <button
@@ -721,8 +722,8 @@ export default function Tenants() {
                             if (!confirm(`Deseja realmente resetar a senha de ${u.email} para admin123?`)) return;
                             try {
                               await api.post(`/superadmin/users/${u.id}/reset-password`);
-                              alert('Senha resetada com sucesso para: admin123');
-                            } catch { alert('Falha ao resetar senha.'); }
+                              toast.success('Senha resetada com sucesso para: admin123');
+                            } catch { toast.error('Falha ao resetar senha.'); }
                           }}
                           className="px-3 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg text-[10px] font-black border border-amber-100 transition-all"
                         >
@@ -741,32 +742,32 @@ export default function Tenants() {
       {/* Modal Criar Gabinete */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter">
+          <div className="bg-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-muted/50">
+              <h3 className="text-lg font-black text-foreground flex items-center gap-2 uppercase tracking-tighter">
                 <Building2 size={20} className="text-blue-600" />
                 Novo Gabinete
               </h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <X size={20} className="text-slate-500" />
+              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-muted rounded-full transition-colors">
+                <X size={20} className="text-muted-foreground" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               {error && <p className="text-red-500 text-xs font-bold bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome do Vereador</label>
-                <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500" placeholder="Ex: João Silva" value={name} onChange={e => setName(e.target.value)} />
+                <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nome do Vereador</label>
+                <input type="text" required className="w-full px-4 py-3 bg-muted border border-border rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500 text-foreground" placeholder="Ex: João Silva" value={name} onChange={e => setName(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Slug (URL)</label>
-                <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500" placeholder="Ex: vereador-joao" value={slug} onChange={e => setSlug(e.target.value)} />
+                <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Slug (URL)</label>
+                <input type="text" required className="w-full px-4 py-3 bg-muted border border-border rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500 text-foreground" placeholder="Ex: vereador-joao" value={slug} onChange={e => setSlug(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Email Principal</label>
-                <input type="email" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500" placeholder="email@exemplo.com" value={email} onChange={e => setEmail(e.target.value)} />
+                <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Email Principal</label>
+                <input type="email" required className="w-full px-4 py-3 bg-muted border border-border rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500 text-foreground" placeholder="email@exemplo.com" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-100">Cancelar</button>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-3 bg-background border border-border text-foreground rounded-xl font-black text-xs uppercase tracking-widest hover:bg-muted">Cancelar</button>
                 <button type="submit" disabled={loading} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50">{loading ? 'Criando...' : 'Criar Gabinete'}</button>
               </div>
             </form>
@@ -777,43 +778,43 @@ export default function Tenants() {
       {/* Modal Editar Gabinete */}
       {editingTenant && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <div className="bg-card rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in duration-200">
+            <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-muted/30">
               <div>
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter">
+                <h3 className="text-lg font-black text-foreground flex items-center gap-2 uppercase tracking-tighter">
                   <Settings size={20} className="text-blue-600" />
                   Configurar Gabinete
                 </h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ajuste de mensagens e identificação</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Ajuste de mensagens e identificação</p>
               </div>
-              <button onClick={() => setEditingTenant(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <X size={20} className="text-slate-500" />
+              <button onClick={() => setEditingTenant(null)} className="p-2 hover:bg-muted rounded-full transition-colors">
+                <X size={20} className="text-muted-foreground" />
               </button>
             </div>
             <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome do Vereador</label>
-                  <input className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editForm.name} onChange={e => setEditEditForm({ ...editForm, name: e.target.value })} />
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Nome do Vereador</label>
+                  <input className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 text-foreground" value={editForm.name} onChange={e => setEditEditForm({ ...editForm, name: e.target.value })} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Slug (URL)</label>
-                  <input className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500" value={editForm.slug} onChange={e => setEditEditForm({ ...editForm, slug: e.target.value })} />
+                  <label className="text-[10px] font-black text-muted-foreground uppercase ml-1">Slug (URL)</label>
+                  <input className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 text-foreground" value={editForm.slug} onChange={e => setEditEditForm({ ...editForm, slug: e.target.value })} />
                 </div>
               </div>
               <div className="p-4 bg-pink-50 rounded-2xl border border-pink-100 space-y-3">
                 <label className="text-[10px] font-black text-pink-600 uppercase flex items-center gap-2">🎈 Mensagem de Aniversário</label>
-                <textarea className="w-full p-4 bg-white border border-pink-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-pink-500 min-h-[100px]" placeholder="Ex: Olá {nome}, parabéns pelo seu aniversário!..." value={editForm.birthdayMessage} onChange={e => setEditEditForm({ ...editForm, birthdayMessage: e.target.value })} />
+                <textarea className="w-full p-4 bg-background border border-pink-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-pink-500 min-h-[100px] text-foreground" placeholder="Ex: Olá {nome}, parabéns pelo seu aniversário!..." value={editForm.birthdayMessage} onChange={e => setEditEditForm({ ...editForm, birthdayMessage: e.target.value })} />
                 <p className="text-[9px] text-pink-400 font-bold uppercase tracking-tighter italic">* Use {'{nome}'} para inserir o nome do munícipe automaticamente.</p>
               </div>
               <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
                 <label className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2">📋 Mensagem de Indicação (Legislativo)</label>
-                <textarea className="w-full p-4 bg-white border border-blue-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]" placeholder="Ex: Olá {nome}! Sua solicitação sobre {assunto} virou a Indicação nº {numero}..." value={editForm.legislativeMessage} onChange={e => setEditEditForm({ ...editForm, legislativeMessage: e.target.value })} />
+                <textarea className="w-full p-4 bg-background border border-blue-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] text-foreground" placeholder="Ex: Olá {nome}! Sua solicitação sobre {assunto} virou a Indicação nº {numero}..." value={editForm.legislativeMessage} onChange={e => setEditEditForm({ ...editForm, legislativeMessage: e.target.value })} />
                 <p className="text-[9px] text-blue-400 font-bold uppercase tracking-tighter italic">* Use {'{nome}'}, {'{assunto}'}, {'{numero}'} e {'{link}'} como variáveis.</p>
               </div>
             </div>
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button onClick={() => setEditingTenant(null)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-100">Cancelar</button>
+            <div className="p-6 bg-muted/50 border-t border-border flex gap-3">
+              <button onClick={() => setEditingTenant(null)} className="flex-1 py-3 bg-background border border-border text-foreground rounded-xl font-black text-xs uppercase tracking-widest hover:bg-muted">Cancelar</button>
               <button onClick={handleSaveTenant} disabled={loading} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50">{loading ? 'Salvando...' : 'Salvar Configurações'}</button>
             </div>
           </div>
@@ -824,7 +825,7 @@ export default function Tenants() {
         <button onClick={handleResetDatabase} className="text-[10px] font-black text-red-400 uppercase border border-red-200 px-3 py-1 rounded-lg">Zerar Banco de Dados</button>
         <div className="flex flex-col items-center gap-2 opacity-50 grayscale">
           <img src="/logo_site.png" alt="CRM do Verê" className="h-8 w-auto object-contain" />
-          <p className="text-[8px] font-black text-slate-400 uppercase">v1.0.0 © 2026</p>
+          <p className="text-[8px] font-black text-muted-foreground uppercase">v1.0.0 © 2026</p>
         </div>
       </footer>
     </div>

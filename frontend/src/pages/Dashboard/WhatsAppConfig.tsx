@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { Smartphone, CheckCircle2, AlertCircle, RefreshCw, Database, Trash2, QrCode as QrCodeIcon } from 'lucide-react';
@@ -138,7 +139,7 @@ export default function WhatsAppConfig() {
     setError(null);
     try {
       await api.post('/whatsapp/setup', config);
-      alert('Configurações de conexão salvas!');
+      toast.success('Configurações de conexão salvas!');
     } catch (err) {
 
       console.error('Erro ao salvar config:', err);
@@ -183,7 +184,7 @@ export default function WhatsAppConfig() {
       await api.post('/whatsapp/instance/logout');
       setStatus(null);
       setQrCode(null);
-      alert('WhatsApp desconectado com sucesso!');
+      toast.success('WhatsApp desconectado com sucesso!');
     } catch (err) {
       console.error('Erro ao deslogar:', err);
       setError('Falha ao desconectar o WhatsApp.');
@@ -207,29 +208,29 @@ export default function WhatsAppConfig() {
   return (
     <div className="max-w-4xl space-y-8">
       <header onClick={handleHeaderClick} className="cursor-default">
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Conexão WhatsApp</h2>
-        <p className="text-slate-500">Integre o CRM diretamente com seu número de WhatsApp via Evolution API.</p>
+        <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Conexão WhatsApp</h2>
+        <p className="text-muted-foreground">Integre o CRM diretamente com seu número de WhatsApp via Evolution API.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
           {/* Seção: Número de Alerta (Visível para todos os Admins) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+          <div className="bg-card rounded-2xl shadow-sm border border-border p-6 space-y-6">
+            <h3 className="font-bold text-foreground flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-500" />
               Notificações de Socorro
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">WhatsApp da Equipe</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold"
+                <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-1 ml-1">WhatsApp da Equipe</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold text-foreground"
                   value={config.whatsappNotificationNumber}
                   onChange={e => setConfig({...config, whatsappNotificationNumber: formatPhoneBR(e.target.value)})}
                   placeholder="+55 (43) 99999-9999"
                 />
-                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
                   Este número receberá um alerta imediato quando a IA solicitar intervenção humana.
                 </p>
               </div>
@@ -237,7 +238,7 @@ export default function WhatsAppConfig() {
                 <button 
                   onClick={handleSaveConfig}
                   disabled={loading}
-                  className="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 text-xs shadow-sm"
+                  className="w-full bg-foreground text-background py-2.5 rounded-xl font-bold hover:bg-foreground/90 transition-colors disabled:opacity-50 text-xs shadow-sm"
                 >
                   {loading ? 'Salvando...' : 'Salvar Número de Alerta'}
                 </button>
@@ -247,28 +248,28 @@ export default function WhatsAppConfig() {
 
           {/* Config Side - Visible for Super Admin OR if config is missing */}
           {(isSuperAdmin || showConfig) && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <div className="bg-card rounded-2xl shadow-sm border border-border p-6 space-y-6">
+              <h3 className="font-bold text-foreground flex items-center gap-2">
                 <Database className="w-4 h-4 text-blue-500" />
                 Configuração de Servidor
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">URL da API</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  <label className="block text-sm font-semibold text-foreground mb-1">URL da API</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-foreground"
                     value={config.evolutionApiUrl}
                     onChange={e => setConfig({...config, evolutionApiUrl: e.target.value})}
                     placeholder="https://wa.crmvere.com.br"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Token Global</label>
-                  <input 
-                    type="password" 
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  <label className="block text-sm font-semibold text-foreground mb-1">Token Global</label>
+                  <input
+                    type="password"
+                    className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-foreground"
                     value={config.evolutionGlobalToken}
                     onChange={e => setConfig({...config, evolutionGlobalToken: e.target.value})}
                     placeholder="Token de Segurança"
@@ -295,30 +296,30 @@ export default function WhatsAppConfig() {
 
         {/* Status/QR Code Side */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 min-h-[400px] flex flex-col items-center justify-center text-center">
+          <div className="bg-card rounded-2xl shadow-sm border border-border p-8 min-h-[400px] flex flex-col items-center justify-center text-center">
             {isConnected ? (
               <div className="space-y-6">
-                <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto text-green-600 animate-pulse">
+                <div className="w-24 h-24 bg-green-50 dark:bg-green-950/30 rounded-full flex items-center justify-center mx-auto text-green-600 animate-pulse">
                   <CheckCircle2 className="w-12 h-12" />
                 </div>
                 <div>
-                  <h4 className="text-2xl font-black text-slate-900">Conectado com Sucesso!</h4>
-                  <p className="text-slate-500 mt-2">Seu WhatsApp está pronto para receber demandas.</p>
+                  <h4 className="text-2xl font-black text-foreground">Conectado com Sucesso!</h4>
+                  <p className="text-muted-foreground mt-2">Seu WhatsApp está pronto para receber demandas.</p>
                 </div>
                 <div className="flex flex-col gap-2 pt-4">
-                  <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-green-100 text-green-700 mx-auto">
+                  <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-green-100 dark:bg-green-950/50 text-green-700 mx-auto">
                     Status: {status?.state || status?.status}
                   </span>
-                  <button 
+                  <button
                     onClick={fetchStatus}
-                    className="text-slate-400 hover:text-slate-600 flex items-center gap-2 text-xs font-semibold mx-auto mt-2 transition-colors"
+                    className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-xs font-semibold mx-auto mt-2 transition-colors"
                   >
                     <RefreshCw className="w-3 h-3" />
                     Atualizar Status
                   </button>
                 </div>
-                <div className="pt-8 border-t border-slate-100 w-full max-w-xs">
-                  <button 
+                <div className="pt-8 border-t border-border w-full max-w-xs">
+                  <button
                     onClick={handleLogout}
                     disabled={loading}
                     className="text-red-500 hover:text-red-700 text-sm font-bold flex items-center gap-2 mx-auto transition-colors disabled:opacity-50"
@@ -330,19 +331,19 @@ export default function WhatsAppConfig() {
               </div>
             ) : qrCode ? (
               <div className="space-y-6">
-                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-200 inline-block">
+                <div className="bg-muted p-4 rounded-2xl border-2 border-dashed border-border inline-block">
                   {qrCode.startsWith('data:image') ? (
                     <img src={qrCode} alt="WhatsApp QR Code" className="w-64 h-64 rounded-lg shadow-sm" />
                   ) : (
                     <div className="w-64 h-64 flex flex-col items-center justify-center gap-2">
-                       <QrCodeIcon className="w-12 h-12 text-slate-300" />
-                       <p className="text-xs text-slate-400 px-8">Carregando QR Code...</p>
+                       <QrCodeIcon className="w-12 h-12 text-muted-foreground/40" />
+                       <p className="text-xs text-muted-foreground px-8">Carregando QR Code...</p>
                     </div>
                   )}
                 </div>
                 <div className="max-w-xs mx-auto">
-                  <h4 className="text-xl font-bold text-slate-900">Escaneie o QR Code</h4>
-                  <p className="text-slate-500 mt-2 text-sm">
+                  <h4 className="text-xl font-bold text-foreground">Escaneie o QR Code</h4>
+                  <p className="text-muted-foreground mt-2 text-sm">
                     Abra o WhatsApp no seu celular, vá em Aparelhos Conectados e escaneie o código acima.
                   </p>
                 </div>
@@ -363,12 +364,12 @@ export default function WhatsAppConfig() {
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600">
+                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-950/30 rounded-full flex items-center justify-center mx-auto text-blue-600">
                   <Smartphone className="w-10 h-10" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold text-slate-900">Conectar WhatsApp</h4>
-                  <p className="text-slate-500 max-w-xs mx-auto mt-2">
+                  <h4 className="text-xl font-bold text-foreground">Conectar WhatsApp</h4>
+                  <p className="text-muted-foreground max-w-xs mx-auto mt-2">
                     Clique no botão abaixo para gerar um QR Code e vincular seu número.
                   </p>
                 </div>

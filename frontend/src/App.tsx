@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SubscriptionProvider, SubscriptionGuard } from './components/SubscriptionGuard';
 import { BillingBanner } from './components/BillingBanner';
@@ -127,8 +129,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+      <AuthProvider>
+        <AppContent />
+        <Toaster richColors position="top-right" />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

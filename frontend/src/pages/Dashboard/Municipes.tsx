@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { formatPhone } from '../../utils/formatPhone';
@@ -122,8 +123,8 @@ export default function Municipes() {
       setCreateForm({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
       setDisplayCreatePhone('');
       loadMunicipes();
-      alert('Munícipe cadastrado com sucesso!');
-    } catch (err: any) { alert(err.response?.data?.error || 'Erro ao cadastrar.'); }
+      toast.success('Munícipe cadastrado com sucesso!');
+    } catch (err: any) { toast.error(err.response?.data?.error || 'Erro ao cadastrar.'); }
     finally { setSaving(false); }
   };
 
@@ -131,7 +132,7 @@ export default function Municipes() {
     try {
       await api.patch(`/demands/municipes/${m.id}`, { isLideranca: !m.isLideranca });
       setMunicipes(prev => prev.map(p => p.id === m.id ? { ...p, isLideranca: !p.isLideranca } : p));
-    } catch { alert('Erro ao atualizar status.'); }
+    } catch { toast.error('Erro ao atualizar status.'); }
   };
 
   const handleBulkLideranca = async () => {
@@ -139,8 +140,8 @@ export default function Municipes() {
     setSaving(true);
     try {
       for (const id of selectedMunicipes) await api.patch(`/demands/municipes/${id}`, { isLideranca: true });
-      setSelectedMunicipes([]); loadMunicipes(); alert('Lideranças atualizadas!');
-    } catch { alert('Erro na atualização em massa.'); }
+      setSelectedMunicipes([]); loadMunicipes(); toast.success('Lideranças atualizadas!');
+    } catch { toast.error('Erro na atualização em massa.'); }
     finally { setSaving(false); }
   };
 
@@ -158,21 +159,21 @@ export default function Municipes() {
   };
 
   const handleImportCSV = async () => {
-    if (!csvFile || !mapping.name || !mapping.phone) { alert('Selecione arquivo e mapeie Nome e Telefone.'); return; }
+    if (!csvFile || !mapping.name || !mapping.phone) { toast.warning('Selecione arquivo e mapeie Nome e Telefone.'); return; }
     setSaving(true);
     const fd = new FormData();
     fd.append('file', csvFile); fd.append('mapping', JSON.stringify(mapping));
     try {
       await api.post('/demands/municipes/import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setIsImportModalOpen(false); setCsvFile(null); setCsvHeaders([]); loadMunicipes(); alert('Importação concluída!');
-    } catch (err: any) { alert('Falha: ' + (err.response?.data?.error || 'Erro desconhecido')); }
+      setIsImportModalOpen(false); setCsvFile(null); setCsvHeaders([]); loadMunicipes(); toast.success('Importação concluída!');
+    } catch (err: any) { toast.error('Falha: ' + (err.response?.data?.error || 'Erro desconhecido')); }
     finally { setSaving(false); }
   };
 
   const handleSendBirthdayMessage = async (m: Municipe) => {
     let msg = (cabinetConfig?.birthdayMessage || `Olá ${m.name}, parabéns pelo seu aniversário! 🎂🎈`).replace(/{nome}/g, m.name);
-    try { await api.post('/whatsapp/send-direct', { phone: m.phone, message: msg }); alert('Mensagem enviada!'); }
-    catch (err: any) { alert(`Falha: ${err.response?.data?.error || 'Verifique a conexão'}`); }
+    try { await api.post('/whatsapp/send-direct', { phone: m.phone, message: msg }); toast.success('Mensagem enviada!'); }
+    catch (err: any) { toast.error(`Falha: ${err.response?.data?.error || 'Verifique a conexão'}`); }
   };
 
   const handleSendBroadcast = async () => {
@@ -186,7 +187,7 @@ export default function Municipes() {
       await new Promise(r => setTimeout(r, 500));
     }
     setSending(false); setIsModalOpen(false); setBroadcastMessage(''); setSelectedMunicipes([]);
-    alert(failed > 0 ? `${selectedMunicipes.length - failed} enviadas, ${failed} falharam.` : 'Enviadas com sucesso!');
+    toast.success(failed > 0 ? `${selectedMunicipes.length - failed} enviadas, ${failed} falharam.` : 'Enviadas com sucesso!');
   };
 
   const formatDateDisplay = (dateStr: string | null) => {
@@ -243,15 +244,15 @@ export default function Municipes() {
     setSaving(true);
     try {
       await api.patch(`/demands/municipes/${editingMunicipe.id}`, { ...editForm, birthDate: parseDateToISO(editForm.birthDate) });
-      setEditingMunicipe(null); alert('Dados atualizados!'); loadMunicipes();
-    } catch { alert('Falha ao atualizar.'); }
+      setEditingMunicipe(null); toast.success('Dados atualizados!'); loadMunicipes();
+    } catch { toast.error('Falha ao atualizar.'); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja excluir este munícipe?')) return;
-    try { await api.delete(`/demands/municipes/${id}`); setMunicipes(prev => prev.filter(m => m.id !== id)); alert('Excluído!'); }
-    catch { alert('Falha ao excluir.'); }
+    try { await api.delete(`/demands/municipes/${id}`); setMunicipes(prev => prev.filter(m => m.id !== id)); toast.success('Excluído!'); }
+    catch { toast.error('Falha ao excluir.'); }
   };
 
   const exportToPDF = async (mode: 'page' | 'all') => {
@@ -271,7 +272,7 @@ export default function Municipes() {
         theme: 'striped', headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
       });
       doc.save(`municipes-${mode}-${Date.now()}.pdf`); setIsExportModalOpen(false);
-    } catch { alert('Erro ao exportar'); }
+    } catch { toast.error('Erro ao exportar'); }
     finally { setExporting(false); }
   };
 

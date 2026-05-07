@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../../api/client';
 import DemandModal from '../../components/DemandModal';
 import NewDemandModal from '../../components/NewDemandModal';
@@ -117,7 +118,7 @@ export default function Demands() {
         theme: 'striped', headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
       });
       doc.save(`atendimentos-${Date.now()}.pdf`); setIsExportModalOpen(false);
-    } catch { alert('Erro ao exportar PDF'); }
+    } catch { toast.error('Erro ao exportar PDF'); }
     finally { setExporting(false); }
   };
 

@@ -1,8 +1,8 @@
 import api from '../api/client';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { formatPhone } from '../utils/formatPhone';
 import {
-  X,
   User,
   Phone,
   Tag,
@@ -17,6 +17,12 @@ import {
   Send,
   Clock
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface LegislativoEditModalProps {
   demand: any;
@@ -86,7 +92,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
         const data: Category[] = res.data.length > 0 ? res.data : DEFAULT_CATEGORIES;
         const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
         setCategories(sorted);
-        // Normaliza a categoria salva para o nome canônico da lista (resolve mismatch de capitalização)
         const saved = demand.demandas.categoria || '';
         const match = sorted.find(c => c.name.toUpperCase() === saved.toUpperCase());
         if (match) setCategoria(match.name);
@@ -142,8 +147,8 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
       });
       onUpdate();
       onClose();
-    } catch (err) {
-      alert('Erro ao salvar as alterações.');
+    } catch {
+      toast.error('Erro ao salvar as alterações.');
     } finally {
       setLoading(false);
     }
@@ -156,7 +161,7 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
       await api.post(`/demands/${demand.demandas.id}/comments`, { comment });
       setComment('');
       loadTimeline();
-    } catch { alert('Erro ao enviar comentário.'); }
+    } catch { toast.error('Erro ao enviar comentário.'); }
     finally { setSendingComment(false); }
   };
 
@@ -177,26 +182,25 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-lg p-0 gap-0 overflow-hidden rounded-3xl"
+      >
+        <DialogHeader className="px-6 py-5 border-b border-border bg-muted/30 flex-row items-center justify-between space-y-0">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Edit2 size={18} className="text-blue-600" />
               Editar Demanda
-            </h3>
-            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">
+            </DialogTitle>
+            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
               {demand.municipes.name}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-            <X size={20} className="text-slate-500" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-100 bg-white">
+        <div className="flex border-b border-border bg-background">
           {tabs.map(t => (
             <button
               key={t.id}
@@ -204,7 +208,7 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
               className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all border-b-2 ${
                 activeTab === t.id
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-400 hover:text-slate-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               {t.label}
@@ -212,20 +216,20 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
           ))}
         </div>
 
-        <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 space-y-5 max-h-[60vh] overflow-y-auto bg-background">
 
           {activeTab === 'detalhes' && (
             <>
-              <div className="space-y-4 p-5 bg-blue-50/30 rounded-2xl border border-blue-100">
+              <div className="space-y-4 p-5 bg-blue-50/30 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/40">
                 <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
                   <User size={14} /> Dados do Cidadão
                 </h4>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                  <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nome Completo</label>
                   <div className="relative">
-                    <User size={14} className="absolute left-3 top-3 text-slate-400" />
+                    <User size={14} className="absolute left-3 top-3 text-muted-foreground" />
                     <input
-                      className="w-full pl-9 pr-4 py-2.5 bg-white border border-blue-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-9 pr-4 py-2.5 bg-background border border-blue-100 dark:border-blue-900/40 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 text-foreground"
                       value={municipe.name}
                       onChange={e => setMunicipe({ ...municipe, name: e.target.value })}
                     />
@@ -233,22 +237,22 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
+                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">WhatsApp</label>
                     <div className="relative">
-                      <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <Phone size={14} className="absolute left-3 top-3 text-muted-foreground" />
                       <input
-                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-blue-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-9 pr-4 py-2.5 bg-background border border-blue-100 dark:border-blue-900/40 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 text-foreground"
                         value={displayPhone}
                         onChange={e => applyPhoneMask(e.target.value)}
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
+                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Bairro</label>
                     <div className="relative">
-                      <MapIcon size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <MapIcon size={14} className="absolute left-3 top-3 text-muted-foreground" />
                       <input
-                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-blue-100 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-9 pr-4 py-2.5 bg-background border border-blue-100 dark:border-blue-900/40 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 text-foreground"
                         value={municipe.bairro}
                         onChange={e => setMunicipe({ ...municipe, bairro: e.target.value })}
                       />
@@ -258,15 +262,15 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <FileText size={14} /> Detalhes do Assunto
                 </h4>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
+                  <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Categoria</label>
                   <div className="relative">
-                    <Tag size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                    <Tag size={14} className="absolute left-3 top-3.5 text-muted-foreground" />
                     <select
-                      className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 appearance-none"
+                      className="w-full pl-9 pr-4 py-3 bg-muted border border-border rounded-xl text-sm font-bold outline-none focus:bg-background focus:border-blue-500 appearance-none text-foreground"
                       value={categoria}
                       onChange={e => setCategoria(e.target.value)}
                     >
@@ -275,9 +279,9 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                  <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Descrição</label>
                   <textarea
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold outline-none focus:bg-white focus:border-blue-500 min-h-[120px]"
+                    className="w-full bg-muted border border-border rounded-2xl p-4 text-sm font-bold outline-none focus:bg-background focus:border-blue-500 min-h-[120px] text-foreground"
                     value={descricao}
                     onChange={e => setDescricao(e.target.value)}
                   />
@@ -289,11 +293,11 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
           {activeTab === 'atribuicao' && (
             <div className="space-y-5">
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-1">
                   <Users size={12} /> Atribuir a
                 </label>
                 <select
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 appearance-none"
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-bold outline-none focus:bg-background focus:border-blue-500 appearance-none text-foreground"
                   value={assignedToId}
                   onChange={e => setAssignedToId(e.target.value)}
                 >
@@ -305,14 +309,14 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-1">
                   <Calendar size={12} /> Prazo
                 </label>
                 <div className="relative">
-                  <Clock size={14} className="absolute left-3 top-3 text-slate-400" />
+                  <Clock size={14} className="absolute left-3 top-3 text-muted-foreground" />
                   <input
                     type="date"
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500"
+                    className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-xl text-sm font-bold outline-none focus:bg-background focus:border-blue-500 text-foreground"
                     value={dueDate}
                     onChange={e => setDueDate(e.target.value)}
                   />
@@ -326,22 +330,22 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
               {timelineLoading ? (
                 <div className="flex justify-center py-8"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
               ) : timeline.length === 0 ? (
-                <p className="text-center text-slate-300 font-black text-xs uppercase py-8">Nenhum registro ainda</p>
+                <p className="text-center text-muted-foreground/50 font-black text-xs uppercase py-8">Nenhum registro ainda</p>
               ) : (
                 <div className="space-y-3">
                   {timeline.map(item => (
                     <div key={item.id} className={`flex gap-3 ${item.type === 'comment' ? '' : 'opacity-70'}`}>
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5 ${
-                        item.type === 'comment' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
+                        item.type === 'comment' ? 'bg-blue-100 dark:bg-blue-950 text-blue-600' : 'bg-muted text-muted-foreground'
                       }`}>
                         {item.userEmail?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[10px] font-black text-slate-500">{item.userEmail?.split('@')[0] || 'Sistema'}</span>
-                          <span className="text-[9px] text-slate-300">{new Date(item.createdAt).toLocaleString('pt-BR')}</span>
+                          <span className="text-[10px] font-black text-muted-foreground">{item.userEmail?.split('@')[0] || 'Sistema'}</span>
+                          <span className="text-[9px] text-muted-foreground/50">{new Date(item.createdAt).toLocaleString('pt-BR')}</span>
                         </div>
-                        <p className={`text-sm leading-relaxed ${item.type === 'comment' ? 'text-slate-700 bg-slate-50 rounded-xl px-3 py-2' : 'text-slate-400 text-xs'}`}>
+                        <p className={`text-sm leading-relaxed ${item.type === 'comment' ? 'text-foreground bg-muted rounded-xl px-3 py-2' : 'text-muted-foreground text-xs'}`}>
                           {formatActivity(item)}
                         </p>
                       </div>
@@ -350,13 +354,13 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <div className="flex gap-2 pt-2 border-t border-border">
                 <div className="relative flex-1">
-                  <MessageSquare size={14} className="absolute left-3 top-3 text-slate-400" />
+                  <MessageSquare size={14} className="absolute left-3 top-3 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Adicionar comentário..."
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500"
+                    className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-xl text-sm font-bold outline-none focus:bg-background focus:border-blue-500 text-foreground"
                     value={comment}
                     onChange={e => setComment(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleSendComment()}
@@ -374,10 +378,10 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
           )}
         </div>
 
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
+        <div className="px-6 py-4 bg-muted/50 border-t border-border flex items-center gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all"
+            className="flex-1 py-3 bg-background border border-border text-foreground rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-muted transition-all"
           >
             Cancelar
           </button>
@@ -385,14 +389,14 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
             <button
               disabled={loading}
               onClick={handleSave}
-              className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+              className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-blue-950/50 hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
               Salvar Alterações
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

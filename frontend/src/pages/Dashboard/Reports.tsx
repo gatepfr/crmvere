@@ -16,11 +16,11 @@ export default function Reports() {
     <div className="space-y-6 animate-in fade-in duration-700">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
             <FileText className="text-blue-600" size={32} />
             Prestação de Contas
           </h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">
             Relatório PDF profissional do mandato
           </p>
         </div>
@@ -33,23 +33,23 @@ export default function Reports() {
         </button>
       </header>
 
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
         <div className="max-w-2xl">
-          <h2 className="text-lg font-black text-slate-800 mb-2">O que está incluído no relatório</h2>
-          <p className="text-sm text-slate-500 mb-6">
+          <h2 className="text-lg font-black text-foreground mb-2">O que está incluído no relatório</h2>
+          <p className="text-sm text-muted-foreground mb-6">
             Gere um PDF completo com os dados do seu mandato para compartilhar com eleitores e redes sociais.
             Selecione o período (mensal, trimestral, anual ou personalizado) e baixe em segundos.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FEATURES.map(f => (
-              <div key={f.label} className="flex gap-3 p-4 bg-slate-50 rounded-xl">
+              <div key={f.label} className="flex gap-3 p-4 bg-muted rounded-xl">
                 <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
                   <f.icon size={16} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-800">{f.label}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{f.desc}</p>
+                  <p className="text-sm font-black text-foreground">{f.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{f.desc}</p>
                 </div>
               </div>
             ))}
@@ -68,11 +68,11 @@ export default function Reports() {
             <button
               key={type}
               onClick={() => setModalOpen(true)}
-              className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-left hover:border-blue-200 hover:shadow-md transition-all group"
+              className="bg-card rounded-2xl border border-border shadow-sm p-6 text-left hover:border-blue-200 hover:shadow-md transition-all group"
             >
-              <FileText size={24} className="text-slate-300 group-hover:text-blue-500 transition-colors mb-3" />
-              <p className="font-black text-slate-800">{labels[type].title}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{labels[type].sub}</p>
+              <FileText size={24} className="text-muted-foreground/40 group-hover:text-blue-500 transition-colors mb-3" />
+              <p className="font-black text-foreground">{labels[type].title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{labels[type].sub}</p>
             </button>
           );
         })}

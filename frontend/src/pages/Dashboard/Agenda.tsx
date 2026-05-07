@@ -7,6 +7,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../../api/client';
 import { Plus, Loader2, AlertCircle, Link as LinkIcon, Unlink } from 'lucide-react';
 import EventModal from '../../components/EventModal';
+import { toast } from 'sonner';
 
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({
@@ -45,7 +46,7 @@ export default function Agenda() {
       setConnected(true);
       window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('google_error')) {
-      alert('Erro ao conectar o Google Calendar. Tente novamente.');
+      toast.error('Erro ao conectar o Google Calendar. Tente novamente.');
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -120,12 +121,12 @@ export default function Agenda() {
 
   if (!connected) {
     return (
-      <div className="max-w-lg mx-auto mt-20 p-10 bg-white rounded-2xl border border-slate-200 shadow-sm text-center">
+      <div className="max-w-lg mx-auto mt-20 p-10 bg-card rounded-2xl border border-border shadow-sm text-center">
         <div className="inline-flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-full mb-6">
           <AlertCircle size={32} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Agenda não conectada</h2>
-        <p className="text-slate-600 mb-8">
+        <h2 className="text-2xl font-bold text-foreground mb-2">Agenda não conectada</h2>
+        <p className="text-muted-foreground mb-8">
           Conecte sua conta Google para visualizar e gerenciar seus compromissos diretamente aqui.
         </p>
         <button
@@ -143,13 +144,13 @@ export default function Agenda() {
     <div className="h-[calc(100vh-10rem)] flex flex-col space-y-4">
       <header className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Agenda do Vereador</h2>
-          <p className="text-slate-500 text-sm">Compromissos sincronizados com o Google Calendar.</p>
+          <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Agenda do Vereador</h2>
+          <p className="text-muted-foreground text-sm">Compromissos sincronizados com o Google Calendar.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleDisconnect}
-            className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-sm font-medium px-3 py-2 rounded-lg border border-slate-200 bg-white transition-colors"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-red-600 text-sm font-medium px-3 py-2 rounded-lg border border-border bg-background transition-colors"
           >
             <Unlink size={15} />
             Desconectar
@@ -164,7 +165,7 @@ export default function Agenda() {
         </div>
       </header>
 
-      <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-4">
+      <div className="flex-1 bg-card rounded-2xl shadow-sm border border-border overflow-hidden p-4 rbc-dark-wrapper">
         <Calendar
           localizer={localizer}
           events={events}

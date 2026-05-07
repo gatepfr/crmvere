@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import api from '../api/client';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 
@@ -71,7 +72,7 @@ export default function BroadcastDetail({ broadcastId, onClose }: Props) {
     try {
       await api.post(`/broadcasts/${broadcastId}/cancel`);
       await load();
-    } catch { alert('Erro ao cancelar disparo.'); }
+    } catch { toast.error('Erro ao cancelar disparo.'); }
     finally { setCancelling(false); }
   };
 
@@ -87,12 +88,12 @@ export default function BroadcastDetail({ broadcastId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-slate-200">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-lg font-black text-slate-900 truncate">
+      <div className="bg-card rounded-2xl shadow-xl w-full max-w-lg border border-border">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-lg font-black text-foreground truncate">
             {data ? data.name : 'Carregando...'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors ml-4 shrink-0">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors ml-4 shrink-0">
             <X size={20} />
           </button>
         </div>
@@ -102,13 +103,13 @@ export default function BroadcastDetail({ broadcastId, onClose }: Props) {
             <Loader2 className="animate-spin text-blue-600" size={32} />
           </div>
         ) : !data ? (
-          <div className="p-6 text-center text-slate-500">Erro ao carregar dados.</div>
+          <div className="p-6 text-center text-muted-foreground">Erro ao carregar dados.</div>
         ) : (
           <div className="p-6 space-y-5">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-bold text-slate-600">Progresso</span>
-                <span className="text-sm font-black text-slate-900">
+                <span className="text-sm font-bold text-muted-foreground">Progresso</span>
+                <span className="text-sm font-black text-foreground">
                   {pct}% ({data.sentCount}/{data.totalRecipients})
                 </span>
               </div>
@@ -120,13 +121,13 @@ export default function BroadcastDetail({ broadcastId, onClose }: Props) {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-600">Status:</span>
+              <span className="text-sm font-bold text-muted-foreground">Status:</span>
               <span className={`text-sm font-black ${
                 data.status === 'enviando' ? 'text-amber-600' :
                 data.status === 'concluido' ? 'text-emerald-600' :
                 data.status === 'cancelado' ? 'text-red-600' :
                 data.status === 'enfileirado' ? 'text-blue-600' :
-                'text-slate-600'
+                'text-muted-foreground'
               }`}>
                 {STATUS_LABEL[data.status]}
               </span>
@@ -150,19 +151,19 @@ export default function BroadcastDetail({ broadcastId, onClose }: Props) {
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 space-y-2">
+            <div className="bg-muted rounded-xl border border-border p-4 space-y-2">
               <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mensagem</span>
-                <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap line-clamp-4">{data.message}</p>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Mensagem</span>
+                <p className="text-sm text-foreground mt-1 whitespace-pre-wrap line-clamp-4">{data.message}</p>
               </div>
               <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Segmento</span>
-                <p className="text-sm text-slate-700 mt-1">{segmentLabel}</p>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Segmento</span>
+                <p className="text-sm text-foreground mt-1">{segmentLabel}</p>
               </div>
               {data.scheduledFor && (
                 <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Agendado para</span>
-                  <p className="text-sm text-slate-700 mt-1">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Agendado para</span>
+                  <p className="text-sm text-foreground mt-1">
                     {new Date(data.scheduledFor).toLocaleString('pt-BR')}
                   </p>
                 </div>
