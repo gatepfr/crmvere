@@ -44,7 +44,7 @@ export default function Municipes() {
   const [onlyLideranca, setOnlyLideranca] = useState(false);
   const [onlyBirthdays, setOnlyBirthdays] = useState(false);
   const [selectedMunicipes, setSelectedMunicipes] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'phone' | 'bairro' | 'createdAt' | 'demandCount' | 'instagramHandle'; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 25, total: 0, totalPages: 0 });
   const [allBairros, setAllBairros] = useState<string[]>([]);
 
@@ -428,8 +428,8 @@ export default function Municipes() {
                 <TableHead className="cursor-pointer group w-[220px]" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1.5">Munícipe <SortIcon col="name" /></div>
                 </TableHead>
-                <TableHead className="w-[160px]">
-                  <div className="flex items-center gap-1.5"><Camera size={12} /> Instagram</div>
+                <TableHead className="cursor-pointer group w-[160px]" onClick={() => handleSort('instagramHandle')}>
+                  <div className="flex items-center gap-1.5"><Camera size={12} /> Instagram <SortIcon col="instagramHandle" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer group w-[200px]" onClick={() => handleSort('bairro')}>
                   <div className="flex items-center gap-1.5">Bairro <SortIcon col="bairro" /></div>
@@ -494,17 +494,15 @@ export default function Municipes() {
                   </TableCell>
                   <TableCell className="w-[160px]">
                     {m.instagramHandle ? (
-                      <Badge variant="secondary" className="text-[9px] bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 px-1.5 py-0.5 gap-1 font-black">
-                        <Camera size={9} />
+                      <a
+                        href={`https://www.instagram.com/${m.instagramHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-xs font-bold text-foreground hover:underline"
+                      >
                         @{m.instagramHandle}
-                        {m.instagramOptinSource && (
-                          <span className="opacity-50 text-[8px]">
-                            {m.instagramOptinSource === 'story_mention' ? '📣' :
-                             m.instagramOptinSource === 'story_reply' ? '📖' :
-                             m.instagramOptinSource === 'comment' ? '💬' : '✉️'}
-                          </span>
-                        )}
-                      </Badge>
+                      </a>
                     ) : (
                       <span className="text-xs text-muted-foreground/40">—</span>
                     )}
