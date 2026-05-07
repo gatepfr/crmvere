@@ -22,7 +22,7 @@ import {
   File,
   ChevronDown,
   ChevronRight,
-  Instagram,
+  Camera as Instagram,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {

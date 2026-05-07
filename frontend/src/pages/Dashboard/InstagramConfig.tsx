@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
 import {
-  Instagram, CheckCircle2, AlertCircle, RefreshCw,
+  Camera as Instagram, CheckCircle2, AlertCircle, RefreshCw,
   Settings2, Bot, MessageCircle, Plus, Trash2, ExternalLink, MessageSquare
 } from 'lucide-react';
 
