@@ -224,7 +224,7 @@ export default function Demands() {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground">{formatName(a.municipes.name)}</span>
                       {a.atendimentos.precisaRetorno && (
-                        <Badge className="bg-destructive text-destructive-foreground text-[9px] px-1.5 py-0">
+                        <Badge className="bg-destructive text-white text-[9px] px-1.5 py-0">
                           EQUIPE
                         </Badge>
                       )}
