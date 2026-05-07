@@ -133,125 +133,134 @@ export async function queueBroadcast(broadcastId: string): Promise<void> {
     .where(eq(broadcasts.id, broadcastId));
 }
 
+let isProcessingQueue = false;
+
 export async function processQueue(): Promise<void> {
-  const enfileirados = await db
-    .select({ id: broadcasts.id })
-    .from(broadcasts)
-    .where(eq(broadcasts.status, 'enfileirado'))
-    .limit(5);
+  if (isProcessingQueue) return;
+  isProcessingQueue = true;
 
-  if (enfileirados.length > 0) {
-    await db
-      .update(broadcasts)
-      .set({ status: 'enviando', startedAt: new Date() })
-      .where(
-        inArray(
-          broadcasts.id,
-          enfileirados.map(b => b.id)
-        )
-      );
-  }
+  try {
+    const enfileirados = await db
+      .select({ id: broadcasts.id })
+      .from(broadcasts)
+      .where(eq(broadcasts.status, 'enfileirado'))
+      .limit(5);
 
-  const sending = await db
-    .select()
-    .from(broadcasts)
-    .where(eq(broadcasts.status, 'enviando'))
-    .limit(5);
-
-  for (const broadcast of sending) {
-    const [tenant] = await db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.id, broadcast.tenantId))
-      .limit(1);
-
-    if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
-      continue;
-    }
-
-    const evolutionService = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
-
-    const pendingRecipients = await db
-      .select({
-        id: broadcastRecipients.id,
-        phone: broadcastRecipients.phone,
-        name: municipes.name,
-      })
-      .from(broadcastRecipients)
-      .leftJoin(municipes, eq(broadcastRecipients.municipeId, municipes.id))
-      .where(
-        and(
-          eq(broadcastRecipients.broadcastId, broadcast.id),
-          eq(broadcastRecipients.status, 'pendente')
-        )
-      )
-      .limit(10);
-
-    let sentDelta = 0;
-    let failedDelta = 0;
-
-    for (const recipient of pendingRecipients) {
-      try {
-        const personalizedMessage = broadcast.message.replace(/\{nome\}/gi, recipient.name ?? '');
-        if (broadcast.mediaUrl) {
-          await evolutionService.sendMediaMessage(
-            tenant.whatsappInstanceId,
-            recipient.phone,
-            broadcast.mediaUrl,
-            personalizedMessage
-          );
-        } else {
-          await evolutionService.sendMessage(
-            tenant.whatsappInstanceId,
-            recipient.phone,
-            personalizedMessage
-          );
-        }
-
-        await db
-          .update(broadcastRecipients)
-          .set({ status: 'enviado', sentAt: new Date() })
-          .where(eq(broadcastRecipients.id, recipient.id));
-
-        sentDelta++;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-
-        await db
-          .update(broadcastRecipients)
-          .set({ status: 'erro', errorMessage })
-          .where(eq(broadcastRecipients.id, recipient.id));
-
-        failedDelta++;
-      }
-
-      await sleep(randomBetween(3000, 5000));
-    }
-
-    await db
-      .update(broadcasts)
-      .set({
-        sentCount: sql`${broadcasts.sentCount} + ${sentDelta}`,
-        failedCount: sql`${broadcasts.failedCount} + ${failedDelta}`,
-      })
-      .where(eq(broadcasts.id, broadcast.id));
-
-    const [remaining] = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(broadcastRecipients)
-      .where(
-        and(
-          eq(broadcastRecipients.broadcastId, broadcast.id),
-          eq(broadcastRecipients.status, 'pendente')
-        )
-      );
-
-    if (Number(remaining.count) === 0) {
+    if (enfileirados.length > 0) {
       await db
         .update(broadcasts)
-        .set({ status: 'concluido', completedAt: new Date() })
-        .where(eq(broadcasts.id, broadcast.id));
+        .set({ status: 'enviando', startedAt: new Date() })
+        .where(
+          inArray(
+            broadcasts.id,
+            enfileirados.map(b => b.id)
+          )
+        );
     }
+
+    const sending = await db
+      .select()
+      .from(broadcasts)
+      .where(eq(broadcasts.status, 'enviando'))
+      .limit(5);
+
+    for (const broadcast of sending) {
+      const [tenant] = await db
+        .select()
+        .from(tenants)
+        .where(eq(tenants.id, broadcast.tenantId))
+        .limit(1);
+
+      if (!tenant?.evolutionApiUrl || !tenant?.evolutionGlobalToken || !tenant?.whatsappInstanceId) {
+        continue;
+      }
+
+      const evolutionService = new EvolutionService(tenant.evolutionApiUrl, tenant.evolutionGlobalToken);
+
+      const pendingRecipients = await db
+        .select({
+          id: broadcastRecipients.id,
+          phone: broadcastRecipients.phone,
+          name: municipes.name,
+        })
+        .from(broadcastRecipients)
+        .leftJoin(municipes, eq(broadcastRecipients.municipeId, municipes.id))
+        .where(
+          and(
+            eq(broadcastRecipients.broadcastId, broadcast.id),
+            eq(broadcastRecipients.status, 'pendente')
+          )
+        )
+        .limit(10);
+
+      let sentDelta = 0;
+      let failedDelta = 0;
+
+      for (const recipient of pendingRecipients) {
+        try {
+          const personalizedMessage = broadcast.message.replace(/\{nome\}/gi, recipient.name ?? '');
+          if (broadcast.mediaUrl) {
+            await evolutionService.sendMediaMessage(
+              tenant.whatsappInstanceId,
+              recipient.phone,
+              broadcast.mediaUrl,
+              personalizedMessage
+            );
+          } else {
+            await evolutionService.sendMessage(
+              tenant.whatsappInstanceId,
+              recipient.phone,
+              personalizedMessage
+            );
+          }
+
+          await db
+            .update(broadcastRecipients)
+            .set({ status: 'enviado', sentAt: new Date() })
+            .where(eq(broadcastRecipients.id, recipient.id));
+
+          sentDelta++;
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+
+          await db
+            .update(broadcastRecipients)
+            .set({ status: 'erro', errorMessage })
+            .where(eq(broadcastRecipients.id, recipient.id));
+
+          failedDelta++;
+        }
+
+        await sleep(randomBetween(3000, 5000));
+      }
+
+      await db
+        .update(broadcasts)
+        .set({
+          sentCount: sql`${broadcasts.sentCount} + ${sentDelta}`,
+          failedCount: sql`${broadcasts.failedCount} + ${failedDelta}`,
+        })
+        .where(eq(broadcasts.id, broadcast.id));
+
+      const [remaining] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(broadcastRecipients)
+        .where(
+          and(
+            eq(broadcastRecipients.broadcastId, broadcast.id),
+            eq(broadcastRecipients.status, 'pendente')
+          )
+        );
+
+      if (Number(remaining.count) === 0) {
+        await db
+          .update(broadcasts)
+          .set({ status: 'concluido', completedAt: new Date() })
+          .where(eq(broadcasts.id, broadcast.id));
+      }
+    }
+  } finally {
+    isProcessingQueue = false;
   }
 }
 
