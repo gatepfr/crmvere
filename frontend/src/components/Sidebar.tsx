@@ -162,10 +162,7 @@ export default function Sidebar() {
             >
               <SidebarMenu>
                 {group.items.map((item) => {
-                  const isActive =
-                    item.path === '/dashboard'
-                      ? location.pathname === '/dashboard'
-                      : location.pathname.startsWith(item.path);
+                  const isActive = location.pathname === item.path;
 
                   return (
                     <SidebarMenuItem key={item.path}>
