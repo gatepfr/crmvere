@@ -22,10 +22,7 @@ import {
   File,
   ChevronDown,
   ChevronRight,
-  Moon,
-  Sun,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useAuth } from '../context/AuthContext';
 import {
   Sidebar as SidebarUI,
@@ -114,7 +111,6 @@ const menuGroups: MenuGroup[] = [
 export default function Sidebar() {
   const { logout, user } = useAuth();
   const location = useLocation();
-  const { theme, setTheme } = useTheme();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(menuGroups.map((g) => [g.label, g.defaultOpen]))
   );
@@ -190,16 +186,6 @@ export default function Sidebar() {
               className="opacity-60 cursor-default hover:bg-transparent hover:opacity-60 group-data-[collapsible=icon]:hidden"
             >
               <span className="text-xs truncate">{user?.email}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            {/* @ts-ignore */}
-            <SidebarMenuButton
-              tooltip={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            >
-              {theme === 'dark' ? <Sun /> : <Moon />}
-              <span>{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
