@@ -281,17 +281,16 @@ export default function Eleicoes() {
                   </div>
                   <h3 className="font-black text-foreground text-xs uppercase tracking-widest">Gênero</h3>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie
                       data={generoData}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
-                      outerRadius={80}
+                      outerRadius={75}
                       paddingAngle={4}
                       dataKey="value"
-                      label={({ name, value }: any) => `${name} ${value}%`}
                     >
                       {generoData.map((entry: any, i: number) => (
                         <Cell key={i} fill={GENERO_COLORS[entry.name] || '#94a3b8'} />
@@ -300,6 +299,15 @@ export default function Eleicoes() {
                     <Tooltip formatter={(v: any, _: any, props: any) => [`${v}%`, props.payload.name]} />
                   </PieChart>
                 </ResponsiveContainer>
+                <div className="flex justify-center gap-4 mt-1">
+                  {generoData.map((entry: any) => (
+                    <div key={entry.name} className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: GENERO_COLORS[entry.name] || '#94a3b8' }} />
+                      <span className="text-xs font-bold text-foreground">{entry.name}</span>
+                      <span className="text-xs text-muted-foreground font-semibold">{entry.value}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               );
             })()}

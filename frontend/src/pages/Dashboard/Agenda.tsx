@@ -17,6 +17,12 @@ import { Plus, Loader2, AlertCircle, Link as LinkIcon, Unlink, ChevronLeft, Chev
 import EventModal from '../../components/EventModal';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
 
 interface CalEvent {
   id: string;
@@ -39,11 +45,13 @@ function MonthCalendar({
   events,
   onDayClick,
   onEventClick,
+  onShowMore,
 }: {
   currentDate: Date;
   events: CalEvent[];
   onDayClick: (date: Date) => void;
   onEventClick: (event: CalEvent) => void;
+  onShowMore: (date: Date, dayEvents: CalEvent[]) => void;
 }) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -124,7 +132,10 @@ function MonthCalendar({
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground font-bold px-1.5">
+                  <div
+                    onClick={e => { e.stopPropagation(); onShowMore(d, dayEvents); }}
+                    className="text-[10px] text-primary font-bold px-1.5 cursor-pointer hover:underline"
+                  >
                     +{dayEvents.length - 3} mais
                   </div>
                 )}
@@ -137,12 +148,15 @@ function MonthCalendar({
   );
 }
 
+type DayDetail = { date: Date; events: CalEvent[] } | null;
+
 export default function Agenda() {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [modal, setModal] = useState<ModalState>({ mode: 'closed' });
+  const [dayDetail, setDayDetail] = useState<DayDetail>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -307,6 +321,7 @@ export default function Agenda() {
             setModal({ mode: 'create', start: d, end: new Date(d.getTime() + 3600000) })
           }
           onEventClick={event => setModal({ mode: 'edit', event })}
+          onShowMore={(date, dayEvents) => setDayDetail({ date, events: dayEvents })}
         />
       </div>
 
@@ -320,6 +335,33 @@ export default function Agenda() {
           onClose={() => setModal({ mode: 'closed' })}
         />
       )}
+
+      <Dialog open={!!dayDetail} onOpenChange={open => { if (!open) setDayDetail(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {dayDetail && format(dayDetail.date, "d 'de' MMMM", { locale: ptBR })}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 max-h-80 overflow-y-auto">
+            {dayDetail?.events.map(event => (
+              <button
+                key={event.id}
+                onClick={() => {
+                  setDayDetail(null);
+                  setModal({ mode: 'edit', event });
+                }}
+                className="w-full text-left px-3 py-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors"
+              >
+                <span className="text-[10px] font-bold text-primary/70 mr-2">
+                  {event.allDay ? 'Dia inteiro' : format(event.start, 'HH:mm')}
+                </span>
+                <span className="text-sm font-bold text-foreground">{event.title}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

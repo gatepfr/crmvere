@@ -250,23 +250,23 @@ export default function DashboardHome() {
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyStats}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                   <XAxis
                     dataKey="date"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 10, fontWeight: 600, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--muted-foreground)' }}
                     dy={8}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 10, fontWeight: 600, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 10, fontWeight: 600, fill: 'var(--muted-foreground)' }}
                   />
                   <Tooltip
                     contentStyle={{
                       borderRadius: '10px',
-                      border: '1px solid hsl(var(--border))',
+                      border: '1px solid var(--border)',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -275,9 +275,9 @@ export default function DashboardHome() {
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="hsl(var(--primary))"
+                    stroke="var(--primary)"
                     strokeWidth={2.5}
-                    dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                    dot={{ r: 4, fill: 'var(--primary)', strokeWidth: 2, stroke: 'var(--background)' }}
                     activeDot={{ r: 6, strokeWidth: 0 }}
                   />
                 </LineChart>
@@ -315,7 +315,7 @@ export default function DashboardHome() {
                   <Tooltip
                     contentStyle={{
                       borderRadius: '10px',
-                      border: '1px solid hsl(var(--border))',
+                      border: '1px solid var(--border)',
                       fontSize: '12px',
                       fontWeight: 600,
                     }}
