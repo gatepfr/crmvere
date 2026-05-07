@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import api from '../../api/client';
+import api, { API_BASE_URL } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import {
   Camera,
   CheckCircle2,
@@ -42,10 +43,21 @@ interface QuickReplyFlow {
 type Tab = 'conexao' | 'dms' | 'comentarios';
 
 const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
-  <label className="relative inline-flex items-center cursor-pointer">
-    <input type="checkbox" className="sr-only peer" checked={checked} onChange={e => onChange(e.target.checked)} />
-    <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500" />
-  </label>
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    onClick={() => onChange(!checked)}
+    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+      checked ? 'bg-blue-800' : 'bg-muted ring-1 ring-border'
+    }`}
+  >
+    <span
+      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+        checked ? 'translate-x-5' : 'translate-x-0'
+      }`}
+    />
+  </button>
 );
 
 export default function InstagramConfig() {
@@ -237,9 +249,13 @@ export default function InstagramConfig() {
     { id: 'comentarios', label: 'Comentários', icon: Bot },
   ];
 
+  const { user } = useAuth();
+  const backendUrl = API_BASE_URL.replace(/\/api$/, '');
+  const webhookUrl = `${backendUrl}/api/webhook/instagram/${user?.tenantId ?? 'SEU_TENANT_ID'}`;
+
   if (fetching) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
+      <Loader2 className="w-8 h-8 text-blue-800 animate-spin" />
     </div>
   );
 
@@ -250,7 +266,7 @@ export default function InstagramConfig() {
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
-            <Camera className="text-pink-500" size={32} />
+            <Camera className="text-blue-800" size={32} />
             Conexão Instagram
           </h1>
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">
@@ -282,7 +298,7 @@ export default function InstagramConfig() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
               activeTab === tab.id
-                ? 'bg-background text-pink-600 shadow-sm'
+                ? 'bg-background text-blue-900 shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -300,7 +316,7 @@ export default function InstagramConfig() {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 space-y-6">
               <h3 className="font-black text-foreground text-sm uppercase tracking-widest flex items-center gap-2">
-                <Settings2 size={16} className="text-pink-500" />
+                <Settings2 size={16} className="text-blue-800" />
                 Credenciais da Meta API
               </h3>
 
@@ -311,7 +327,7 @@ export default function InstagramConfig() {
                   </label>
                   <input
                     type="password"
-                    className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-pink-400 transition-all"
+                    className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                     value={config.instagramAccessToken}
                     onChange={e => setConfig({ ...config, instagramAccessToken: e.target.value })}
                     placeholder="EAAxxxxxxxxx..."
@@ -328,7 +344,7 @@ export default function InstagramConfig() {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      className="flex-1 px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-pink-400 transition-all"
+                      className="flex-1 px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                       value={config.instagramWebhookVerifyToken}
                       onChange={e => setConfig({ ...config, instagramWebhookVerifyToken: e.target.value })}
                       placeholder="token-secreto"
@@ -364,7 +380,7 @@ export default function InstagramConfig() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex items-center gap-2 px-8 py-3 bg-pink-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-pink-600 shadow-lg shadow-pink-200 dark:shadow-pink-900/30 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-8 py-3 bg-blue-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-900 shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all disabled:opacity-50"
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                   {saving ? 'Salvando...' : 'Salvar Credenciais'}
@@ -455,7 +471,7 @@ export default function InstagramConfig() {
           {/* Stories */}
           <div className="bg-card rounded-[2.5rem] shadow-sm border border-border p-8 space-y-5">
             <h3 className="font-black text-foreground text-sm uppercase tracking-widest flex items-center gap-2">
-              <Camera size={16} className="text-pink-500" />
+              <Camera size={16} className="text-blue-800" />
               Respostas a Stories
             </h3>
             <p className="text-xs text-muted-foreground">Quando alguém menciona seu perfil ou responde um Story, o bot envia DM automática.</p>
@@ -463,7 +479,7 @@ export default function InstagramConfig() {
             <div>
               <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Menção nos Stories (@conta)</label>
               <textarea
-                className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-pink-400 transition-all resize-none"
+                className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all resize-none"
                 rows={2}
                 value={config.instagramStoryMentionReply}
                 onChange={e => setConfig({ ...config, instagramStoryMentionReply: e.target.value })}
@@ -474,7 +490,7 @@ export default function InstagramConfig() {
             <div>
               <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Resposta ao Story</label>
               <textarea
-                className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-pink-400 transition-all resize-none"
+                className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all resize-none"
                 rows={2}
                 value={config.instagramStoryReply}
                 onChange={e => setConfig({ ...config, instagramStoryReply: e.target.value })}
@@ -574,7 +590,7 @@ export default function InstagramConfig() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-8 py-3 bg-pink-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-pink-600 shadow-lg shadow-pink-200 dark:shadow-pink-900/30 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-8 py-3 bg-blue-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-900 shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all disabled:opacity-50"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
               {saving ? 'Salvando...' : 'Salvar Configurações'}
@@ -603,19 +619,19 @@ export default function InstagramConfig() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className="flex-1 px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-pink-400 transition-all"
+                  className="flex-1 px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                   value={newKeyword}
                   onChange={e => setNewKeyword(e.target.value.toUpperCase())}
                   onKeyDown={e => e.key === 'Enter' && addKeyword()}
                   placeholder="QUERO, INFO, AJUDA..."
                 />
-                <button onClick={addKeyword} className="p-3 bg-pink-500 hover:bg-pink-600 text-white rounded-2xl transition-colors">
+                <button onClick={addKeyword} className="p-3 bg-blue-800 hover:bg-blue-900 text-white rounded-2xl transition-colors">
                   <Plus size={16} />
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 mt-3">
                 {config.instagramCommentKeywords.map(kw => (
-                  <span key={kw} className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 rounded-xl text-xs font-black">
+                  <span key={kw} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-xl text-xs font-black">
                     {kw}
                     <button onClick={() => removeKeyword(kw)} className="hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
                   </span>
@@ -629,7 +645,7 @@ export default function InstagramConfig() {
             <div>
               <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">Resposta automática</label>
               <textarea
-                className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-pink-400 transition-all resize-none"
+                className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all resize-none"
                 rows={3}
                 value={config.instagramCommentReply}
                 onChange={e => setConfig({ ...config, instagramCommentReply: e.target.value })}
@@ -734,7 +750,7 @@ export default function InstagramConfig() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-8 py-3 bg-pink-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-pink-600 shadow-lg shadow-pink-200 dark:shadow-pink-900/30 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-8 py-3 bg-blue-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-900 shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all disabled:opacity-50"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
               {saving ? 'Salvando...' : 'Salvar Configurações'}
