@@ -132,7 +132,7 @@ function KanbanColumn({ col, leads, onDelete, onDeleteLead }: { col: Column, lea
   });
 
   return (
-    <div className="flex-shrink-0 w-80 flex flex-col h-full">
+    <div className="flex-shrink-0 w-full md:w-80 flex flex-col h-full">
       <div className="mb-4 flex items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">{col.name}</h3>

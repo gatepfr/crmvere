@@ -188,7 +188,30 @@ export default function Demands() {
             <Loader2 className="animate-spin text-primary" size={28} />
           </div>
         )}
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y divide-border">
+          {atendimentos.length === 0 && !loading ? (
+            <p className="py-16 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">Nenhum atendimento encontrado</p>
+          ) : atendimentos.map(a => (
+            <div key={a.atendimentos.id} className={cn('p-4 cursor-pointer active:bg-muted/50', a.atendimentos.precisaRetorno && 'bg-destructive/5')} onClick={() => setSelectedAtendimento(a)}>
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-foreground truncate">{formatName(a.municipes.name)}</span>
+                  {a.atendimentos.precisaRetorno && <Badge className="bg-destructive text-white text-[9px] px-1.5 py-0 shrink-0">ATENÇÃO</Badge>}
+                </div>
+                <PriorityBadge priority={a.atendimentos.prioridade} />
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-medium">{formatPhone(a.municipes.phone)}</span>
+                <span>{new Date(a.atendimentos.updatedAt).toLocaleDateString('pt-BR')}</span>
+              </div>
+              {a.atendimentos.categoria && (
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 block">{a.atendimentos.categoria.replace('_', ' ')}</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">

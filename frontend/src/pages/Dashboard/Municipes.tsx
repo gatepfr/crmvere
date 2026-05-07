@@ -376,7 +376,37 @@ export default function Municipes() {
             <Loader2 className="animate-spin text-primary" size={28} />
           </div>
         )}
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y divide-border">
+          {municipes.length === 0 && !loading ? (
+            <p className="py-16 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">Nenhum munícipe encontrado</p>
+          ) : municipes.map(m => (
+            <div key={m.id} className="p-4 flex items-center gap-3 cursor-pointer active:bg-muted/50" onClick={() => handleEdit(m)}>
+              <button
+                onClick={e => { e.stopPropagation(); handleToggleLideranca(m); }}
+                className={cn('w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-base shrink-0', m.isLideranca ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-muted text-muted-foreground')}
+              >
+                {m.isLideranca ? <Star size={18} fill="currentColor" /> : m.name.charAt(0).toUpperCase()}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold text-foreground">{m.name}</span>
+                  {m.isLideranca && <Badge variant="secondary" className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0">Liderança</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">{formatPhone(m.phone)}</p>
+                {m.bairro && <p className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">{m.bairro}</p>}
+              </div>
+              <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                {isTodayBirthday(m.birthDate) && (
+                  <button onClick={() => handleSendBirthdayMessage(m)} className="w-8 h-8 flex items-center justify-center bg-pink-50 hover:bg-pink-100 rounded-lg text-base" title="Parabéns">🎈</button>
+                )}
+                <button onClick={() => handleEdit(m)} className="p-2 text-muted-foreground hover:text-primary rounded-lg transition-colors"><Edit2 size={15} /></button>
+                <button onClick={() => handleDelete(m.id)} className="p-2 text-muted-foreground hover:text-destructive rounded-lg transition-colors"><Trash2 size={15} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">

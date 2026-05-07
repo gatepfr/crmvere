@@ -280,7 +280,7 @@ export default function Agenda() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<CalView>('month');
+  const [view, setView] = useState<CalView>(typeof window !== 'undefined' && window.innerWidth < 768 ? 'day' : 'month');
   const [modal, setModal] = useState<ModalState>({ mode: 'closed' });
   const [dayDetail, setDayDetail] = useState<DayDetail>(null);
 
@@ -410,12 +410,12 @@ export default function Agenda() {
 
   return (
     <div className="h-[calc(100vh-10rem)] flex flex-col space-y-4">
-      <header className="flex justify-between items-center">
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h2 className="text-3xl font-extrabold text-foreground tracking-tight">Agenda do Vereador</h2>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">Agenda do Vereador</h2>
           <p className="text-muted-foreground text-sm">Compromissos sincronizados com o Google Calendar.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleDisconnect}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-red-600 text-sm font-medium px-3 py-2 rounded-lg border border-border bg-background transition-colors"

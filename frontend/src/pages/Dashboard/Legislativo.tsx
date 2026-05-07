@@ -408,7 +408,48 @@ export default function Legislativo() {
 
       <Card className="overflow-hidden relative">
         {loading && <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={28} /></div>}
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y divide-border">
+          {sortedDemands.length === 0 && !loading ? (
+            <p className="py-16 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">Nenhuma indicação encontrada</p>
+          ) : sortedDemands.map(d => {
+            const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'concluida';
+            const assignedEmail = (d as any).assignedToEmail as string | null;
+            return (
+              <div key={d.id} className={cn('p-4', isOverdue && 'bg-destructive/5')}>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">{d.municipes.name}</span>
+                      {isOverdue && <Badge className="bg-destructive text-destructive-foreground text-[8px] px-1.5 py-0">Vencida</Badge>}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5 flex items-center gap-1"><MapPin size={9} />{d.municipes.bairro || 'Centro'}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[9px] font-semibold uppercase bg-primary/10 text-primary border-primary/20 shrink-0">{d.categoria}</Badge>
+                </div>
+                {d.descricao && <p className="text-xs text-foreground font-medium mt-1 line-clamp-2">{d.descricao}</p>}
+                {assignedEmail && (
+                  <p className="text-[10px] text-muted-foreground mt-1">Resp: {assignedEmail.split('@')[0]}</p>
+                )}
+                <div className="flex items-center justify-between mt-2 gap-2 flex-wrap">
+                  <button
+                    onClick={() => toggleLegislativo(d.id, d.isLegislativo)}
+                    className={cn('py-1 px-2 rounded-lg text-[10px] font-semibold uppercase border transition-all', d.isLegislativo ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-muted border-border text-muted-foreground')}
+                  >
+                    {d.isLegislativo ? `Indicação ${d.numeroIndicacao || 'S/N'}` : 'Não protocolada'}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {d.isLegislativo && (
+                      <button onClick={() => sendToWhatsApp(d)} className="flex items-center gap-1 text-primary font-semibold text-[10px] uppercase"><Send size={12} /> Avisar</button>
+                    )}
+                    <button onClick={() => setSelectedDemand({ demandas: d, municipes: d.municipes })} className="p-1.5 text-muted-foreground hover:text-primary rounded-lg"><Edit2 size={15} /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">

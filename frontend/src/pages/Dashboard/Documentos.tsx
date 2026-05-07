@@ -363,7 +363,41 @@ export default function Documentos() {
             <Loader2 size={28} className="animate-spin text-primary" />
           </div>
         )}
-        <div className="overflow-x-auto">
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y divide-border">
+          {!loading && docs.length === 0 ? (
+            <p className="py-16 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">Nenhum documento encontrado</p>
+          ) : sortedDocs.map(({ documento: d, municipe }) => (
+            <div key={d.id} className={cn('p-4', TIPO_ROW_BG[d.tipo])}>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <span className="font-semibold text-foreground">{municipe ? municipe.name : d.origem === 'gabinete' ? 'Gabinete' : '—'}</span>
+                  {municipe?.bairro && <p className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">{municipe.bairro}</p>}
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <Badge variant="outline" className={cn('text-[9px] font-semibold uppercase', TIPO_COLORS[d.tipo] || 'bg-muted text-muted-foreground')}>{TIPO_LABELS[d.tipo] || d.tipo}</Badge>
+                  <Badge variant="outline" className={cn('text-[9px] font-semibold uppercase', STATUS_COLORS[d.status] || 'bg-muted text-muted-foreground')}>{STATUS_LABELS[d.status] || d.status}</Badge>
+                </div>
+              </div>
+              <p className="text-sm font-semibold text-foreground">{d.categoria || '—'}</p>
+              {d.descricao && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{d.descricao}</p>}
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center gap-3">
+                  {d.numeroDocumento && <span className="text-xs font-semibold text-foreground">{d.numeroDocumento}</span>}
+                  {d.documentUrl && /^https?:\/\//i.test(d.documentUrl) && (
+                    <a href={d.documentUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink size={10} /> Ver doc</a>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground mr-1">{formatDate(d.createdAt)}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEdit({ documento: d, municipe })}><Edit2 size={15} /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(d.id)}><Trash2 size={15} /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
