@@ -2,7 +2,11 @@ FROM node:20 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-COPY . .
+COPY src ./src
+COPY drizzle.config.ts ./
+COPY tsconfig.json ./
+COPY tsconfig.build.json ./
+COPY .swcrc ./
 RUN npm run build
 
 FROM node:20-slim
