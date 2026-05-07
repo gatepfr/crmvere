@@ -162,7 +162,7 @@ export default function Demands() {
               className={cn(
                 'px-5 py-2.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all border flex items-center gap-1.5',
                 filterByAttention
-                  ? 'bg-destructive border-destructive/80 text-destructive-foreground shadow-sm'
+                  ? 'bg-destructive border-destructive/80 text-black shadow-sm'
                   : 'bg-muted border-transparent text-muted-foreground hover:bg-muted/80'
               )}
             >
@@ -192,7 +192,7 @@ export default function Demands() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="pl-5 cursor-pointer group" onClick={() => handleSort('municipes.name')}>
+                <TableHead className="pl-5 cursor-pointer group w-[220px]" onClick={() => handleSort('municipes.name')}>
                   <div className="flex items-center gap-1.5">Munícipe <SortIcon col="municipes.name" /></div>
                 </TableHead>
                 <TableHead>WhatsApp</TableHead>
@@ -220,12 +220,12 @@ export default function Demands() {
                   className={cn('cursor-pointer', a.atendimentos.precisaRetorno && 'bg-destructive/5')}
                   onClick={() => setSelectedAtendimento(a)}
                 >
-                  <TableCell className="pl-5">
+                  <TableCell className="pl-5 w-[220px]">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground">{formatName(a.municipes.name)}</span>
                       {a.atendimentos.precisaRetorno && (
                         <Badge className="bg-destructive text-white text-[9px] px-1.5 py-0">
-                          EQUIPE
+                          ATENÇÃO
                         </Badge>
                       )}
                     </div>

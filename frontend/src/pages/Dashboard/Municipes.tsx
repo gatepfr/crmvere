@@ -393,7 +393,7 @@ export default function Municipes() {
                     {selectedMunicipes.length === municipes.length && municipes.length > 0 && <Check size={11} strokeWidth={3} />}
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer group" onClick={() => handleSort('name')}>
+                <TableHead className="cursor-pointer group w-[220px]" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1.5">Munícipe <SortIcon col="name" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer group" onClick={() => handleSort('bairro')}>
@@ -427,7 +427,7 @@ export default function Municipes() {
                       {selectedMunicipes.includes(m.id) && <Check size={11} strokeWidth={3} />}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="w-[220px]">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={e => { e.stopPropagation(); handleToggleLideranca(m); }}

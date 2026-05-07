@@ -367,7 +367,7 @@ export default function Documentos() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="pl-5 cursor-pointer group" onClick={() => toggleSort('name')}>
+                <TableHead className="pl-5 cursor-pointer group w-[220px]" onClick={() => toggleSort('name')}>
                   <div className="flex items-center gap-1.5 group-hover:text-primary transition-colors">Munícipe <SortIcon field="name" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer group" onClick={() => toggleSort('categoria')}>
@@ -390,7 +390,7 @@ export default function Documentos() {
                 </TableRow>
               ) : sortedDocs.map(({ documento: d, municipe }) => (
                 <TableRow key={d.id} className={cn('align-top', TIPO_ROW_BG[d.tipo])}>
-                  <TableCell className="pl-5">
+                  <TableCell className="pl-5 w-[220px]">
                     <div className="flex flex-col">
                       <span className="font-semibold text-foreground">
                         {municipe ? municipe.name : d.origem === 'gabinete' ? <span className="text-muted-foreground">Gabinete</span> : <span className="text-muted-foreground/30 font-normal">—</span>}

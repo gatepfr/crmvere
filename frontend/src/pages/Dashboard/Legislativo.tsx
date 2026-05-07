@@ -412,7 +412,7 @@ export default function Legislativo() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="pl-5 cursor-pointer group" onClick={() => toggleSort('name')}>
+                <TableHead className="pl-5 cursor-pointer group w-[220px]" onClick={() => toggleSort('name')}>
                   <div className="flex items-center gap-1.5 group-hover:text-primary transition-colors">Munícipe <SortIcon field="name" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer group" onClick={() => toggleSort('subject')}>
@@ -437,7 +437,7 @@ export default function Legislativo() {
                 const assignedEmail = (d as any).assignedToEmail as string | null;
                 return (
                   <TableRow key={d.id} className={cn('align-top', isOverdue && 'bg-destructive/5')}>
-                    <TableCell className="pl-5">
+                    <TableCell className="pl-5 w-[220px]">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-foreground">{d.municipes.name}</span>
