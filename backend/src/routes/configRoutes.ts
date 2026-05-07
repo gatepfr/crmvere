@@ -44,7 +44,10 @@ router.patch('/update', async (req, res) => {
     name, aiProvider, aiApiKey, aiModel, aiBaseUrl, systemPrompt,
     municipio, uf, partido, mandato, fotoUrl, calendarUrl,
     birthdayMessage, birthdayAutomated, legislativeMessage,
-    whatsappVereadorNumber, followUpEnabled, followUpDays, followUpMessage
+    whatsappVereadorNumber, followUpEnabled, followUpDays, followUpMessage,
+    instagramAccountId, instagramAccessToken, instagramWebhookVerifyToken,
+    instagramDmAiEnabled, instagramAutoCreateMunicipe, instagramBotEnabled,
+    instagramCommentKeywords, instagramCommentReply,
   } = req.body;
 
   await db.update(tenants)
@@ -52,7 +55,10 @@ router.patch('/update', async (req, res) => {
       name, aiProvider, aiApiKey, aiModel, aiBaseUrl, systemPrompt,
       municipio, uf, partido, mandato, fotoUrl, calendarUrl,
       birthdayMessage, birthdayAutomated, legislativeMessage,
-      whatsappVereadorNumber, followUpEnabled, followUpDays, followUpMessage
+      whatsappVereadorNumber, followUpEnabled, followUpDays, followUpMessage,
+      instagramAccountId, instagramAccessToken, instagramWebhookVerifyToken,
+      instagramDmAiEnabled, instagramAutoCreateMunicipe, instagramBotEnabled,
+      instagramCommentKeywords, instagramCommentReply,
     })
     .where(eq(tenants.id, tenantId));
 

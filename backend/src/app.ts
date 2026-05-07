@@ -21,6 +21,7 @@ import calendarRoutes from './routes/calendarRoutes';
 import broadcastRoutes from './routes/broadcastRoutes';
 import reportRoutes from './routes/reportRoutes';
 import documentoRoutes from './routes/documentoRoutes';
+import instagramRoutes from './routes/instagramRoutes';
 import { authenticate } from './middleware/auth';
 import { initAutomations } from './services/automationService';
 import { checkTenant } from './middleware/tenant';
@@ -80,6 +81,7 @@ app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/broadcasts', broadcastRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/documentos', documentoRoutes);
+app.use('/api/instagram', instagramRoutes);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

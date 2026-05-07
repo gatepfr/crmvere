@@ -22,6 +22,7 @@ import {
   File,
   ChevronDown,
   ChevronRight,
+  Instagram,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -93,6 +94,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { name: 'Disparo em Massa', icon: Megaphone, path: '/dashboard/broadcasts' },
       { name: 'WhatsApp', icon: MessageCircle, path: '/dashboard/whatsapp' },
+      { name: 'Instagram', icon: Instagram, path: '/dashboard/instagram' },
     ],
   },
   {

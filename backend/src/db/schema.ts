@@ -47,6 +47,18 @@ export const tenants = pgTable("tenants", {
   followUpEnabled: boolean("follow_up_enabled").default(false).notNull(),
   followUpDays: integer("follow_up_days").default(5).notNull(),
   followUpMessage: varchar("follow_up_message", { length: 2000 }),
+  // Instagram Integration
+  instagramAccountId: varchar("instagram_account_id", { length: 255 }),
+  instagramAccessToken: varchar("instagram_access_token", { length: 1000 }),
+  instagramWebhookVerifyToken: varchar("instagram_webhook_verify_token", { length: 255 }),
+  instagramDmAiEnabled: boolean("instagram_dm_ai_enabled").default(true).notNull(),
+  instagramAutoCreateMunicipe: boolean("instagram_auto_create_municipe").default(true).notNull(),
+  instagramBotEnabled: boolean("instagram_bot_enabled").default(false).notNull(),
+  instagramCommentKeywords: varchar("instagram_comment_keywords", { length: 2000 }),
+  instagramCommentReply: varchar("instagram_comment_reply", { length: 2000 }),
+  instagramStoryMentionReply: varchar("instagram_story_mention_reply", { length: 1000 }),
+  instagramStoryReply: varchar("instagram_story_reply", { length: 1000 }),
+  instagramDefaultQuickReplies: varchar("instagram_default_quick_replies", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -74,6 +86,10 @@ export const municipes = pgTable("municipes", {
   bairro: varchar("bairro", { length: 255 }),
   birthDate: timestamp("birth_date"),
   isLideranca: boolean("is_lideranca").default(false).notNull(),
+  instagramHandle: varchar("instagram_handle", { length: 100 }),
+  instagramUserId: varchar("instagram_user_id", { length: 100 }),
+  instagramOptinSource: varchar("instagram_optin_source", { length: 50 }),
+  instagramOptinAt: timestamp("instagram_optin_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
@@ -361,4 +377,25 @@ export const documentos = pgTable("documentos", {
   criadoPor: uuid("criado_por").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// --- INSTAGRAM INTEGRATION ---
+
+export const instagramCommentRules = pgTable("instagram_comment_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  mediaId: varchar("media_id", { length: 255 }).notNull(),
+  mediaLabel: varchar("media_label", { length: 255 }).notNull(),
+  keywords: varchar("keywords", { length: 1000 }).notNull(),
+  replyMessage: varchar("reply_message", { length: 2000 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const instagramQuickReplyFlows = pgTable("instagram_quick_reply_flows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  triggerPayload: varchar("trigger_payload", { length: 255 }).notNull(),
+  responseMessage: varchar("response_message", { length: 2000 }).notNull(),
+  nextQuickReplies: varchar("next_quick_replies", { length: 2000 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

@@ -13,6 +13,7 @@ import Documentos from './pages/Dashboard/Documentos';
 import DashboardHome from './pages/Dashboard/DashboardHome';
 import AIConfig from './pages/Dashboard/AIConfig';
 import WhatsAppConfig from './pages/Dashboard/WhatsAppConfig';
+import InstagramConfig from './pages/Dashboard/InstagramConfig';
 import KnowledgeBase from './pages/Dashboard/KnowledgeBase';
 import CabinetConfig from './pages/Dashboard/CabinetConfig';
 import KanbanLeads from './pages/Dashboard/KanbanLeads';
@@ -112,6 +113,7 @@ function AppContent() {
             <Route path="cabinet" element={<CabinetConfig />} />
             <Route path="kanban" element={<KanbanLeads />} />
             <Route path="whatsapp" element={<WhatsAppConfig />} />
+            <Route path="instagram" element={<InstagramConfig />} />
             <Route path="ai" element={<AIConfig />} />
             <Route path="knowledge" element={<KnowledgeBase />} />
             <Route path="team" element={<Team />} />

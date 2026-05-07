@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils';
 interface Municipe {
   id: string; name: string; phone: string; cep?: string | null;
   bairro: string | null; birthDate: string | null; isLideranca: boolean;
+  instagramHandle?: string | null;
+  instagramOptinSource?: 'dm' | 'comment' | 'story_mention' | 'story_reply' | null;
   createdAt: string; demandCount: number; documentCount: number; indicacaoCount: number;
 }
 
@@ -51,14 +53,14 @@ export default function Municipes() {
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
+  const [createForm, setCreateForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false, instagramHandle: '' });
   const [displayCreatePhone, setDisplayCreatePhone] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState({ name: '', phone: '', bairro: '', birthDate: '' });
   const [editingMunicipe, setEditingMunicipe] = useState<Municipe | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false, instagramHandle: '' });
   const [displayEditPhone, setDisplayEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -118,9 +120,9 @@ export default function Municipes() {
   const handleCreateMunicipe = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     try {
-      await api.post('/demands/municipes', { ...createForm, birthDate: parseDateToISO(createForm.birthDate) });
+      await api.post('/demands/municipes', { ...createForm, birthDate: parseDateToISO(createForm.birthDate), instagramHandle: createForm.instagramHandle || null });
       setIsCreateModalOpen(false);
-      setCreateForm({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false });
+      setCreateForm({ name: '', phone: '', cep: '', bairro: '', birthDate: '', isLideranca: false, instagramHandle: '' });
       setDisplayCreatePhone('');
       loadMunicipes();
       toast.success('Munícipe cadastrado com sucesso!');
@@ -235,7 +237,7 @@ export default function Municipes() {
 
   const handleEdit = (m: Municipe) => {
     setEditingMunicipe(m);
-    setEditForm({ name: m.name, phone: m.phone, cep: m.cep || '', bairro: m.bairro || '', birthDate: m.birthDate ? formatDateDisplay(m.birthDate) : '', isLideranca: m.isLideranca });
+    setEditForm({ name: m.name, phone: m.phone, cep: m.cep || '', bairro: m.bairro || '', birthDate: m.birthDate ? formatDateDisplay(m.birthDate) : '', isLideranca: m.isLideranca, instagramHandle: m.instagramHandle || '' });
     setDisplayEditPhone(formatPhone(m.phone));
   };
 
@@ -243,7 +245,7 @@ export default function Municipes() {
     if (!editingMunicipe) return;
     setSaving(true);
     try {
-      await api.patch(`/demands/municipes/${editingMunicipe.id}`, { ...editForm, birthDate: parseDateToISO(editForm.birthDate) });
+      await api.patch(`/demands/municipes/${editingMunicipe.id}`, { ...editForm, birthDate: parseDateToISO(editForm.birthDate), instagramHandle: editForm.instagramHandle || null });
       setEditingMunicipe(null); toast.success('Dados atualizados!'); loadMunicipes();
     } catch { toast.error('Falha ao atualizar.'); }
     finally { setSaving(false); }
@@ -482,6 +484,18 @@ export default function Municipes() {
                               <Gavel size={8} />{m.indicacaoCount} ind.
                             </Badge>
                           )}
+                          {m.instagramHandle && (
+                            <Badge variant="secondary" className="text-[9px] bg-pink-100 text-pink-700 px-1.5 py-0 gap-0.5">
+                              @{m.instagramHandle}
+                              {m.instagramOptinSource && (
+                                <span className="opacity-60">
+                                  {m.instagramOptinSource === 'story_mention' ? '📣' :
+                                   m.instagramOptinSource === 'story_reply' ? '📖' :
+                                   m.instagramOptinSource === 'comment' ? '💬' : '✉️'}
+                                </span>
+                              )}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{formatPhone(m.phone)}</p>
                       </div>
@@ -617,6 +631,24 @@ export default function Municipes() {
                   <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Bairro</label>
                   <input type="text" className={inputCls} value={editingMunicipe ? editForm.bairro : createForm.bairro} onChange={e => editingMunicipe ? setEditForm({ ...editForm, bairro: e.target.value.toUpperCase() }) : setCreateForm({ ...createForm, bairro: e.target.value.toUpperCase() })} />
                 </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5">Instagram</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">@</span>
+                  <input
+                    type="text"
+                    className={`${inputCls} pl-8`}
+                    placeholder="usuario"
+                    value={editingMunicipe ? editForm.instagramHandle : createForm.instagramHandle}
+                    onChange={e => {
+                      const val = e.target.value.replace('@', '');
+                      if (editingMunicipe) setEditForm({ ...editForm, instagramHandle: val });
+                      else setCreateForm({ ...createForm, instagramHandle: val });
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">Preencher evita duplicatas quando a pessoa mandar DM pelo Instagram.</p>
               </div>
               <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-100 rounded-xl">
                 <div className="flex items-center gap-2">

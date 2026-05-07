@@ -12,13 +12,14 @@ import iconv from 'iconv-lite';
  */
 export const createMunicipe = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
-  const { name, phone, cep, bairro, birthDate, isLideranca } = req.body;
+  const { name, phone, cep, bairro, birthDate, isLideranca, instagramHandle } = req.body;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   try {
     const [newMunicipe] = await db.insert(municipes).values({
       tenantId, name, phone: normalizePhone(phone), cep, bairro,
       birthDate: birthDate ? new Date(birthDate) : null,
-      isLideranca: isLideranca || false
+      isLideranca: isLideranca || false,
+      instagramHandle: instagramHandle || null,
     }).returning();
     res.status(201).json(newMunicipe);
   } catch (error: any) {
@@ -80,6 +81,8 @@ export const listMunicipes = async (req: Request, res: Response) => {
     const results = await db.select({
       id: municipes.id, name: municipes.name, phone: municipes.phone, bairro: municipes.bairro,
       birthDate: municipes.birthDate, createdAt: municipes.createdAt, isLideranca: municipes.isLideranca,
+      instagramHandle: municipes.instagramHandle,
+      instagramOptinSource: municipes.instagramOptinSource,
       demandCount: sql<number>`count(distinct ${demandas.id})::int`,
       documentCount: sql<number>`count(distinct ${documentos.id})::int`,
       indicacaoCount: sql<number>`count(distinct case when ${demandas.isLegislativo} = true then ${demandas.id} end)::int`,
@@ -94,7 +97,7 @@ export const listMunicipes = async (req: Request, res: Response) => {
 
 export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { name, phone, cep, bairro, birthDate, isLideranca } = req.body;
+  const { name, phone, cep, bairro, birthDate, isLideranca, instagramHandle } = req.body;
   try {
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
@@ -103,6 +106,7 @@ export const updateMunicipe = async (req: Request, res: Response) => {
     if (bairro !== undefined) updateData.bairro = bairro;
     if (birthDate !== undefined) updateData.birthDate = birthDate ? new Date(birthDate) : null;
     if (isLideranca !== undefined) updateData.isLideranca = isLideranca;
+    if (instagramHandle !== undefined) updateData.instagramHandle = instagramHandle || null;
     const [u] = await db.update(municipes).set(updateData).where(eq(municipes.id, id)).returning();
     res.json(u);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
