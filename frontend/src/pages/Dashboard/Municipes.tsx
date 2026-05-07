@@ -396,7 +396,7 @@ export default function Municipes() {
                 <TableHead className="cursor-pointer group w-[220px]" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1.5">Munícipe <SortIcon col="name" /></div>
                 </TableHead>
-                <TableHead className="cursor-pointer group" onClick={() => handleSort('bairro')}>
+                <TableHead className="cursor-pointer group w-[280px]" onClick={() => handleSort('bairro')}>
                   <div className="flex items-center gap-1.5">Bairro <SortIcon col="bairro" /></div>
                 </TableHead>
                 <TableHead className="text-center">Nascimento</TableHead>
@@ -457,7 +457,7 @@ export default function Municipes() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-muted-foreground uppercase">{m.bairro || '—'}</TableCell>
+                  <TableCell className="text-xs font-medium text-muted-foreground uppercase w-[280px]">{m.bairro || '—'}</TableCell>
                   <TableCell className="text-center text-xs text-muted-foreground">{formatDateDisplay(m.birthDate)}</TableCell>
                   <TableCell className="pr-5" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
