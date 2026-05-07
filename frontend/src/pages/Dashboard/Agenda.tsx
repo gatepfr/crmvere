@@ -1,22 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import type { View } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  isSameDay,
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 import api from '../../api/client';
-import { Plus, Loader2, AlertCircle, Link as LinkIcon, Unlink } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, Link as LinkIcon, Unlink, ChevronLeft, ChevronRight } from 'lucide-react';
 import EventModal from '../../components/EventModal';
 import { toast } from 'sonner';
-
-const locales = { 'pt-BR': ptBR };
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { locale: ptBR }),
-  getDay,
-  locales,
-});
+import { Button } from '../../components/ui/button';
 
 interface CalEvent {
   id: string;
@@ -32,12 +32,116 @@ type ModalState =
   | { mode: 'create'; start: Date; end: Date }
   | { mode: 'edit'; event: CalEvent };
 
+const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function MonthCalendar({
+  currentDate,
+  events,
+  onDayClick,
+  onEventClick,
+}: {
+  currentDate: Date;
+  events: CalEvent[];
+  onDayClick: (date: Date) => void;
+  onEventClick: (event: CalEvent) => void;
+}) {
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+
+  const days: Date[] = [];
+  let day = calStart;
+  while (day <= calEnd) {
+    days.push(day);
+    day = addDays(day, 1);
+  }
+
+  const today = new Date();
+
+  const getEventsForDay = (date: Date) =>
+    events.filter(e => isSameDay(e.start, date));
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+        {DAY_NAMES.map(name => (
+          <div
+            key={name}
+            className="py-2 text-center text-[10px] font-black text-muted-foreground uppercase tracking-widest"
+          >
+            {name}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 flex-1" style={{ gridAutoRows: '1fr' }}>
+        {days.map((d, i) => {
+          const isCurrentMonth = isSameMonth(d, currentDate);
+          const isToday = isSameDay(d, today);
+          const dayEvents = getEventsForDay(d);
+
+          return (
+            <div
+              key={i}
+              onClick={() => onDayClick(d)}
+              className={[
+                'border-r border-b border-border p-1.5 cursor-pointer hover:bg-accent/40 transition-colors overflow-hidden min-h-[80px]',
+                !isCurrentMonth ? 'bg-muted/20' : '',
+                i % 7 === 0 ? 'border-l' : '',
+              ].join(' ')}
+            >
+              <div
+                className={[
+                  'w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mb-1 select-none',
+                  isToday
+                    ? 'bg-primary text-primary-foreground'
+                    : isCurrentMonth
+                    ? 'text-foreground'
+                    : 'text-muted-foreground/50',
+                ].join(' ')}
+              >
+                {format(d, 'd')}
+              </div>
+
+              <div className="space-y-0.5">
+                {dayEvents.slice(0, 3).map(event => (
+                  <div
+                    key={event.id}
+                    onClick={e => {
+                      e.stopPropagation();
+                      onEventClick(event);
+                    }}
+                    title={event.title}
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary truncate cursor-pointer hover:bg-primary/30 transition-colors"
+                  >
+                    {!event.allDay && (
+                      <span className="opacity-60 mr-1">
+                        {format(event.start, 'HH:mm')}
+                      </span>
+                    )}
+                    {event.title}
+                  </div>
+                ))}
+                {dayEvents.length > 3 && (
+                  <div className="text-[10px] text-muted-foreground font-bold px-1.5">
+                    +{dayEvents.length - 3} mais
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Agenda() {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<View>('month');
   const [modal, setModal] = useState<ModalState>({ mode: 'closed' });
 
   useEffect(() => {
@@ -52,7 +156,8 @@ export default function Agenda() {
   }, []);
 
   useEffect(() => {
-    api.get('/calendar/status')
+    api
+      .get('/calendar/status')
       .then(res => setConnected(res.data.connected))
       .catch(() => setConnected(false))
       .finally(() => setLoading(false));
@@ -93,7 +198,13 @@ export default function Agenda() {
     setEvents([]);
   }
 
-  async function handleSave(data: { title: string; description: string; start: string; end: string; allDay: boolean }) {
+  async function handleSave(data: {
+    title: string;
+    description: string;
+    start: string;
+    end: string;
+    allDay: boolean;
+  }) {
     if (modal.mode === 'create') {
       await api.post('/calendar/events', data);
     } else if (modal.mode === 'edit') {
@@ -140,6 +251,8 @@ export default function Agenda() {
     );
   }
 
+  const monthLabel = format(currentDate, 'MMMM yyyy', { locale: ptBR });
+
   return (
     <div className="h-[calc(100vh-10rem)] flex flex-col space-y-4">
       <header className="flex justify-between items-center">
@@ -156,7 +269,13 @@ export default function Agenda() {
             Desconectar
           </button>
           <button
-            onClick={() => setModal({ mode: 'create', start: new Date(), end: new Date(Date.now() + 3600000) })}
+            onClick={() =>
+              setModal({
+                mode: 'create',
+                start: new Date(),
+                end: new Date(Date.now() + 3600000),
+              })
+            }
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20"
           >
             <Plus size={18} />
@@ -165,31 +284,29 @@ export default function Agenda() {
         </div>
       </header>
 
-      <div className="flex-1 bg-card rounded-2xl shadow-sm border border-border overflow-hidden p-4 rbc-dark-wrapper">
-        <Calendar
-          localizer={localizer}
+      <div className="flex items-center justify-between bg-card rounded-xl border border-border px-4 py-2.5">
+        <Button variant="ghost" size="icon" onClick={() => setCurrentDate(d => subMonths(d, 1))}>
+          <ChevronLeft size={18} />
+        </Button>
+        <h3 className="text-base font-bold text-foreground capitalize">{monthLabel}</h3>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentDate(new Date())}>
+            Hoje
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setCurrentDate(d => addMonths(d, 1))}>
+            <ChevronRight size={18} />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+        <MonthCalendar
+          currentDate={currentDate}
           events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          culture="pt-BR"
-          view={view}
-          onView={setView}
-          date={currentDate}
-          onNavigate={setCurrentDate}
-          messages={{
-            next: 'Próximo',
-            previous: 'Anterior',
-            today: 'Hoje',
-            month: 'Mês',
-            week: 'Semana',
-            day: 'Dia',
-            agenda: 'Lista',
-            noEventsInRange: 'Sem compromissos neste período.',
-          }}
-          onSelectEvent={event => setModal({ mode: 'edit', event })}
-          onSelectSlot={({ start, end }) => setModal({ mode: 'create', start, end })}
-          selectable
+          onDayClick={d =>
+            setModal({ mode: 'create', start: d, end: new Date(d.getTime() + 3600000) })
+          }
+          onEventClick={event => setModal({ mode: 'edit', event })}
         />
       </div>
 
