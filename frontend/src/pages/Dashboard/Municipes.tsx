@@ -6,7 +6,7 @@ import { formatPhone } from '../../utils/formatPhone';
 import {
   Users, Search, Loader2, Send, X, ArrowUpDown, ArrowUp, ArrowDown,
   FileDown, Star, Edit2, Trash2, Plus, Upload, ChevronLeft, ChevronRight,
-  Check, FileText, Gavel, MessageSquare
+  Check, FileText, Gavel, MessageSquare, Camera
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -428,7 +428,10 @@ export default function Municipes() {
                 <TableHead className="cursor-pointer group w-[220px]" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1.5">Munícipe <SortIcon col="name" /></div>
                 </TableHead>
-                <TableHead className="cursor-pointer group w-[280px]" onClick={() => handleSort('bairro')}>
+                <TableHead className="w-[160px]">
+                  <div className="flex items-center gap-1.5"><Camera size={12} /> Instagram</div>
+                </TableHead>
+                <TableHead className="cursor-pointer group w-[200px]" onClick={() => handleSort('bairro')}>
                   <div className="flex items-center gap-1.5">Bairro <SortIcon col="bairro" /></div>
                 </TableHead>
                 <TableHead className="text-center">Nascimento</TableHead>
@@ -438,7 +441,7 @@ export default function Municipes() {
             <TableBody>
               {municipes.length === 0 && !loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-20 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">
+                  <TableCell colSpan={6} className="py-20 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">
                     Nenhum munícipe encontrado
                   </TableCell>
                 </TableRow>
@@ -484,24 +487,29 @@ export default function Municipes() {
                               <Gavel size={8} />{m.indicacaoCount} ind.
                             </Badge>
                           )}
-                          {m.instagramHandle && (
-                            <Badge variant="secondary" className="text-[9px] bg-pink-100 text-pink-700 px-1.5 py-0 gap-0.5">
-                              @{m.instagramHandle}
-                              {m.instagramOptinSource && (
-                                <span className="opacity-60">
-                                  {m.instagramOptinSource === 'story_mention' ? '📣' :
-                                   m.instagramOptinSource === 'story_reply' ? '📖' :
-                                   m.instagramOptinSource === 'comment' ? '💬' : '✉️'}
-                                </span>
-                              )}
-                            </Badge>
-                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{formatPhone(m.phone)}</p>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-muted-foreground uppercase w-[280px]">{m.bairro || '—'}</TableCell>
+                  <TableCell className="w-[160px]">
+                    {m.instagramHandle ? (
+                      <Badge variant="secondary" className="text-[9px] bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800 px-1.5 py-0.5 gap-1 font-black">
+                        <Camera size={9} />
+                        @{m.instagramHandle}
+                        {m.instagramOptinSource && (
+                          <span className="opacity-50 text-[8px]">
+                            {m.instagramOptinSource === 'story_mention' ? '📣' :
+                             m.instagramOptinSource === 'story_reply' ? '📖' :
+                             m.instagramOptinSource === 'comment' ? '💬' : '✉️'}
+                          </span>
+                        )}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/40">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs font-medium text-muted-foreground uppercase w-[200px]">{m.bairro || '—'}</TableCell>
                   <TableCell className="text-center text-xs text-muted-foreground">{formatDateDisplay(m.birthDate)}</TableCell>
                   <TableCell className="pr-5" onClick={e => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
