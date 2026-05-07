@@ -425,7 +425,7 @@ export default function Municipes() {
                     {selectedMunicipes.length === municipes.length && municipes.length > 0 && <Check size={11} strokeWidth={3} />}
                   </div>
                 </TableHead>
-                <TableHead className="cursor-pointer group w-[220px]" onClick={() => handleSort('name')}>
+                <TableHead className="cursor-pointer group w-[280px]" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1.5">Munícipe <SortIcon col="name" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer group w-[160px]" onClick={() => handleSort('instagramHandle')}>
@@ -462,7 +462,7 @@ export default function Municipes() {
                       {selectedMunicipes.includes(m.id) && <Check size={11} strokeWidth={3} />}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[220px]">
+                  <TableCell className="w-[280px]">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={e => { e.stopPropagation(); handleToggleLideranca(m); }}
