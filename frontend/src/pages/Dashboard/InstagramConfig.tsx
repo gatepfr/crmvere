@@ -78,6 +78,7 @@ export default function InstagramConfig() {
   const [qrFlows, setQrFlows] = useState<QuickReplyFlow[]>([]);
   const [fetching, setFetching] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
   const [newRule, setNewRule] = useState({ mediaId: '', mediaLabel: '', keywords: '', replyMessage: '' });
   const [addingRule, setAddingRule] = useState(false);
@@ -153,7 +154,7 @@ export default function InstagramConfig() {
       toast.error('Falha ao conectar com o Meta. Tente novamente.');
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [fetchStatus]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     setSaving(true);
@@ -175,6 +176,10 @@ export default function InstagramConfig() {
   const handleConnect = async () => {
     try {
       const res = await api.get('/instagram/oauth/start');
+      if (!res.data?.url) {
+        toast.error('Não foi possível iniciar a conexão com o Instagram.');
+        return;
+      }
       window.location.href = res.data.url;
     } catch {
       toast.error('Não foi possível iniciar a conexão com o Instagram.');
@@ -182,12 +187,15 @@ export default function InstagramConfig() {
   };
 
   const handleDisconnect = async () => {
+    setDisconnecting(true);
     try {
       await api.post('/instagram/oauth/disconnect');
       await fetchStatus();
       toast.success('Instagram desconectado.');
     } catch {
       toast.error('Falha ao desconectar.');
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -366,9 +374,10 @@ export default function InstagramConfig() {
                     </div>
                     <button
                       onClick={handleDisconnect}
-                      className="px-4 py-2 bg-white dark:bg-card border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                      disabled={disconnecting}
+                      className="px-4 py-2 bg-white dark:bg-card border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-950/30 transition-all disabled:opacity-50"
                     >
-                      Desconectar
+                      {disconnecting ? 'Desconectando...' : 'Desconectar'}
                     </button>
                   </div>
                 ) : (
