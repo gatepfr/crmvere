@@ -160,7 +160,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-3xl p-0 max-h-[90vh] flex flex-col gap-0">
+      <DialogContent className="max-w-4xl p-0 max-h-[90vh] flex flex-col gap-0">
         <DialogHeader className="px-8 py-6 border-b border-border bg-muted/30 shrink-0">
           <DialogTitle>Gerenciar Atendimento</DialogTitle>
           <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">ID: {demand.demandas.id.slice(0, 8)}</p>
