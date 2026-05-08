@@ -16,7 +16,7 @@ router.get('/status', async (req: Request, res: Response) => {
     if (!tenant?.instagramAccessToken) return res.json({ connected: false });
 
     const igService = new InstagramService(tenant.instagramAccessToken);
-    const info = await igService.getAccountInfo();
+    const info = await igService.getAccountInfo(tenant.instagramAccountId ?? undefined);
     return res.json({ connected: true, accountId: info.id, username: info.username });
   } catch {
     return res.json({ connected: false, error: 'Token inválido ou expirado.' });

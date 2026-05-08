@@ -47,8 +47,9 @@ export class InstagramService {
     return response.data;
   }
 
-  async getAccountInfo() {
-    const response = await axios.get(`${BASE_URL}/me`, {
+  async getAccountInfo(accountId?: string) {
+    const id = accountId || 'me';
+    const response = await axios.get(`${BASE_URL}/${id}`, {
       params: { fields: 'id,name,username', access_token: this.accessToken },
     });
     return response.data;
