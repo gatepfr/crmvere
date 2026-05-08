@@ -216,7 +216,7 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                 {isEditing ? (
                   <input className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm font-bold outline-none text-foreground" value={displayPhone} onChange={e => applyPhoneMask(e.target.value)} />
                 ) : (
-                  <div className="flex items-center gap-2 text-sm font-bold text-foreground"><Phone size={14} className="text-primary" /> {displayPhone}</div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-foreground whitespace-nowrap"><Phone size={14} className="text-primary shrink-0" /> {displayPhone}</div>
                 )}
               </div>
               <div className="space-y-1">
