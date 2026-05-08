@@ -488,7 +488,7 @@ export default function Municipes() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{formatPhone(m.phone)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{formatPhone(m.phone)}</p>
                       </div>
                     </div>
                   </TableCell>
