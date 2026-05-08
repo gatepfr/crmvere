@@ -49,6 +49,7 @@ export const tenants = pgTable("tenants", {
   followUpMessage: varchar("follow_up_message", { length: 2000 }),
   // Instagram Integration
   instagramAccountId: varchar("instagram_account_id", { length: 255 }),
+  instagramPageId: varchar("instagram_page_id", { length: 255 }),
   instagramAccessToken: varchar("instagram_access_token", { length: 1000 }),
   instagramWebhookVerifyToken: varchar("instagram_webhook_verify_token", { length: 255 }),
   instagramDmAiEnabled: boolean("instagram_dm_ai_enabled").default(true).notNull(),

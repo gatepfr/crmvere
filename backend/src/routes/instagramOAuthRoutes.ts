@@ -63,26 +63,36 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
 
     let pageToken: string | null = null;
     let igAccountId: string | null = null;
+    let pageId: string | null = null;
 
     for (const page of pages) {
-      // Fix 2: Only request instagram_business_account field; use page.access_token from /me/accounts
       const pageRes = await axios.get(`${GRAPH_URL}/${page.id}`, {
         params: { fields: 'instagram_business_account', access_token: longLivedToken },
       });
       if (pageRes.data.instagram_business_account) {
-        pageToken = page.access_token;  // use from /me/accounts, not from field expansion
+        pageToken = page.access_token;
         igAccountId = pageRes.data.instagram_business_account.id;
+        pageId = page.id;
         break;
       }
     }
 
-    if (!pageToken || !igAccountId) {
+    if (!pageToken || !igAccountId || !pageId) {
       return res.redirect(`${FRONTEND_URL}/dashboard/instagram?error=sem_conta_instagram`);
     }
 
     await db.update(tenants)
-      .set({ instagramAccessToken: pageToken, instagramAccountId: igAccountId })
+      .set({ instagramAccessToken: pageToken, instagramAccountId: igAccountId, instagramPageId: pageId })
       .where(eq(tenants.id, tenantId));
+
+    // Auto-subscribe page to webhook events so the gabinete doesn't need to configure Meta manually
+    try {
+      await axios.post(`${GRAPH_URL}/${pageId}/subscribed_apps`, null, {
+        params: { subscribed_fields: 'messages,comments,mentions', access_token: pageToken },
+      });
+    } catch (subErr: any) {
+      console.warn('[INSTAGRAM] Auto-subscribe webhook failed (non-fatal):', subErr?.response?.data ?? subErr?.message);
+    }
 
     res.redirect(`${FRONTEND_URL}/dashboard/instagram?connected=true`);
   } catch (err: unknown) {

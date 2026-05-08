@@ -47,56 +47,64 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
   }
 });
 
-// Instagram Webhook — Meta challenge verification (GET)
-router.get('/instagram/:tenantId', express.json(), async (req: Request, res: Response) => {
-  const { tenantId } = req.params;
+// Instagram Webhook — app-level verification (GET)
+// Meta calls this once when the CRM owner configures the webhook in the Meta portal.
+// Uses INSTAGRAM_WEBHOOK_VERIFY_TOKEN from .env — no per-tenant logic needed here.
+router.get('/instagram', express.json(), (req: Request, res: Response) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
   if (mode !== 'subscribe') return res.sendStatus(400);
-
-  try {
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
-    if (!tenant?.instagramWebhookVerifyToken) return res.sendStatus(403);
-    if (token !== tenant.instagramWebhookVerifyToken) return res.sendStatus(403);
-    return res.status(200).send(challenge);
-  } catch {
-    return res.sendStatus(500);
-  }
+  if (token !== process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) return res.sendStatus(403);
+  return res.status(200).send(challenge);
 });
 
-// Instagram Webhook — receive DM and comment events (POST)
-router.post('/instagram/:tenantId', express.json(), async (req: Request, res: Response) => {
-  const { tenantId } = req.params;
+// Instagram Webhook — app-level event receiver (POST)
+// Routes to the correct tenant by looking up instagramAccountId from the payload.
+router.post('/instagram', express.json(), async (req: Request, res: Response) => {
   const payload = req.body;
+  const igAccountId = payload?.entry?.[0]?.id;
 
-  console.log(`[INSTAGRAM WEBHOOK] Tenant: ${tenantId} | Object: ${payload?.object}`);
+  console.log(`[INSTAGRAM WEBHOOK] AccountId: ${igAccountId} | Object: ${payload?.object}`);
 
   res.status(200).json({ status: 'received' });
 
-  const hasMessaging = payload?.entry?.[0]?.messaging?.length > 0;
-  const hasComments = payload?.entry?.[0]?.changes?.[0]?.field === 'comments';
+  if (!igAccountId) return;
 
-  if (hasMessaging) {
-    const messaging = payload.entry[0].messaging[0];
-    const isStoryInteraction =
-      messaging?.message?.attachments?.some((a: any) => a.type === 'story_mention') ||
-      !!messaging?.message?.reply_to?.story;
+  try {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.instagramAccountId, igAccountId));
+    if (!tenant) {
+      console.warn(`[INSTAGRAM WEBHOOK] No tenant found for accountId: ${igAccountId}`);
+      return;
+    }
 
-    if (isStoryInteraction) {
-      orchestrateInstagramStoryInteraction(payload, tenantId).catch(err =>
-        console.error('[INSTAGRAM STORY BG ERROR]', err.message)
-      );
-    } else {
-      orchestrateInstagramDM(payload, tenantId).catch(err =>
-        console.error('[INSTAGRAM DM BG ERROR]', err.message)
+    const tenantId = tenant.id;
+    const hasMessaging = payload?.entry?.[0]?.messaging?.length > 0;
+    const hasComments = payload?.entry?.[0]?.changes?.[0]?.field === 'comments';
+
+    if (hasMessaging) {
+      const messaging = payload.entry[0].messaging[0];
+      const isStoryInteraction =
+        messaging?.message?.attachments?.some((a: any) => a.type === 'story_mention') ||
+        !!messaging?.message?.reply_to?.story;
+
+      if (isStoryInteraction) {
+        orchestrateInstagramStoryInteraction(payload, tenantId).catch((err: any) =>
+          console.error('[INSTAGRAM STORY BG ERROR]', err.message)
+        );
+      } else {
+        orchestrateInstagramDM(payload, tenantId).catch((err: any) =>
+          console.error('[INSTAGRAM DM BG ERROR]', err.message)
+        );
+      }
+    } else if (hasComments) {
+      orchestrateInstagramComment(payload, tenantId).catch((err: any) =>
+        console.error('[INSTAGRAM COMMENT BG ERROR]', err.message)
       );
     }
-  } else if (hasComments) {
-    orchestrateInstagramComment(payload, tenantId).catch(err =>
-      console.error('[INSTAGRAM COMMENT BG ERROR]', err.message)
-    );
+  } catch (err: any) {
+    console.error('[INSTAGRAM WEBHOOK ROUTING ERROR]', err.message);
   }
 });
 
