@@ -63,7 +63,6 @@ const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 export default function InstagramConfig() {
   const [activeTab, setActiveTab] = useState<Tab>('conexao');
   const [config, setConfig] = useState({
-    instagramAccessToken: '',
     instagramWebhookVerifyToken: '',
     instagramDmAiEnabled: true,
     instagramAutoCreateMunicipe: true,
@@ -91,7 +90,6 @@ export default function InstagramConfig() {
       const res = await api.get('/config/me');
       const d = res.data;
       setConfig({
-        instagramAccessToken: d.instagramAccessToken || '',
         instagramWebhookVerifyToken: d.instagramWebhookVerifyToken || '',
         instagramDmAiEnabled: d.instagramDmAiEnabled ?? true,
         instagramAutoCreateMunicipe: d.instagramAutoCreateMunicipe ?? true,
@@ -139,6 +137,24 @@ export default function InstagramConfig() {
     fetchFlows();
   }, [fetchConfig, fetchStatus, fetchRules, fetchFlows]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'true') {
+      toast.success('Instagram conectado com sucesso!');
+      window.history.replaceState({}, '', window.location.pathname);
+      fetchStatus();
+    } else if (params.get('error') === 'cancelado') {
+      toast.info('Conexão cancelada.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('error') === 'sem_conta_instagram') {
+      toast.error('Nenhuma conta Instagram Business encontrada nas suas Páginas do Facebook.');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('error') === 'falha_meta') {
+      toast.error('Falha ao conectar com o Meta. Tente novamente.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [fetchStatus]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -153,6 +169,25 @@ export default function InstagramConfig() {
       toast.error(err.response?.data?.error || 'Falha ao salvar.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      const res = await api.get('/instagram/oauth/start');
+      window.location.href = res.data.url;
+    } catch {
+      toast.error('Não foi possível iniciar a conexão com o Instagram.');
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await api.post('/instagram/oauth/disconnect');
+      await fetchStatus();
+      toast.success('Instagram desconectado.');
+    } catch {
+      toast.error('Falha ao desconectar.');
     }
   };
 
@@ -318,23 +353,35 @@ export default function InstagramConfig() {
                 Credenciais da Meta API
               </h3>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">
-                    Access Token (Page Token)
-                  </label>
-                  <input
-                    type="password"
-                    className="w-full px-4 py-3 bg-muted border border-border rounded-2xl text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-                    value={config.instagramAccessToken}
-                    onChange={e => setConfig({ ...config, instagramAccessToken: e.target.value })}
-                    placeholder="EAAxxxxxxxxx..."
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1.5">
-                    Meta for Developers → seu App → Instagram → Token de Acesso da Página.
-                  </p>
-                </div>
+              <div className="space-y-6">
+                {/* OAuth Connect/Disconnect */}
+                {status?.connected ? (
+                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-black text-green-800 dark:text-green-300">Conta conectada</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">@{status.username}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleDisconnect}
+                      className="px-4 py-2 bg-white dark:bg-card border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                    >
+                      Desconectar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnect}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-800 hover:bg-blue-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all"
+                  >
+                    <Camera size={18} />
+                    Conectar com Instagram
+                  </button>
+                )}
 
+                {/* Webhook Verify Token */}
                 <div>
                   <label className="block text-xs font-black text-muted-foreground uppercase tracking-widest mb-2">
                     Verify Token (Webhook)
@@ -356,6 +403,7 @@ export default function InstagramConfig() {
                   </div>
                 </div>
 
+                {/* Webhook URL */}
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-800">
                   <p className="text-xs font-black text-blue-800 dark:text-blue-300 mb-2 uppercase tracking-widest">
                     URL do Webhook
@@ -364,25 +412,23 @@ export default function InstagramConfig() {
                     <code className="flex-1 text-xs text-blue-600 dark:text-blue-400 break-all font-mono">
                       {webhookUrl}
                     </code>
-                    <button
-                      onClick={copyWebhook}
-                      className="p-2 text-blue-400 hover:text-blue-600 transition-colors flex-shrink-0"
-                    >
+                    <button onClick={copyWebhook} className="p-2 text-blue-400 hover:text-blue-600 transition-colors flex-shrink-0">
                       <Copy size={14} />
                     </button>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-8 py-3 bg-blue-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-900 shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all disabled:opacity-50"
-                >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  {saving ? 'Salvando...' : 'Salvar Credenciais'}
-                </button>
+                {/* Save verify token button */}
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-8 py-3 bg-blue-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-900 shadow-lg shadow-blue-200 dark:shadow-blue-900/30 transition-all disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    {saving ? 'Salvando...' : 'Salvar Webhook Token'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -419,9 +465,9 @@ export default function InstagramConfig() {
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-[2.5rem] p-6 space-y-3">
               <h4 className="font-black text-xs text-amber-800 dark:text-amber-300 uppercase tracking-widest">Passos</h4>
               <ol className="space-y-2 text-xs text-amber-700 dark:text-amber-400 font-bold list-decimal list-inside">
-                <li>Crie um App em developers.facebook.com</li>
-                <li>Adicione o produto "Instagram"</li>
-                <li>Gere um Page Access Token longo</li>
+                <li>Clique em "Conectar com Instagram"</li>
+                <li>Autorize o acesso no Meta</li>
+                <li>Gere e salve o Verify Token acima</li>
                 <li>Configure o Webhook com a URL acima</li>
                 <li>Assine: <code>messages</code> e <code>comments</code></li>
               </ol>
