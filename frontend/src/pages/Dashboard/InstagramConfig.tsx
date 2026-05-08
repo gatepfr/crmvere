@@ -471,15 +471,56 @@ export default function InstagramConfig() {
               )}
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-[2.5rem] p-6 space-y-3">
-              <h4 className="font-black text-xs text-amber-800 dark:text-amber-300 uppercase tracking-widest">Passos</h4>
-              <ol className="space-y-2 text-xs text-amber-700 dark:text-amber-400 font-bold list-decimal list-inside">
-                <li>Clique em "Conectar com Instagram"</li>
-                <li>Autorize o acesso no Meta</li>
-                <li>Gere e salve o Verify Token acima</li>
-                <li>Configure o Webhook com a URL acima</li>
-                <li>Assine: <code>messages</code> e <code>comments</code></li>
-              </ol>
+            <div className="bg-card border border-border rounded-[2.5rem] p-6 space-y-4">
+              <h4 className="font-black text-xs text-foreground uppercase tracking-widest">Como configurar</h4>
+              <div className="space-y-3">
+                {[
+                  {
+                    n: 1,
+                    title: 'Conectar conta',
+                    desc: 'Clique em "Conectar com Instagram" e autorize o acesso no Meta. Você voltará aqui com a conta conectada.',
+                    done: !!status?.connected,
+                  },
+                  {
+                    n: 2,
+                    title: 'Gerar o Verify Token',
+                    desc: 'Clique no botão ⚡ ao lado do campo "Verify Token" para gerar um token seguro, depois clique em "Salvar Webhook Token".',
+                    done: !!config.instagramWebhookVerifyToken,
+                  },
+                  {
+                    n: 3,
+                    title: 'Copiar a URL do Webhook',
+                    desc: 'Copie a URL do Webhook exibida abaixo e guarde junto com o Verify Token.',
+                    done: false,
+                  },
+                  {
+                    n: 4,
+                    title: 'Configurar no Meta',
+                    desc: 'No Meta for Developers → seu App → Instagram → Webhooks: cole a URL e o Verify Token, depois clique em "Verificar e Salvar".',
+                    done: false,
+                  },
+                  {
+                    n: 5,
+                    title: 'Assinar eventos',
+                    desc: 'Ative as assinaturas: messages e comments. Agora DMs e comentários chegam automaticamente.',
+                    done: false,
+                  },
+                ].map(step => (
+                  <div key={step.n} className="flex gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 ${
+                      step.done
+                        ? 'bg-green-500 text-white'
+                        : 'bg-muted text-muted-foreground border border-border'
+                    }`}>
+                      {step.done ? '✓' : step.n}
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black ${step.done ? 'text-green-700 dark:text-green-400 line-through opacity-60' : 'text-foreground'}`}>{step.title}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
