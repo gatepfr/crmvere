@@ -52,6 +52,16 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
     const normalized = normalizeEvolution(payload, tenantId);
     if (!normalized) return { status: 'ignored' };
 
+    // Deduplicação: garante que cada mensagem seja processada uma única vez,
+    // mesmo que a Evolution API entregue o webhook duplicado.
+    if (normalized.messageId) {
+      const acquired = await redisService.acquireMessageLock(tenantId, normalized.messageId);
+      if (!acquired) {
+        console.log(`[ORCHESTRATOR] Mensagem duplicada ignorada: ${normalized.messageId}`);
+        return { status: 'duplicate' };
+      }
+    }
+
     console.log(`[ORCHESTRATOR] Mensagem de ${normalized.from} para ${tenantId}`);
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));

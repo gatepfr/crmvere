@@ -91,6 +91,17 @@ export const redisService = {
     const val = await redis.get(key);
     return val ? JSON.parse(val) : null;
   },
+
+  /**
+   * Atomic deduplication lock for incoming WhatsApp messages.
+   * Returns true if this messageId is new (acquired lock), false if already processed.
+   * TTL of 5 minutes is enough to absorb duplicate webhook deliveries.
+   */
+  async acquireMessageLock(tenantId: string, messageId: string): Promise<boolean> {
+    const key = `msg_lock:${tenantId}:${messageId}`;
+    const result = await redis.set(key, '1', 'EX', 300, 'NX');
+    return result === 'OK';
+  },
 };
 
 export default redis;

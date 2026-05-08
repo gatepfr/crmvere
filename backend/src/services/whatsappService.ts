@@ -7,6 +7,7 @@ export interface IncomingMessage {
   tenantId: string;
   isGroup: boolean;
   fromMe: boolean;
+  messageId: string;
 }
 
 /**
@@ -71,6 +72,7 @@ export const normalizeEvolution = (payload: any, tenantId: string): IncomingMess
     text,
     tenantId,
     isGroup: false,
-    fromMe: false
+    fromMe: false,
+    messageId: messageEntry.key?.id || ''
   };
 };
