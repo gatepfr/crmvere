@@ -210,8 +210,8 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
+            <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
+              <div className="space-y-1 min-w-[160px]">
                 <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">WhatsApp</label>
                 {isEditing ? (
                   <input className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm font-bold outline-none text-foreground" value={displayPhone} onChange={e => applyPhoneMask(e.target.value)} />
@@ -219,12 +219,12 @@ export default function DemandModal({ demand, onClose, onUpdate }: DemandModalPr
                   <div className="flex items-center gap-2 text-sm font-bold text-foreground whitespace-nowrap"><Phone size={14} className="text-primary shrink-0" /> {displayPhone}</div>
                 )}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1 min-w-[180px]">
                 <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Bairro</label>
                 {isEditing ? (
                   <input className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm font-bold outline-none text-foreground" value={municipe.bairro} onChange={e => setMunicipe({ ...municipe, bairro: e.target.value })} />
                 ) : (
-                  <div className="flex items-center gap-2 text-sm font-bold text-foreground"><MapIcon size={14} className="text-primary" /> {municipe.bairro || 'Não informado'}</div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-foreground"><MapIcon size={14} className="text-primary shrink-0" /> {municipe.bairro || 'Não informado'}</div>
                 )}
               </div>
             </div>
