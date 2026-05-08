@@ -1,5 +1,20 @@
 import { vi } from 'vitest';
 
+// Mock puppeteer-core globally (not installed in test env)
+vi.mock('puppeteer-core', () => ({
+  default: {
+    launch: vi.fn().mockResolvedValue({
+      newPage: vi.fn().mockResolvedValue({
+        goto: vi.fn(),
+        setContent: vi.fn(),
+        pdf: vi.fn().mockResolvedValue(Buffer.from('')),
+        close: vi.fn(),
+      }),
+      close: vi.fn(),
+    }),
+  },
+}));
+
 // Mock ioredis globally
 vi.mock('ioredis', () => {
   class MockRedis {

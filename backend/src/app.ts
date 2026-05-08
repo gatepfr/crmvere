@@ -22,6 +22,7 @@ import broadcastRoutes from './routes/broadcastRoutes';
 import reportRoutes from './routes/reportRoutes';
 import documentoRoutes from './routes/documentoRoutes';
 import instagramRoutes from './routes/instagramRoutes';
+import instagramOAuthRoutes from './routes/instagramOAuthRoutes';
 import { authenticate } from './middleware/auth';
 import { initAutomations } from './services/automationService';
 import { checkTenant } from './middleware/tenant';
@@ -52,6 +53,9 @@ app.use('/api/auth', authRoutes);
 
 // Calendar routes (callback is public; auth applied internally after callback)
 app.use('/api/calendar', calendarRoutes);
+
+// Instagram OAuth routes (callback is public; auth applied internally after callback)
+app.use('/api/instagram', instagramOAuthRoutes);
 
 // 3. PROTECTED ROUTES (Require Login)
 app.use(authenticate);
