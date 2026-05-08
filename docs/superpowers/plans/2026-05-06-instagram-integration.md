@@ -1039,6 +1039,7 @@ export default function InstagramConfig() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [settings, setSettings] = useState({
+    tenantId: '',
     instagramWebhookVerifyToken: '',
     instagramDmAiEnabled: true,
     instagramAutoCreateMunicipe: true,
@@ -1046,6 +1047,7 @@ export default function InstagramConfig() {
     instagramCommentKeywords: [] as string[],
     instagramCommentReply: '',
   });
+  const [showGuide, setShowGuide] = useState(false);
   const [status, setStatus] = useState<InstagramStatus | null>(null);
   const [rules, setRules] = useState<CommentRule[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1065,6 +1067,7 @@ export default function InstagramConfig() {
       ]);
       const d = configRes.data;
       setSettings({
+        tenantId: d.id || '',
         instagramWebhookVerifyToken: d.instagramWebhookVerifyToken || '',
         instagramDmAiEnabled: d.instagramDmAiEnabled ?? true,
         instagramAutoCreateMunicipe: d.instagramAutoCreateMunicipe ?? true,
@@ -1177,7 +1180,7 @@ export default function InstagramConfig() {
     </label>
   );
 
-  const backendUrl = import.meta.env.VITE_API_URL || window.location.origin.replace(':3000', ':3001');
+  const BACKEND_URL = 'https://www.crmvere.com.br';
 
   if (fetching) return <div className="flex items-center justify-center h-64"><RefreshCw className="w-8 h-8 text-pink-500 animate-spin" /></div>;
 
@@ -1258,7 +1261,7 @@ export default function InstagramConfig() {
             </div>
             <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
               <p className="text-xs font-bold text-blue-800 mb-1">URL do Webhook (cole na Meta):</p>
-              <code className="text-xs text-blue-600 break-all">{backendUrl}/api/webhook/instagram/SEU_TENANT_ID</code>
+              <code className="text-xs text-blue-600 break-all select-all">{BACKEND_URL}/api/webhook/instagram/{settings.tenantId || 'SEU_TENANT_ID'}</code>
             </div>
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1">
               <p className="font-bold text-slate-700">Assinaturas necessárias no webhook:</p>
@@ -1420,15 +1423,58 @@ export default function InstagramConfig() {
             )}
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
-            <h4 className="font-black text-xs text-amber-800 uppercase tracking-widest">Setup único (dev)</h4>
-            <ol className="space-y-2 text-xs text-amber-700 font-bold list-decimal list-inside">
-              <li>Criar App no Meta Developer Portal</li>
-              <li>Adicionar produto "Instagram"</li>
-              <li>Adicionar a URL de callback do OAuth</li>
-              <li>Definir <code>FACEBOOK_APP_ID</code> e <code>FACEBOOK_APP_SECRET</code> no <code>.env</code></li>
-            </ol>
-            <p className="text-[10px] text-amber-600">Feito isso, os usuários conectam com um clique — sem precisar tocar em tokens.</p>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <button
+              onClick={() => setShowGuide(v => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+            >
+              <span className="flex items-center gap-2 text-sm font-black text-slate-700">
+                <span className="text-base">📋</span> Como configurar no Meta?
+              </span>
+              <span className="text-slate-400 text-xs font-bold">{showGuide ? '▲ Fechar' : '▼ Ver passo a passo'}</span>
+            </button>
+
+            {showGuide && (
+              <div className="px-5 pb-5 space-y-4 border-t border-slate-100">
+                <div className="space-y-3 pt-4">
+                  {[
+                    {
+                      n: 1,
+                      title: 'Criar o App no Meta',
+                      desc: <>Acesse <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">developers.facebook.com</a>, clique em <strong>Criar app</strong> e escolha o tipo <strong>Business</strong>.</>,
+                    },
+                    {
+                      n: 2,
+                      title: 'Adicionar o produto Instagram',
+                      desc: <>No painel do app, clique em <strong>Adicionar produto</strong>, encontre <strong>Instagram</strong> e clique em <strong>Configurar</strong>.</>,
+                    },
+                    {
+                      n: 3,
+                      title: 'Adicionar a URL de retorno OAuth',
+                      desc: <>Em <strong>Instagram → Configurações básicas</strong>, adicione em <em>URIs de redirecionamento OAuth válidas</em>:<br /><code className="block mt-1 bg-slate-100 px-2 py-1 rounded text-[10px] break-all select-all">{BACKEND_URL}/api/instagram/oauth/callback</code></>,
+                    },
+                    {
+                      n: 4,
+                      title: 'Configurar o Webhook',
+                      desc: <>Em <strong>Instagram → Webhooks</strong>, clique em <strong>Assinar</strong>. Cole a URL abaixo e o <em>Verify Token</em> que você gerou acima. Marque <strong>messages</strong> e <strong>comments</strong>.<br /><code className="block mt-1 bg-slate-100 px-2 py-1 rounded text-[10px] break-all select-all">{BACKEND_URL}/api/webhook/instagram/{settings.tenantId || '...'}</code></>,
+                    },
+                    {
+                      n: 5,
+                      title: 'Voltar aqui e clicar em "Conectar"',
+                      desc: <>Pronto! Clique no botão <strong>Conectar com Instagram</strong> acima, autorize no Meta e a conta ficará vinculada automaticamente.</>,
+                    },
+                  ].map(step => (
+                    <div key={step.n} className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-pink-500 text-white rounded-full flex items-center justify-center text-[11px] font-black mt-0.5">{step.n}</span>
+                      <div>
+                        <p className="text-sm font-black text-slate-800">{step.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{step.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
