@@ -49,37 +49,68 @@ router.post(['/evolution/:tenantId', '/evolution/:tenantId/:eventName'], express
 
 // Instagram Webhook — app-level verification (GET)
 // Meta calls this once when the CRM owner configures the webhook in the Meta portal.
-// Uses INSTAGRAM_WEBHOOK_VERIFY_TOKEN from .env — no per-tenant logic needed here.
-router.get('/instagram', express.json(), (req: Request, res: Response) => {
+router.get(['/instagram', '/instagram/:tenantId'], async (req: Request, res: Response) => {
+  const { tenantId } = req.params;
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode !== 'subscribe') return res.sendStatus(400);
-  if (token !== process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) return res.sendStatus(403);
-  return res.status(200).send(challenge);
+  console.log(`[INSTAGRAM VERIFY ATTEMPT] Tenant: ${tenantId || 'global'} | Token received: ${token}`);
+
+  if (mode !== 'subscribe') {
+    console.warn('[INSTAGRAM VERIFY] Invalid mode:', mode);
+    return res.sendStatus(400);
+  }
+
+  // 1. Try per-tenant verification
+  if (tenantId && !['SEU_TENANT_ID', '...', 'undefined', 'null'].includes(tenantId)) {
+    try {
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+      if (tenant?.instagramWebhookVerifyToken && token === tenant.instagramWebhookVerifyToken) {
+        console.log(`[INSTAGRAM VERIFY] Success for tenant: ${tenantId}`);
+        return res.status(200).send(challenge);
+      }
+    } catch (e: any) {
+      console.error('[INSTAGRAM WEBHOOK VERIFY DB ERROR]', e.message);
+    }
+  }
+
+  // 2. Fallback to global verification token from .env
+  if (token && token === process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) {
+    console.log('[INSTAGRAM VERIFY] Success using global token');
+    return res.status(200).send(challenge);
+  }
+
+  console.warn(`[INSTAGRAM VERIFY] Unauthorized attempt. Expected: ${process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN}, Received: ${token}`);
+  return res.sendStatus(403);
 });
 
 // Instagram Webhook — app-level event receiver (POST)
-// Routes to the correct tenant by looking up instagramAccountId from the payload.
-router.post('/instagram', express.json(), async (req: Request, res: Response) => {
+// Routes to the correct tenant by looking up instagramAccountId from the payload,
+// or uses tenantId from the URL if provided.
+router.post(['/instagram', '/instagram/:tenantId'], express.json(), async (req: Request, res: Response) => {
+  const { tenantId: tenantIdParam } = req.params;
   const payload = req.body;
   const igAccountId = payload?.entry?.[0]?.id;
 
-  console.log(`[INSTAGRAM WEBHOOK] AccountId: ${igAccountId} | Object: ${payload?.object}`);
+  console.log(`[INSTAGRAM WEBHOOK] AccountId: ${igAccountId} | Object: ${payload?.object} | TenantParam: ${tenantIdParam}`);
 
   res.status(200).json({ status: 'received' });
 
-  if (!igAccountId) return;
-
   try {
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.instagramAccountId, igAccountId));
-    if (!tenant) {
-      console.warn(`[INSTAGRAM WEBHOOK] No tenant found for accountId: ${igAccountId}`);
-      return;
+    let tenantId = tenantIdParam;
+
+    // If no tenantId in URL, must find by igAccountId
+    if (!tenantId) {
+      if (!igAccountId) return;
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.instagramAccountId, igAccountId));
+      if (!tenant) {
+        console.warn(`[INSTAGRAM WEBHOOK] No tenant found for accountId: ${igAccountId}`);
+        return;
+      }
+      tenantId = tenant.id;
     }
 
-    const tenantId = tenant.id;
     const hasMessaging = payload?.entry?.[0]?.messaging?.length > 0;
     const hasComments = payload?.entry?.[0]?.changes?.[0]?.field === 'comments';
 

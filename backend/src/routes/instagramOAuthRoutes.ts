@@ -132,7 +132,11 @@ router.post('/oauth/disconnect', async (req: Request, res: Response) => {
 
   try {
     await db.update(tenants)
-      .set({ instagramAccessToken: null, instagramAccountId: null })
+      .set({ 
+        instagramAccessToken: null, 
+        instagramAccountId: null, 
+        instagramPageId: null 
+      })
       .where(eq(tenants.id, tenantId));
     res.json({ success: true });
   } catch (err: unknown) {

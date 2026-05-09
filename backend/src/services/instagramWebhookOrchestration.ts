@@ -61,14 +61,39 @@ async function findOrCreateMunicipeByInstagram(
 export async function orchestrateInstagramDM(payload: any, tenantId: string) {
   try {
     const messaging = payload?.entry?.[0]?.messaging?.[0];
-    if (!messaging?.message?.text) return { status: 'ignored' };
+    if (!messaging) return { status: 'ignored' };
 
     const senderIgsid: string = messaging.sender.id;
-    const messageText: string = messaging.message.text;
     const senderUsername: string = messaging.sender?.username || '';
 
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
     if (!tenant?.instagramAccessToken) return { status: 'no_instagram_config' };
+
+    // 1. Quick Reply Flow: user clicked a button
+    const quickReplyPayload = messaging.message?.quick_reply?.payload;
+    if (quickReplyPayload) {
+      const [flowStep] = await db.select().from(instagramQuickReplyFlows).where(
+        and(
+          eq(instagramQuickReplyFlows.tenantId, tenantId),
+          eq(instagramQuickReplyFlows.triggerPayload, quickReplyPayload)
+        )
+      );
+      if (flowStep) {
+        const igService = new InstagramService(tenant.instagramAccessToken);
+        let nextQRs: { title: string; payload: string }[] = [];
+        try { nextQRs = JSON.parse(flowStep.nextQuickReplies || '[]'); } catch { }
+
+        if (nextQRs.length > 0) {
+          await igService.sendDMWithQuickReplies(senderIgsid, flowStep.responseMessage, nextQRs);
+        } else {
+          await igService.sendDM(senderIgsid, flowStep.responseMessage);
+        }
+        return { status: 'quick_reply_flow' };
+      }
+    }
+
+    if (!messaging.message?.text) return { status: 'ignored' };
+    const messageText: string = messaging.message.text;
 
     const autoCreate = tenant.instagramAutoCreateMunicipe !== false;
     const municipe = await findOrCreateMunicipeByInstagram(tenantId, senderIgsid, senderUsername, autoCreate);

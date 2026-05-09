@@ -472,7 +472,10 @@ export default function InstagramConfig() {
             </div>
 
             <div className="bg-card border border-border rounded-[2.5rem] p-6 space-y-4">
-              <h4 className="font-black text-xs text-foreground uppercase tracking-widest">Como configurar</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-black text-xs text-foreground uppercase tracking-widest">Como configurar</h4>
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded-lg">Admin</span>
+              </div>
               <div className="space-y-3">
                 {[
                   {
@@ -489,31 +492,38 @@ export default function InstagramConfig() {
                   },
                   {
                     n: 3,
-                    title: 'Copiar a URL do Webhook',
-                    desc: 'Copie a URL do Webhook exibida abaixo e guarde junto com o Verify Token.',
+                    title: 'Configuração do Sistema',
+                    desc: 'Os passos abaixo são realizados uma única vez pelo administrador do sistema no Meta for Developers.',
                     done: false,
+                    info: true
                   },
                   {
                     n: 4,
-                    title: 'Configurar no Meta',
-                    desc: 'No Meta for Developers → seu App → Instagram → Webhooks: cole a URL e o Verify Token, depois clique em "Verificar e Salvar".',
+                    title: 'URL do Webhook',
+                    desc: 'Cole a URL exibida ao lado e o Verify Token no painel da Meta.',
                     done: false,
                   },
                   {
                     n: 5,
                     title: 'Assinar eventos',
-                    desc: 'Ative as assinaturas: messages e comments. Agora DMs e comentários chegam automaticamente.',
+                    desc: 'Ative as assinaturas: messages e comments para receber as interações.',
                     done: false,
                   },
                 ].map(step => (
                   <div key={step.n} className="flex gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 ${
-                      step.done
-                        ? 'bg-green-500 text-white'
-                        : 'bg-muted text-muted-foreground border border-border'
-                    }`}>
-                      {step.done ? '✓' : step.n}
-                    </div>
+                    {step.info ? (
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
+                        <Settings2 size={12} />
+                      </div>
+                    ) : (
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 ${
+                        step.done
+                          ? 'bg-green-500 text-white'
+                          : 'bg-muted text-muted-foreground border border-border'
+                      }`}>
+                        {step.done ? '✓' : step.n}
+                      </div>
+                    )}
                     <div>
                       <p className={`text-xs font-black ${step.done ? 'text-green-700 dark:text-green-400 line-through opacity-60' : 'text-foreground'}`}>{step.title}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{step.desc}</p>
