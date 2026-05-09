@@ -102,8 +102,14 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
       await axios.post(`${GRAPH_URL}/${pageId}/subscribed_apps`, null, {
         params: { subscribed_fields: 'messages,feed,mention', access_token: pageToken },
       });
+      console.log(`[INSTAGRAM] Webhook auto-subscribed successfully for page ${pageId}`);
     } catch (subErr: any) {
-      console.warn('[INSTAGRAM] Auto-subscribe webhook failed (non-fatal):', subErr?.response?.data ?? subErr?.message);
+      const msg = subErr?.response?.data?.error?.message || subErr.message;
+      if (msg.includes('pages_messaging') || msg.includes('pages_manage_metadata')) {
+        console.info(`[INSTAGRAM] Auto-subscription skipped: Meta App needs App Review for 'pages_messaging'. Please ensure you have manually clicked "Subscribe" for 'messages' and 'feed' in the Meta Developer Dashboard.`);
+      } else {
+        console.warn('[INSTAGRAM] Auto-subscribe webhook failed:', msg);
+      }
     }
 
     res.redirect(`${FRONTEND_URL}/dashboard/instagram?connected=true`);
