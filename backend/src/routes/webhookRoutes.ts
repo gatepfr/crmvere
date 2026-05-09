@@ -72,20 +72,27 @@ router.get(['/instagram', '/instagram/:tenantId'], async (req: Request, res: Res
     `);
   }
 
-  console.log(`[INSTAGRAM VERIFY ATTEMPT] Tenant: ${tenantId || 'global'} | Token received: ${token}`);
+  console.log('[INSTAGRAM VERIFY DEBUG]', {
+    tenantId,
+    mode,
+    token,
+    challenge,
+    headers: req.headers['user-agent']
+  });
 
   if (mode !== 'subscribe') {
     console.warn('[INSTAGRAM VERIFY] Invalid mode:', mode);
     return res.sendStatus(400);
   }
 
+  let authorized = false;
+
   // 1. Try per-tenant verification
   if (tenantId && !['SEU_TENANT_ID', '...', 'undefined', 'null'].includes(tenantId)) {
     try {
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
       if (tenant?.instagramWebhookVerifyToken && token === tenant.instagramWebhookVerifyToken) {
-        console.log(`[INSTAGRAM VERIFY] Success for tenant: ${tenantId}`);
-        return res.status(200).send(challenge);
+        authorized = true;
       }
     } catch (e: any) {
       console.error('[INSTAGRAM WEBHOOK VERIFY DB ERROR]', e.message);
@@ -93,12 +100,17 @@ router.get(['/instagram', '/instagram/:tenantId'], async (req: Request, res: Res
   }
 
   // 2. Fallback to global verification token from .env
-  if (token && token === process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) {
-    console.log('[INSTAGRAM VERIFY] Success using global token');
+  if (!authorized && token && token === process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) {
+    authorized = true;
+  }
+
+  if (authorized && challenge) {
+    console.log('[INSTAGRAM VERIFY] Success. Returning challenge.');
+    // CRITICAL: Must return the challenge as a raw string/number, not JSON
     return res.status(200).send(challenge);
   }
 
-  console.warn(`[INSTAGRAM VERIFY] Unauthorized attempt. Expected: ${process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN}, Received: ${token}`);
+  console.warn(`[INSTAGRAM VERIFY] Unauthorized attempt. Expected token: ${process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN}, Received: ${token}`);
   return res.sendStatus(403);
 });
 
