@@ -81,8 +81,20 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
       return res.redirect(`${FRONTEND_URL}/dashboard/instagram?error=sem_conta_instagram`);
     }
 
+    // Get current tenant data to check if verify token is already set
+    const [existingTenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+
     await db.update(tenants)
-      .set({ instagramAccessToken: pageToken, instagramAccountId: igAccountId, instagramPageId: pageId })
+      .set({ 
+        instagramAccessToken: pageToken, 
+        instagramAccountId: igAccountId, 
+        instagramPageId: pageId,
+        // Auto-configure basic settings on first connection
+        instagramBotEnabled: true,
+        instagramDmAiEnabled: existingTenant?.instagramDmAiEnabled ?? true,
+        instagramAutoCreateMunicipe: existingTenant?.instagramAutoCreateMunicipe ?? true,
+        instagramWebhookVerifyToken: existingTenant?.instagramWebhookVerifyToken || `ig_${crypto.randomBytes(16).toString('hex')}`
+      })
       .where(eq(tenants.id, tenantId));
 
     // Auto-subscribe page to webhook events so the gabinete doesn't need to configure Meta manually
