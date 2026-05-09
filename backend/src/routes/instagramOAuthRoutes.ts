@@ -100,7 +100,7 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
     // Auto-subscribe page to webhook events so the gabinete doesn't need to configure Meta manually
     try {
       await axios.post(`${GRAPH_URL}/${pageId}/subscribed_apps`, null, {
-        params: { subscribed_fields: 'messages,comments,mentions', access_token: pageToken },
+        params: { subscribed_fields: 'messages,feed,mention', access_token: pageToken },
       });
     } catch (subErr: any) {
       console.warn('[INSTAGRAM] Auto-subscribe webhook failed (non-fatal):', subErr?.response?.data ?? subErr?.message);
