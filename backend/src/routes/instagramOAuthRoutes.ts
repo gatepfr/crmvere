@@ -130,7 +130,7 @@ router.get('/oauth/start', async (req: Request, res: Response) => {
   const url = new URL('https://www.facebook.com/v21.0/dialog/oauth');
   url.searchParams.set('client_id', META_APP_ID);
   url.searchParams.set('redirect_uri', REDIRECT_URI);
-  url.searchParams.set('scope', 'instagram_basic,instagram_manage_messages,pages_read_engagement,instagram_manage_comments,pages_messaging,pages_manage_metadata');
+  url.searchParams.set('scope', 'instagram_basic,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement');
   url.searchParams.set('state', nonce);
   url.searchParams.set('response_type', 'code');
 
