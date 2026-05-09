@@ -55,6 +55,23 @@ router.get(['/instagram', '/instagram/:tenantId'], async (req: Request, res: Res
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
+  // If no mode, it's likely a manual browser access to test if the route is open
+  if (!mode) {
+    return res.status(200).send(`
+      <html>
+        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc;">
+          <div style="text-align: center; padding: 2rem; background: white; border-radius: 1rem; shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+            <h1 style="color: #1e40af;">Webhook Instagram Ativo 🚀</h1>
+            <p style="color: #64748b;">Esta rota está pronta para receber conexões da Meta.</p>
+            <code style="display: block; margin-top: 1rem; padding: 0.5rem; background: #f1f5f9; border-radius: 0.5rem; font-size: 0.875rem;">
+              Tenant: ${tenantId || 'Global'}
+            </code>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
   console.log(`[INSTAGRAM VERIFY ATTEMPT] Tenant: ${tenantId || 'global'} | Token received: ${token}`);
 
   if (mode !== 'subscribe') {
