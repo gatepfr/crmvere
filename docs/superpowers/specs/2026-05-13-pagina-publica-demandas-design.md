@@ -43,7 +43,7 @@ Tela única, scroll vertical, sem paginação.
 ### Cabeçalho
 - Avatar circular (64px) com borda dourada:
   - **Com foto:** `tenant.fotoUrl` (foto cadastrada no perfil do gabinete)
-  - **Sem foto:** ícone 🚀 (foguete do CRM do Verê) com fundo gradiente roxo escuro
+  - **Sem foto:** imagem `icone_foguete.png` (logo do CRM do Verê) com fundo gradiente roxo escuro
 - Nome do vereador (`tenant.name`)
 - Cidade + UF + Partido (`tenant.municipio`, `tenant.uf`, `tenant.partido`)
 - Fundo: gradiente `#1a0a3b → #2d1b69`
