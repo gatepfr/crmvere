@@ -153,6 +153,12 @@ export const demandas = pgTable("demandas", {
   dueDate: timestamp("due_date"),
   closedAt: timestamp("closed_at"),
 
+  // Formulário público
+  origem: varchar("origem", { length: 50 }),           // "formulario_publico" | "whatsapp" | "instagram" | "manual"
+  localizacao: varchar("localizacao", { length: 500 }),
+  fotoUrl: varchar("foto_url", { length: 500 }),
+  protocolo: varchar("protocolo", { length: 20 }),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

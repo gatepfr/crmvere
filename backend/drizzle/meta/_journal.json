@@ -78,6 +78,13 @@
       "when": 1776525179549,
       "tag": "0010_strange_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778713703779,
+      "tag": "0011_bent_fallen_one",
+      "breakpoints": true
     }
   ]
 }
