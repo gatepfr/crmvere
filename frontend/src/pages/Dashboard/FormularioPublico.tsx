@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import api from '../../api/client';
+import { formatPhone } from '../../utils/formatPhone';
 import {
-  Search, Loader2, X, MapPin, Phone, MessageCircle, Globe, ChevronLeft, ChevronRight,
+  Search, Loader2, X, MapPin, MessageCircle, Globe, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +79,7 @@ export default function FormularioPublico() {
   const [selected, setSelected] = useState<PublicDemanda | null>(null);
   const [editStatus, setEditStatus] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
+  const [sendingWa, setSendingWa] = useState(false);
 
   const fetchDemandas = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -143,14 +145,18 @@ export default function FormularioPublico() {
     }
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     if (!selected) return;
-    const phone = selected.municipes.phone.replace(/\D/g, '');
-    const msg = encodeURIComponent(
-      `Olá ${selected.municipes.name}, sobre sua solicitação protocolo ${selected.demandas.protocolo ?? ''}, ` +
-      `estamos trabalhando para atendê-la. Em breve entraremos em contato.`
-    );
-    window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
+    const message = `Olá ${selected.municipes.name}, sobre sua solicitação protocolo ${selected.demandas.protocolo ?? ''}, estamos trabalhando para atendê-la. Em breve entraremos em contato.`;
+    setSendingWa(true);
+    try {
+      await api.post('/whatsapp/send', { demandId: selected.demandas.id, message });
+      toast.success('Mensagem enviada pelo WhatsApp!');
+    } catch {
+      toast.error('Falha ao enviar mensagem pelo WhatsApp.');
+    } finally {
+      setSendingWa(false);
+    }
   };
 
   return (
@@ -257,23 +263,20 @@ export default function FormularioPublico() {
                 <button
                   key={d.demandas.id}
                   onClick={() => openModal(d)}
-                  className="w-full text-left px-5 py-4 hover:bg-muted/40 transition-colors flex gap-4 items-start"
+                  className="w-full text-left px-5 py-4 hover:bg-muted/40 transition-colors flex gap-3 items-start"
                 >
-                  <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-slate-100">
-                    {d.demandas.fotoUrl ? (
-                      <img
-                        src={`${BACKEND_URL}${d.demandas.fotoUrl}`}
-                        alt="foto"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300">
-                        <Globe size={20} />
-                      </div>
-                    )}
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm shrink-0">
+                    {d.municipes.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground">{d.municipes.name}</span>
+                      <span className="text-xs text-muted-foreground">{formatPhone(d.municipes.phone)}</span>
+                    </div>
+                    {d.municipes.bairro && (
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">{d.municipes.bairro}</p>
+                    )}
+                    <div className="flex items-center gap-2 flex-wrap mt-2">
                       {d.demandas.protocolo && (
                         <span className="text-xs font-bold text-primary">#{d.demandas.protocolo}</span>
                       )}
@@ -294,9 +297,6 @@ export default function FormularioPublico() {
                     </div>
                     <p className="text-sm text-foreground mt-1 line-clamp-2">{d.demandas.descricao}</p>
                     <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Phone size={10} /> {d.municipes.name} · {d.municipes.phone}
-                      </span>
                       {d.demandas.localizacao && (
                         <span className="flex items-center gap-1">
                           <MapPin size={10} /> {d.demandas.localizacao}
@@ -429,8 +429,10 @@ export default function FormularioPublico() {
                 variant="outline"
                 className="flex-1 border-[#25d366] text-[#25d366] hover:bg-[#25d366]/10"
                 onClick={handleWhatsApp}
+                disabled={sendingWa}
               >
-                <MessageCircle size={16} className="mr-2" /> WhatsApp
+                {sendingWa ? <Loader2 size={16} className="mr-2 animate-spin" /> : <MessageCircle size={16} className="mr-2" />}
+                WhatsApp
               </Button>
               <Button
                 className="flex-1"

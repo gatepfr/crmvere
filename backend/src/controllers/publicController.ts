@@ -5,7 +5,7 @@ import {
   tenants, municipes, demandas, demandCategories, globalCategories
 } from '../db/schema';
 import { eq, and, sql, asc } from 'drizzle-orm';
-import { normalizePhone } from '../utils/phoneUtils';
+import { normalizePhone, formatPhoneBR } from '../utils/phoneUtils';
 import { EvolutionService } from '../services/evolutionService';
 import fs from 'fs';
 import path from 'path';
@@ -178,8 +178,9 @@ export const submitPublicDemand = async (req: Request, res: Response) => {
 
       if (tenant.whatsappNotificationNumber) {
         const preview = descricao.length > 100 ? descricao.slice(0, 100) + '...' : descricao;
+        const locStr = localizacao ? `\n📍 ${localizacao}` : '';
         const teamMsg =
-          `🔔 *Nova demanda via formulário público!*\n\n👤 ${nome} — 📱 ${phoneNormalized}\n📌 ${categoriaNome}${localizacao ? ` — 📍 ${localizacao}` : ''}\n📝 ${preview}\n\nAcesse o CRM para visualizar e atribuir.`;
+          `🔔 *Nova demanda via formulário público!*\n\n👤 ${nome}\n📱 ${formatPhoneBR(phoneNormalized)}\n📌 ${categoriaNome}${locStr}\n\n📝 ${preview}\n\nAcesse o CRM para visualizar e atribuir.`;
         evo.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, teamMsg).catch(() => {});
       }
     }
