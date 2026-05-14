@@ -23,11 +23,11 @@ function normalizeStr(s: string): string {
 }
 
 const VIRTUAL_CATEGORIES = [
-  { displayName: 'Buraco / Rua',        dbName: 'zeladoria publica', icon: 'Hammer'      },
-  { displayName: 'Mato Alto / Limpeza', dbName: 'zeladoria publica', icon: 'Scissors'    },
-  { displayName: 'Iluminação Pública',  dbName: 'zeladoria publica', icon: 'Lightbulb'   },
-  { displayName: 'Saúde / UBS',         dbName: 'saude',             icon: 'Stethoscope' },
-  { displayName: 'Segurança Pública',   dbName: 'seguranca publica', icon: 'Shield'      },
+  { displayName: 'Buraco / Rua',        dbName: 'Zeladoria Pública', icon: 'Hammer'      },
+  { displayName: 'Mato Alto / Limpeza', dbName: 'Zeladoria Pública', icon: 'Scissors'    },
+  { displayName: 'Iluminação Pública',  dbName: 'Zeladoria Pública', icon: 'Lightbulb'   },
+  { displayName: 'Saúde / UBS',         dbName: 'Saúde',             icon: 'Stethoscope' },
+  { displayName: 'Segurança',           dbName: 'Segurança',         icon: 'Shield'      },
 ];
 
 interface Category {
@@ -193,13 +193,13 @@ export default function PublicDemandPage() {
     <div className="min-h-screen bg-slate-100">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#1a0a3b] to-[#2d1b69] px-4 py-6 text-center text-white">
-        <div className="w-16 h-16 rounded-full mx-auto mb-3 overflow-hidden border-2 border-yellow-400/50 bg-[#1a0a3b] flex items-center justify-center">
+        <div className="w-16 h-16 rounded-full mx-auto mb-3 overflow-hidden border-2 border-[#39FF14] shadow-[0_0_12px_#39FF14,0_0_24px_#39FF14] bg-[#1a0a3b] flex items-center justify-center">
           {tenant.fotoUrl
             ? <img src={tenant.fotoUrl} alt={tenant.name} className="w-full h-full object-cover" />
             : <img src="/icone_foguete.png" alt="CRM do Verê" className="w-10 h-10 object-contain" />
           }
         </div>
-        <h1 className="font-extrabold text-base leading-tight">{tenant.name}</h1>
+        <h1 className="font-extrabold text-base leading-tight text-white">{tenant.name}</h1>
         <p className="text-xs opacity-75 mt-1">
           {[tenant.municipio, tenant.uf, tenant.partido].filter(Boolean).join(' · ')}
         </p>
@@ -213,10 +213,12 @@ export default function PublicDemandPage() {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Tipo de demanda *</p>
           <div className="grid grid-cols-3 gap-2">
             {(() => {
+              const fallback = tenant.categories[0];
               const displayCategories = VIRTUAL_CATEGORIES
                 .map(v => {
-                  const match = tenant.categories.find(c => normalizeStr(c.name) === v.dbName);
-                  return match ? { id: match.id, displayName: v.displayName, icon: v.icon } : null;
+                  const match = tenant.categories.find(c => normalizeStr(c.name) === normalizeStr(v.dbName));
+                  const resolved = match || fallback;
+                  return resolved ? { id: resolved.id, displayName: v.displayName, icon: v.icon } : null;
                 })
                 .filter((c): c is { id: string; displayName: string; icon: string } => c !== null);
 

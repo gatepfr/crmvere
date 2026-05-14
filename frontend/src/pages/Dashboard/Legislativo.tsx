@@ -39,7 +39,6 @@ interface Demand {
   isLegislativo: boolean;
   numeroIndicacao: string | null;
   documentUrl: string | null;
-  assignedToId: string | null;
   dueDate: string | null;
   createdAt: string;
   municipes: {
@@ -50,11 +49,6 @@ interface Demand {
   };
 }
 
-interface TeamMember {
-  id: string;
-  email: string;
-  role: string;
-}
 
 interface Pagination {
   page: number;
@@ -79,15 +73,11 @@ interface CabinetConfig {
 type SortField = 'name' | 'subject' | 'number' | 'date';
 type SortOrder = 'asc' | 'desc';
 
-type FilterMode = 'all' | 'mine' | 'unassigned' | 'overdue';
-
 export default function Legislativo() {
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [cabinetConfig, setCabinetConfig] = useState<CabinetConfig | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [onlyPending, setOnlyPending] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedDemand, setSelectedDemand] = useState<{ demandas: Demand; municipes: Demand['municipes'] } | null>(null);
@@ -105,42 +95,28 @@ export default function Legislativo() {
     setLoading(true);
     try {
       if (!cabinetConfig) {
-        const [configRes, teamRes] = await Promise.all([api.get('/config/me'), api.get('/team')]);
+        const configRes = await api.get('/config/me');
         setCabinetConfig(configRes.data);
-        setTeamMembers(teamRes.data || []);
       }
 
-      if (filterMode === 'mine') {
-        const res = await api.get('/demands/my');
-        setDemands((res.data as any[]).map((d: any) => ({
-          ...d.demandas,
-          municipes: d.municipes,
-          assignedToEmail: null,
-        })));
-        setPagination({ page: 1, limit: 1000, total: res.data.length, totalPages: 1 });
-      } else {
-        const params = new URLSearchParams({
-          page: pagination.page.toString(),
-          limit: pagination.limit.toString(),
-          search: searchTerm,
-        });
-        if (filterMode === 'unassigned') params.set('unassigned', 'true');
-        if (filterMode === 'overdue') params.set('overdue', 'true');
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        search: searchTerm,
+      });
 
-        const res = await api.get(`/demands?${params.toString()}`);
-        setDemands(res.data.data.map((d: any) => ({
-          ...d.demandas,
-          municipes: d.municipes,
-          assignedToEmail: d.assignedTo?.email || null,
-        })));
-        setPagination(res.data.pagination);
-      }
+      const res = await api.get(`/demands?${params.toString()}`);
+      setDemands(res.data.data.map((d: any) => ({
+        ...d.demandas,
+        municipes: d.municipes,
+      })));
+      setPagination(res.data.pagination);
     } catch (err) {
       console.error('Erro ao carregar dados legislativos');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, searchTerm, filterMode, cabinetConfig]);
+  }, [pagination.page, pagination.limit, searchTerm, cabinetConfig]);
 
   useEffect(() => {
     loadDemands();
@@ -370,21 +346,6 @@ export default function Legislativo() {
               onChange={e => { setSearchTerm(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
             />
           </div>
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 border border-border/50">
-            {(['all', 'mine', 'unassigned', 'overdue'] as FilterMode[]).map(mode => (
-              <button
-                key={mode}
-                onClick={() => { setFilterMode(mode); setPagination(p => ({ ...p, page: 1 })); }}
-                className={cn(
-                  'px-3 py-1.5 rounded-md font-semibold text-[10px] uppercase tracking-widest transition-all',
-                  filterMode === mode ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                  mode === 'overdue' && filterMode === mode && 'text-destructive'
-                )}
-              >
-                {mode === 'all' ? 'Todas' : mode === 'mine' ? 'Minhas' : mode === 'unassigned' ? 'Sem resp.' : 'Vencidas'}
-              </button>
-            ))}
-          </div>
           <button
             onClick={() => setOnlyPending(!onlyPending)}
             className={cn(
@@ -414,7 +375,6 @@ export default function Legislativo() {
             <p className="py-16 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">Nenhuma indicação encontrada</p>
           ) : sortedDemands.map(d => {
             const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'concluida';
-            const assignedEmail = (d as any).assignedToEmail as string | null;
             return (
               <div key={d.id} className={cn('p-4', isOverdue && 'bg-destructive/5')}>
                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -428,9 +388,6 @@ export default function Legislativo() {
                   <Badge variant="outline" className="text-[9px] font-semibold uppercase bg-primary/10 text-primary border-primary/20 shrink-0">{d.categoria}</Badge>
                 </div>
                 {d.descricao && <p className="text-xs text-foreground font-medium mt-1 line-clamp-2">{d.descricao}</p>}
-                {assignedEmail && (
-                  <p className="text-[10px] text-muted-foreground mt-1">Resp: {assignedEmail.split('@')[0]}</p>
-                )}
                 <div className="flex items-center justify-between mt-2 gap-2 flex-wrap">
                   <button
                     onClick={() => toggleLegislativo(d.id, d.isLegislativo)}
@@ -459,7 +416,6 @@ export default function Legislativo() {
                 <TableHead className="cursor-pointer group" onClick={() => toggleSort('subject')}>
                   <div className="flex items-center gap-1.5 group-hover:text-primary transition-colors">Assunto Detalhado <SortIcon field="subject" /></div>
                 </TableHead>
-                <TableHead>Responsável</TableHead>
                 <TableHead className="text-center cursor-pointer group" onClick={() => toggleSort('number')}>
                   <div className="flex items-center justify-center gap-1.5 group-hover:text-primary transition-colors">Nº Indicação <SortIcon field="number" /></div>
                 </TableHead>
@@ -469,13 +425,12 @@ export default function Legislativo() {
             <TableBody>
               {sortedDemands.length === 0 && !loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-20 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">
+                  <TableCell colSpan={4} className="py-20 text-center text-muted-foreground text-xs uppercase tracking-widest font-semibold">
                     Nenhuma indicação encontrada
                   </TableCell>
                 </TableRow>
               ) : sortedDemands.map(d => {
                 const isOverdue = d.dueDate && new Date(d.dueDate) < new Date() && d.status !== 'concluida';
-                const assignedEmail = (d as any).assignedToEmail as string | null;
                 return (
                   <TableRow key={d.id} className={cn('align-top', isOverdue && 'bg-destructive/5')}>
                     <TableCell className="pl-5 w-[220px]">
@@ -508,18 +463,6 @@ export default function Legislativo() {
                         <div className={cn('mt-2 text-[10px] font-semibold uppercase', isOverdue ? 'text-destructive' : 'text-muted-foreground')}>
                           Prazo: {new Date(d.dueDate).toLocaleDateString('pt-BR')}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {assignedEmail ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
-                            {assignedEmail[0].toUpperCase()}
-                          </div>
-                          <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{assignedEmail.split('@')[0]}</span>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/40 font-semibold uppercase">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
