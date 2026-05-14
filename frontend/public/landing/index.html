@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM do Verê — Inteligência Política de Elite para Vereadores</title>
     <meta name="description" content="O sistema completo para vereadores que querem mais votos: IA no WhatsApp, disparo em massa, relatórios do mandato e inteligência territorial.">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YDFLW6MP7E"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-YDFLW6MP7E');
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <style>
@@ -236,12 +244,121 @@
             display: inline-block;
         }
 
+        /* ───── Phone mockup ───── */
+        .phone-frame {
+            width: 220px;
+            background: #fff;
+            border-radius: 36px;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.08), inset 0 0 0 1px rgba(0,0,0,0.12);
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .phone-notch {
+            width: 72px; height: 20px;
+            background: #0B0A1E;
+            border-radius: 0 0 16px 16px;
+            margin: 0 auto;
+        }
+        .phone-screen { background: #f1f5f9; }
+        .phone-header {
+            background: linear-gradient(135deg, #1a0a3b, #2d1b69);
+            padding: 14px 12px;
+            text-align: center;
+        }
+        .phone-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 2px solid rgba(201,162,39,0.6);
+            background: rgba(255,255,255,0.1);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 6px;
+            font-size: 18px;
+        }
+        .phone-cat-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px; padding: 10px 10px 0;
+        }
+        .phone-cat {
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 7px 4px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .phone-cat.active {
+            border-color: #7c3aed;
+            background: #f5f0ff;
+        }
+        .phone-input {
+            margin: 8px 10px 0;
+            height: 28px;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .phone-textarea {
+            margin: 6px 10px 0;
+            height: 42px;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .phone-btn {
+            margin: 8px 10px 12px;
+            background: linear-gradient(135deg, #7c3aed, #2d1b69);
+            border-radius: 10px;
+            padding: 9px;
+            text-align: center;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .benefit-icon {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            background: rgba(124,58,237,0.15);
+            border: 1px solid rgba(124,58,237,0.25);
+        }
+        @keyframes phone-float {
+            0%, 100% { transform: translateY(0) rotate(2deg); }
+            50% { transform: translateY(-12px) rotate(2deg); }
+        }
+        .phone-float { animation: phone-float 5s ease-in-out infinite; }
+
         /* ───── Responsive ───── */
         @media (max-width: 640px) {
             .hero-title { font-size: 2.25rem; line-height: 1.15; }
             .feature-grid { grid-template-columns: 1fr; }
         }
     </style>
+    <!-- Meta Pixel Code -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1395478609281560');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1395478609281560&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -261,6 +378,7 @@
         <div class="flex items-center gap-3">
             <a href="https://wa.me/5543984138841?text=Olá,%20quero%20saber%20mais%20sobre%20o%20CRM%20do%20Verê"
                target="_blank"
+               onclick="fbq('track', 'Lead')"
                class="hidden sm:flex items-center gap-2 btn-outline text-white text-sm font-bold px-4 py-2 rounded-xl">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -312,6 +430,7 @@
                     </a>
                     <a href="https://wa.me/5543984138841?text=Quero%20uma%20demonstração%20do%20CRM%20do%20Verê"
                        target="_blank"
+                       onclick="fbq('track', 'Lead')"
                        class="btn-whatsapp w-full sm:w-auto flex items-center justify-center gap-2.5 text-white font-black text-base px-8 py-4 rounded-2xl">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -495,6 +614,162 @@
 
 
 <!-- ═══════════════════════════════════════════
+     FORMULÁRIO PÚBLICO DE DEMANDAS
+═══════════════════════════════════════════ -->
+<section class="section-dark py-24 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-5">
+
+        <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-20">
+
+            <!-- Left: phone mockup -->
+            <div class="flex-shrink-0 flex items-center justify-center relative">
+                <!-- Glow behind phone -->
+                <div class="absolute w-64 h-64 rounded-full pointer-events-none"
+                     style="background: radial-gradient(circle, rgba(124,58,237,0.3) 0%, transparent 70%);"></div>
+
+                <div class="phone-frame phone-float relative z-10">
+                    <!-- Notch -->
+                    <div class="phone-notch"></div>
+
+                    <div class="phone-screen">
+                        <!-- Header -->
+                        <div class="phone-header">
+                            <div class="phone-avatar">🏛️</div>
+                            <div style="color:#fff;font-size:11px;font-weight:800;line-height:1.3;">Vereador João Silva</div>
+                            <div style="color:rgba(255,255,255,0.55);font-size:9px;margin-top:2px;">Cornélio Procópio · PR · PSD</div>
+                        </div>
+
+                        <!-- Title -->
+                        <div style="padding:10px 10px 0;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.08em;">Tipo de demanda *</div>
+
+                        <!-- Category grid -->
+                        <div class="phone-cat-grid">
+                            <div class="phone-cat">
+                                <div style="font-size:15px;margin-bottom:2px;">🔨</div>
+                                <div style="font-size:7.5px;font-weight:700;color:#374151;line-height:1.2;">Buraco / Rua</div>
+                            </div>
+                            <div class="phone-cat active">
+                                <div style="font-size:15px;margin-bottom:2px;">✂️</div>
+                                <div style="font-size:7.5px;font-weight:700;color:#7c3aed;line-height:1.2;">Mato / Limpeza</div>
+                            </div>
+                            <div class="phone-cat">
+                                <div style="font-size:15px;margin-bottom:2px;">💡</div>
+                                <div style="font-size:7.5px;font-weight:700;color:#374151;line-height:1.2;">Iluminação</div>
+                            </div>
+                            <div class="phone-cat">
+                                <div style="font-size:15px;margin-bottom:2px;">🏥</div>
+                                <div style="font-size:7.5px;font-weight:700;color:#374151;line-height:1.2;">Saúde / UBS</div>
+                            </div>
+                            <div class="phone-cat">
+                                <div style="font-size:15px;margin-bottom:2px;">🛡️</div>
+                                <div style="font-size:7.5px;font-weight:700;color:#374151;line-height:1.2;">Segurança</div>
+                            </div>
+                            <div class="phone-cat">
+                                <div style="font-size:15px;margin-bottom:2px;">📌</div>
+                                <div style="font-size:7.5px;font-weight:700;color:#374151;line-height:1.2;">Outros</div>
+                            </div>
+                        </div>
+
+                        <!-- Location input -->
+                        <div style="padding:8px 10px 0;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.08em;">Localização</div>
+                        <div class="phone-input" style="display:flex;align-items:center;padding:0 8px;gap:4px;">
+                            <div style="font-size:10px;">📍</div>
+                            <div style="font-size:8px;color:#94a3b8;">Rua das Flores, 123, Centro</div>
+                        </div>
+
+                        <!-- Description -->
+                        <div style="padding:6px 10px 0;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.08em;">Descrição *</div>
+                        <div class="phone-textarea" style="display:flex;align-items:flex-start;padding:6px 8px;">
+                            <div style="font-size:8px;color:#64748b;line-height:1.4;">Mato alto na calçada bloqueando a passagem de pedestres...</div>
+                        </div>
+
+                        <!-- Submit button -->
+                        <div class="phone-btn">📤 ENVIAR DEMANDA</div>
+
+                        <!-- Confirmation badge -->
+                        <div style="margin:0 10px 12px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:7px 8px;display:flex;align-items:center;gap:5px;">
+                            <div style="font-size:11px;">✅</div>
+                            <div>
+                                <div style="font-size:7.5px;font-weight:800;color:#166534;">Demanda enviada!</div>
+                                <div style="font-size:7px;color:#16a34a;">Protocolo #2847 enviado por WhatsApp</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: content -->
+            <div class="flex-1">
+                <div class="badge badge-gold mb-6">Canal Digital de Atendimento</div>
+
+                <h2 class="text-4xl lg:text-5xl font-black mb-5 leading-tight">
+                    Ofereça um canal onde<br>
+                    <span class="gradient-text-gold">a comunidade pede ajuda</span>
+                </h2>
+
+                <p class="text-white/55 text-lg leading-relaxed mb-10">
+                    Cada vereador recebe um <strong class="text-white/80">link exclusivo</strong> para compartilhar com seus eleitores. O cidadão acessa pelo celular, descreve o problema — buraco, mato, iluminação, saúde — e recebe um protocolo pelo WhatsApp na hora.
+                </p>
+
+                <!-- Benefits -->
+                <div class="space-y-5">
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🔗</div>
+                        <div>
+                            <div class="font-black text-white text-base">Link exclusivo do seu gabinete</div>
+                            <div class="text-white/50 text-sm mt-0.5">Compartilhe no WhatsApp, stories e material de campanha — é o seu canal, com o seu nome.</div>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">📋</div>
+                        <div>
+                            <div class="font-black text-white text-base">Protocolo automático para o cidadão</div>
+                            <div class="text-white/50 text-sm mt-0.5">Cada pedido gera um número de protocolo enviado por WhatsApp — transparência e credibilidade na hora.</div>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">📍</div>
+                        <div>
+                            <div class="font-black text-white text-base">GPS e foto da ocorrência</div>
+                            <div class="text-white/50 text-sm mt-0.5">O cidadão localiza o problema no mapa e pode anexar foto — você recebe tudo organizado no painel.</div>
+                        </div>
+                    </div>
+
+                    <div class="benefit-item">
+                        <div class="benefit-icon">📊</div>
+                        <div>
+                            <div class="font-black text-white text-base">Gestão completa no painel do CRM</div>
+                            <div class="text-white/50 text-sm mt-0.5">Todas as demandas chegam organizadas por categoria e status — nova, em andamento, resolvida.</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- CTA -->
+                <div class="mt-10">
+                    <a href="https://wa.me/5543984138841?text=Quero%20saber%20mais%20sobre%20o%20formulário%20público%20do%20CRM%20do%20Verê"
+                       target="_blank"
+                       onclick="fbq('track', 'Lead')"
+                       class="btn-whatsapp inline-flex items-center gap-2.5 text-white font-black text-sm px-7 py-3.5 rounded-2xl">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                        </svg>
+                        Ver demonstração
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<div class="gradient-divider"></div>
+
+
+<!-- ═══════════════════════════════════════════
      COMO FUNCIONA
 ═══════════════════════════════════════════ -->
 <section id="como-funciona" class="section-purple py-24">
@@ -613,11 +888,13 @@
                         <a href="https://buy.stripe.com/bJe14m3TQea31TX3g0cfK00"
                            target="_blank"
                            id="stripe-link"
+                           onclick="fbq('track', 'InitiateCheckout')"
                            class="btn-gold flex-1 text-center font-black text-base uppercase tracking-wider px-6 py-4 rounded-2xl">
                             Assinar Agora
                         </a>
                         <a href="https://wa.me/5543984138841?text=Quero%20começar%20o%20trial%20grátis%20do%20CRM%20do%20Verê"
                            target="_blank"
+                           onclick="fbq('track', 'Lead')"
                            class="btn-whatsapp flex-1 flex items-center justify-center gap-2 text-white font-black text-base px-6 py-4 rounded-2xl">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
                                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -698,11 +975,13 @@
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href="https://buy.stripe.com/bJe14m3TQea31TX3g0cfK00"
                target="_blank"
+               onclick="fbq('track', 'InitiateCheckout')"
                class="btn-gold w-full sm:w-auto text-center font-black text-lg uppercase tracking-wider px-10 py-5 rounded-2xl">
                 Assinar — R$ 247/mês
             </a>
             <a href="https://wa.me/5543984138841?text=Quero%20saber%20mais%20sobre%20o%20CRM%20do%20Verê"
                target="_blank"
+               onclick="fbq('track', 'Lead')"
                class="btn-whatsapp w-full sm:w-auto flex items-center justify-center gap-3 text-white font-black text-lg px-10 py-5 rounded-2xl">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -722,7 +1001,7 @@
     <div class="max-w-7xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-white/30 text-sm">
         <img src="logomarca.png" alt="CRM do Verê" class="h-8">
         <p>© 2026 CRM do Verê. Todos os direitos reservados.</p>
-        <a href="https://wa.me/5543984138841" target="_blank" class="hover:text-white/60 transition-colors">
+        <a href="https://wa.me/5543984138841" target="_blank" onclick="fbq('track', 'Lead')" class="hover:text-white/60 transition-colors">
             (43) 98413-8841
         </a>
     </div>
@@ -734,6 +1013,7 @@
 ═══════════════════════════════════════════ -->
 <a href="https://wa.me/5543984138841?text=Olá,%20quero%20saber%20mais%20sobre%20o%20CRM%20do%20Verê"
    target="_blank"
+   onclick="fbq('track', 'Lead')"
    class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full btn-whatsapp flex items-center justify-center shadow-2xl"
    title="Fale conosco no WhatsApp">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
