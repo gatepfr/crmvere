@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import api from '../../api/client';
 import { formatPhone } from '../../utils/formatPhone';
 import {
-  Search, Loader2, X, MapPin, Phone, MessageCircle, Globe, ChevronLeft, ChevronRight,
+  Search, Loader2, X, MapPin, Phone, MessageCircle, Globe, ChevronLeft, ChevronRight, Edit2, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +81,7 @@ export default function FormularioPublico() {
   const [editStatus, setEditStatus] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
   const [sendingWa, setSendingWa] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchDemandas = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -143,6 +144,22 @@ export default function FormularioPublico() {
       toast.error('Erro ao atualizar status');
     } finally {
       setSavingStatus(false);
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Apagar esta demanda? Esta ação não pode ser desfeita.')) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/demands/${id}`);
+      toast.success('Demanda apagada.');
+      fetchDemandas(true);
+      fetchStats();
+    } catch {
+      toast.error('Erro ao apagar demanda.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -261,10 +278,10 @@ export default function FormularioPublico() {
           ) : (
             <div className="divide-y divide-border">
               {demandas.map(d => (
-                <button
+                <div
                   key={d.demandas.id}
                   onClick={() => openModal(d)}
-                  className="w-full text-left px-5 py-4 hover:bg-muted/40 transition-colors flex gap-3 items-start"
+                  className="w-full text-left px-5 py-4 hover:bg-muted/40 transition-colors flex gap-3 items-start cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm shrink-0">
                     {d.municipes.name.charAt(0).toUpperCase()}
@@ -309,7 +326,24 @@ export default function FormularioPublico() {
                       )}
                     </div>
                   </div>
-                </button>
+                  <div className="flex gap-1 shrink-0 self-center" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => openModal(d)}
+                      className="p-2 text-muted-foreground hover:text-primary rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 size={15} />
+                    </button>
+                    <button
+                      onClick={e => handleDelete(d.demandas.id, e)}
+                      disabled={deletingId === d.demandas.id}
+                      className="p-2 text-muted-foreground hover:text-destructive rounded-lg transition-colors disabled:opacity-50"
+                      title="Apagar"
+                    >
+                      {deletingId === d.demandas.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
