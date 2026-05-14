@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import authRoutes from './routes/authRoutes';
 import superAdminRoutes from './routes/superAdminRoutes';
 import webhookRoutes from './routes/webhookRoutes';
@@ -48,6 +49,7 @@ app.use(cors({
 app.use('/api/webhook', webhookRoutes);
 
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 2. AUTH (Public)
 app.use('/api/auth', authRoutes);
