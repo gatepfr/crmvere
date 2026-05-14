@@ -20,6 +20,7 @@ interface PublicDemanda {
     localizacao: string | null;
     fotoUrl: string | null;
     protocolo: string | null;
+    numeroIndicacao: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -217,7 +218,7 @@ export default function FormularioPublico() {
               onChange={e => { setCategoryFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
             >
               <option value="">Todas as categorias</option>
-              {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {[...categories].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
             <input
               type="date"
@@ -295,7 +296,7 @@ export default function FormularioPublico() {
                         {STATUS_LABELS[d.demandas.status] || d.demandas.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-foreground mt-1 line-clamp-2">{d.demandas.descricao}</p>
+                    <p className="text-sm text-foreground mt-1">{d.demandas.descricao}</p>
                     <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-muted-foreground">
                       {d.demandas.localizacao && (
                         <span className="flex items-center gap-1">
@@ -303,6 +304,9 @@ export default function FormularioPublico() {
                         </span>
                       )}
                       <span>{timeAgo(d.demandas.createdAt)}</span>
+                      {d.demandas.numeroIndicacao && (
+                        <span className="text-muted-foreground/60">Ind. nº {d.demandas.numeroIndicacao}</span>
+                      )}
                     </div>
                   </div>
                 </button>
