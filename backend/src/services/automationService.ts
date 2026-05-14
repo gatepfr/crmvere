@@ -269,6 +269,17 @@ const processWeeklyReport = async () => {
         )
       );
 
+      // Demandas recebidas via formulário público na semana
+      const [formPublicoCount] = await db.select({
+        total: sql<number>`count(*)::int`
+      }).from(demandas).where(
+        and(
+          eq(demandas.tenantId, tenant.id),
+          eq(demandas.origem, 'formulario_publico'),
+          sql`${demandas.createdAt} >= ${weekStart}`
+        )
+      );
+
       // Bairro mais ativo na semana (demandas + documentos com municipe)
       const bairroResult = await db.execute(sql`
         SELECT m.bairro, count(*)::int AS total
@@ -298,6 +309,7 @@ const processWeeklyReport = async () => {
         `🗣️ Atendimentos na semana: ${atendimentoCount?.total || 0}`,
         `📋 Indicações realizadas: ${indicacoesCount?.total || 0}`,
         `📄 Documentos criados: ${documentosCount?.total || 0}`,
+        `🌐 Demandas via Formulário Público: ${formPublicoCount?.total || 0}`,
         `🎂 Aniversariantes nos próximos 7 dias: ${birthdayCount?.total || 0}`,
         `📍 Bairro mais ativo: ${bairroAtivo}`,
         ``,
