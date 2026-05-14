@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import api from '../../api/client';
 import { formatPhone } from '../../utils/formatPhone';
 import {
-  Search, Loader2, X, MapPin, Phone, MessageCircle, Globe, ChevronLeft, ChevronRight, Edit2, Trash2,
+  Search, Loader2, X, MapPin, Phone, Globe, ChevronLeft, ChevronRight, Edit2, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +80,6 @@ export default function FormularioPublico() {
   const [selected, setSelected] = useState<PublicDemanda | null>(null);
   const [editStatus, setEditStatus] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
-  const [sendingWa, setSendingWa] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchDemandas = useCallback((isBackground = false) => {
@@ -160,20 +159,6 @@ export default function FormularioPublico() {
       toast.error('Erro ao apagar demanda.');
     } finally {
       setDeletingId(null);
-    }
-  };
-
-  const handleWhatsApp = async () => {
-    if (!selected) return;
-    const message = `Olá ${selected.municipes.name}, sobre sua solicitação protocolo ${selected.demandas.protocolo ?? ''}, estamos trabalhando para atendê-la. Em breve entraremos em contato.`;
-    setSendingWa(true);
-    try {
-      await api.post('/whatsapp/send', { demandId: selected.demandas.id, message });
-      toast.success('Mensagem enviada pelo WhatsApp!');
-    } catch {
-      toast.error('Falha ao enviar mensagem pelo WhatsApp.');
-    } finally {
-      setSendingWa(false);
     }
   };
 
@@ -394,8 +379,7 @@ export default function FormularioPublico() {
                   {selected.demandas.categoria}
                 </div>
                 <div className="text-white/70 text-xs mt-0.5 flex items-center gap-1.5">
-                  <Phone size={10} />
-                  {selected.municipes.name} · {selected.municipes.phone} · {timeAgo(selected.demandas.createdAt)}
+                  {selected.municipes.name} · {timeAgo(selected.demandas.createdAt)}
                 </div>
               </div>
               <button
@@ -453,20 +437,19 @@ export default function FormularioPublico() {
                   </div>
                 </div>
               )}
+
+              <div>
+                <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Telefone</div>
+                <div className="text-sm bg-muted rounded-lg p-3 flex items-center gap-2 text-foreground">
+                  <Phone size={14} className="text-muted-foreground flex-shrink-0" />
+                  {formatPhone(selected.municipes.phone)}
+                </div>
+              </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-border flex gap-3">
+            <div className="px-6 py-4 border-t border-border">
               <Button
-                variant="outline"
-                className="flex-1 border-[#25d366] text-[#25d366] hover:bg-[#25d366]/10"
-                onClick={handleWhatsApp}
-                disabled={sendingWa}
-              >
-                {sendingWa ? <Loader2 size={16} className="mr-2 animate-spin" /> : <MessageCircle size={16} className="mr-2" />}
-                WhatsApp
-              </Button>
-              <Button
-                className="flex-1"
+                className="w-full"
                 disabled={savingStatus || editStatus === selected.demandas.status}
                 onClick={handleSaveStatus}
               >
