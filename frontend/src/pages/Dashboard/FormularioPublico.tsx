@@ -406,6 +406,16 @@ export default function FormularioPublico() {
               </button>
             </div>
 
+            {selected.demandas.fotoUrl && (
+              <a href={`${BACKEND_URL}${selected.demandas.fotoUrl}`} target="_blank" rel="noreferrer" className="block">
+                <img
+                  src={`${BACKEND_URL}${selected.demandas.fotoUrl}`}
+                  alt="Foto da demanda"
+                  className="w-full h-56 object-cover hover:opacity-95 transition-opacity cursor-zoom-in"
+                />
+              </a>
+            )}
+
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-muted rounded-lg p-3">
@@ -425,23 +435,6 @@ export default function FormularioPublico() {
                     <option value="cancelada">Cancelada</option>
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Foto</div>
-                {selected.demandas.fotoUrl ? (
-                  <a href={`${BACKEND_URL}${selected.demandas.fotoUrl}`} target="_blank" rel="noreferrer">
-                    <img
-                      src={`${BACKEND_URL}${selected.demandas.fotoUrl}`}
-                      alt="Foto da demanda"
-                      className="w-full h-40 object-cover rounded-lg hover:opacity-90 transition-opacity cursor-pointer"
-                    />
-                  </a>
-                ) : (
-                  <div className="w-full h-20 bg-muted rounded-lg flex items-center justify-center text-muted-foreground/40 text-sm">
-                    Sem foto
-                  </div>
-                )}
               </div>
 
               <div>
