@@ -16,7 +16,6 @@ import {
   ClipboardList,
   Settings,
   Target,
-  ListTodo,
   Megaphone,
   FileText,
   File,
@@ -62,7 +61,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
       { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda' },
-      { name: 'Minhas Tarefas', icon: ListTodo, path: '/dashboard/my-tasks' },
     ],
   },
   {

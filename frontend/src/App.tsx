@@ -25,7 +25,6 @@ import Agenda from './pages/Dashboard/Agenda';
 import Municipes from './pages/Dashboard/Municipes';
 import IALab from './pages/Dashboard/IALab';
 import Eleicoes from './pages/Dashboard/Eleicoes';
-import MyTasks from './pages/Dashboard/MyTasks';
 import Broadcasts from './pages/Dashboard/Broadcasts';
 import Reports from './pages/Dashboard/Reports';
 import StrategicIntelligence from './pages/Intelligence/StrategicDashboard';
@@ -110,7 +109,6 @@ function AppContent() {
             <Route path="legislativo" element={<Legislativo />} />
             <Route path="documentos" element={<Documentos />} />
             <Route path="formulario-publico" element={<FormularioPublico />} />
-            <Route path="my-tasks" element={<MyTasks />} />
             <Route path="broadcasts" element={<Broadcasts />} />
             <Route path="reports" element={<Reports />} />
             <Route path="map" element={<VoterMap />} />
