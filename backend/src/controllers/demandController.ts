@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { db } from '../db';
 import { demandas, municipes, documentos, systemConfigs, tenants, demandCategories, globalCategories, atendimentos, users, demandComments, demandActivityLog } from '../db/schema';
-import { eq, desc, asc, and, sql, count, ilike, or, lt, isNull } from 'drizzle-orm';
+import { eq, desc, asc, and, sql, count, ilike, or, lt, gte, lte, isNull } from 'drizzle-orm';
 import { normalizePhone } from '../utils/phoneUtils';
 import fs from 'fs';
 import { parse } from 'csv-parse/sync';
@@ -196,6 +196,9 @@ export const listDemands = async (req: Request, res: Response) => {
   const search = req.query.search as string;
   const category = req.query.category as string;
   const status = req.query.status as string;
+  const origem = req.query.origem as string;
+  const dateFrom = req.query.dateFrom as string;
+  const dateTo = req.query.dateTo as string;
   const overdue = req.query.overdue === 'true';
   const unassigned = req.query.unassigned === 'true';
   const offset = (page - 1) * limit;
@@ -205,15 +208,27 @@ export const listDemands = async (req: Request, res: Response) => {
     const conditions = [eq(demandas.tenantId, tenantId)];
     if (category) conditions.push(eq(demandas.categoria, category));
     if (status) conditions.push(eq(demandas.status, status as any));
+    if (origem) conditions.push(eq(demandas.origem, origem as any));
+    if (dateFrom) conditions.push(gte(demandas.createdAt, new Date(dateFrom)));
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      conditions.push(lte(demandas.createdAt, to));
+    }
     if (overdue) {
       conditions.push(lt(demandas.dueDate, new Date()));
       conditions.push(sql`${demandas.status} != 'concluida'`);
     }
     if (unassigned) conditions.push(isNull(demandas.assignedToId));
     if (search) {
-      conditions.push(or(ilike(municipes.name, `%${search}%`), ilike(municipes.phone, `%${search}%`), ilike(municipes.bairro, `%${search}%`)) as any);
+      conditions.push(or(
+        ilike(municipes.name, `%${search}%`),
+        ilike(municipes.phone, `%${search}%`),
+        ilike(municipes.bairro, `%${search}%`),
+        ilike(demandas.protocolo, `%${search}%`),
+        ilike(demandas.descricao, `%${search}%`),
+      ) as any);
     }
-    const assignedUser = { id: users.id, email: users.email };
     const [totalCount] = await db.select({ count: count() }).from(demandas).innerJoin(municipes, eq(demandas.municipeId, municipes.id)).where(and(...conditions));
     const results = await db
       .select({ demandas: demandas, municipes: municipes, assignedTo: { id: users.id, email: users.email } })
