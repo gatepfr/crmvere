@@ -347,7 +347,7 @@ export const createDemand = async (req: Request, res: Response) => {
 
 export const updateDemand = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const { status, resumoIa, prioridade, categoria, isLegislativo, numeroIndicacao, documentUrl, dueDate } = req.body;
+  const { status, resumoIa, prioridade, categoria, isLegislativo, numeroIndicacao, documentUrl, dueDate, localizacao } = req.body;
   const tenantId = req.user?.tenantId;
   const actorId = req.user?.id;
   try {
@@ -364,6 +364,7 @@ export const updateDemand = async (req: Request, res: Response) => {
     if (numeroIndicacao !== undefined) updateData.numeroIndicacao = numeroIndicacao;
     if (documentUrl !== undefined) updateData.documentUrl = documentUrl;
     if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
+    if (localizacao !== undefined) updateData.localizacao = localizacao || null;
     await db.update(demandas).set(updateData).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
     if (status && existing?.status !== status && actorId) {
       await db.insert(demandActivityLog).values({ demandId: id, userId: actorId, action: 'status_changed', oldValue: existing?.status || null, newValue: status });

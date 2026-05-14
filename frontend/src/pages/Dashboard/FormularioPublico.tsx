@@ -83,6 +83,7 @@ export default function FormularioPublico() {
   const [editDescricao, setEditDescricao] = useState('');
   const [editNome, setEditNome] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editLocalizacao, setEditLocalizacao] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -133,7 +134,8 @@ export default function FormularioPublico() {
     setEditCategoria(d.demandas.categoria);
     setEditDescricao(d.demandas.descricao);
     setEditNome(d.municipes.name);
-    setEditPhone(d.municipes.phone);
+    setEditPhone(formatPhone(d.municipes.phone));
+    setEditLocalizacao(d.demandas.localizacao ?? '');
   };
 
   const closeModal = () => {
@@ -143,6 +145,7 @@ export default function FormularioPublico() {
     setEditDescricao('');
     setEditNome('');
     setEditPhone('');
+    setEditLocalizacao('');
   };
 
   const handleSave = async () => {
@@ -152,10 +155,11 @@ export default function FormularioPublico() {
       const demandChanged =
         editStatus !== selected.demandas.status ||
         editCategoria !== selected.demandas.categoria ||
-        editDescricao !== selected.demandas.descricao;
+        editDescricao !== selected.demandas.descricao ||
+        editLocalizacao !== (selected.demandas.localizacao ?? '');
       const municipeChanged =
         editNome !== selected.municipes.name ||
-        editPhone !== selected.municipes.phone;
+        editPhone !== formatPhone(selected.municipes.phone);
 
       const promises: Promise<any>[] = [];
       if (demandChanged) {
@@ -163,6 +167,7 @@ export default function FormularioPublico() {
           status: editStatus,
           categoria: editCategoria,
           resumoIa: editDescricao,
+          localizacao: editLocalizacao,
         }));
       }
       if (municipeChanged) {
@@ -187,8 +192,9 @@ export default function FormularioPublico() {
     editStatus !== selected.demandas.status ||
     editCategoria !== selected.demandas.categoria ||
     editDescricao !== selected.demandas.descricao ||
+    editLocalizacao !== (selected.demandas.localizacao ?? '') ||
     editNome !== selected.municipes.name ||
-    editPhone !== selected.municipes.phone
+    editPhone !== formatPhone(selected.municipes.phone)
   );
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -507,15 +513,18 @@ export default function FormularioPublico() {
                 />
               </div>
 
-              {selected.demandas.localizacao && (
-                <div>
-                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Localização</div>
-                  <div className="text-sm bg-muted rounded-lg p-3 flex items-center gap-2 text-foreground">
-                    <MapPin size={14} className="text-muted-foreground flex-shrink-0" />
-                    {selected.demandas.localizacao}
-                  </div>
+              <div>
+                <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Localização</div>
+                <div className="flex items-center gap-2">
+                  <MapPin size={14} className="text-muted-foreground flex-shrink-0" />
+                  <input
+                    className="flex-1 text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
+                    value={editLocalizacao}
+                    onChange={e => setEditLocalizacao(e.target.value)}
+                    placeholder="Endereço ou referência"
+                  />
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-border">
