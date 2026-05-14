@@ -22,7 +22,7 @@ interface Atendimento {
   atendimentos: {
     id: string; resumoIa: string; categoria?: string | null;
     prioridade?: string | null; precisaRetorno: boolean;
-    createdAt: string; updatedAt: string;
+    createdAt: string; updatedAt: string; origem?: string | null;
   };
   municipes: { id: string; name: string; phone: string; demandCount: number; bairro: string | null; };
 }
@@ -198,6 +198,11 @@ export default function Demands() {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold text-foreground truncate">{formatName(a.municipes.name)}</span>
                   {a.atendimentos.precisaRetorno && <Badge className="bg-destructive text-white text-[9px] px-1.5 py-0 shrink-0">ATENÇÃO</Badge>}
+                  {a.atendimentos.origem === 'formulario_publico' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 rounded-full px-2 py-0.5 shrink-0">
+                      📋 Formulário
+                    </span>
+                  )}
                 </div>
                 <PriorityBadge priority={a.atendimentos.prioridade} />
               </div>
@@ -250,6 +255,11 @@ export default function Demands() {
                         <Badge className="bg-destructive text-white text-[9px] px-1.5 py-0">
                           ATENÇÃO
                         </Badge>
+                      )}
+                      {a.atendimentos.origem === 'formulario_publico' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-200 rounded-full px-2 py-0.5">
+                          📋 Formulário
+                        </span>
                       )}
                     </div>
                   </TableCell>
