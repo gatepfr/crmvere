@@ -2,6 +2,21 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../../api/client';
+import {
+  Tag, Briefcase, Hammer, Heart, Shield, Star, Zap, Globe, Users, Map,
+  TreePine, Building2, BookOpen, Car, Trash2, Droplets, Flame, Wind,
+  Volume2, AlertTriangle, Wrench, Scissors, Leaf, ShoppingBag, Home,
+  Lightbulb, Stethoscope, GraduationCap, Bike, Bus, Dog, Fish,
+  type LucideProps,
+} from 'lucide-react';
+import type { FC } from 'react';
+
+const ICON_MAP: Record<string, FC<LucideProps>> = {
+  Tag, Briefcase, Hammer, Heart, Shield, Star, Zap, Globe, Users, Map,
+  TreePine, Building2, BookOpen, Car, Trash2, Droplets, Flame, Wind,
+  Volume2, AlertTriangle, Wrench, Scissors, Leaf, ShoppingBag, Home,
+  Lightbulb, Stethoscope, GraduationCap, Bike, Bus, Dog, Fish,
+};
 
 interface Category {
   id: string;
@@ -194,7 +209,12 @@ export default function PublicDemandPage() {
                     : 'border-slate-200 bg-white text-slate-700'
                 }`}
               >
-                <span className="block text-xl mb-1">{cat.icon || '📌'}</span>
+                {(() => {
+                  const IconComp = cat.icon ? ICON_MAP[cat.icon] : null;
+                  return IconComp
+                    ? <IconComp size={22} className="mx-auto mb-1" />
+                    : <span className="block text-xl mb-1">📌</span>;
+                })()}
                 <span className="text-[10px] font-semibold leading-tight block">{cat.name}</span>
               </button>
             ))}
