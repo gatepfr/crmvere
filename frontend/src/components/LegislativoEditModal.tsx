@@ -11,11 +11,8 @@ import {
   Loader2,
   Edit2,
   FileText,
-  Calendar,
-  Users,
   MessageSquare,
   Send,
-  Clock
 } from 'lucide-react';
 import {
   Dialog,
@@ -31,7 +28,6 @@ interface LegislativoEditModalProps {
 }
 
 interface Category { id: string; name: string; color: string; }
-interface TeamMember { id: string; email: string; role: string; }
 interface TimelineItem {
   id: string;
   type: string;
@@ -59,13 +55,12 @@ const DEFAULT_CATEGORIES = [
   { id: 'f12', name: 'ZELADORIA URBANA', color: '#ea580c' },
 ];
 
-type Tab = 'detalhes' | 'atribuicao' | 'timeline';
+type Tab = 'detalhes' | 'timeline';
 
 export default function LegislativoEditModal({ demand, onClose, onUpdate }: LegislativoEditModalProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('detalhes');
   const [categories, setCategories] = useState<Category[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [comment, setComment] = useState('');
@@ -80,10 +75,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
   const [displayPhone, setDisplayPhone] = useState('');
   const [categoria, setCategoria] = useState(demand.demandas.categoria || 'OUTRO');
   const [descricao, setDescricao] = useState(demand.demandas.descricao || '');
-  const [assignedToId, setAssignedToId] = useState<string>(demand.demandas.assignedToId || '');
-  const [dueDate, setDueDate] = useState<string>(
-    demand.demandas.dueDate ? new Date(demand.demandas.dueDate).toISOString().split('T')[0] : ''
-  );
 
   useEffect(() => {
     if (demand.municipes.phone) setDisplayPhone(formatPhone(demand.municipes.phone));
@@ -103,9 +94,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
         const match = sorted.find(c => c.name.toUpperCase() === saved.toUpperCase());
         if (match) setCategoria(match.name);
       });
-    api.get('/team')
-      .then(res => setTeamMembers(res.data || []))
-      .catch(() => {});
   }, [demand]);
 
   useEffect(() => {
@@ -140,10 +128,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
       });
       await api.patch(`/demands/${demand.demandas.id}/status`, {
         categoria, resumoIa: descricao,
-        dueDate: dueDate || null
-      });
-      await api.patch(`/demands/${demand.demandas.id}/assign`, {
-        userId: assignedToId || null
       });
       onUpdate();
       onClose();
@@ -177,7 +161,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'detalhes', label: 'Detalhes' },
-    { id: 'atribuicao', label: 'Atribuição' },
     { id: 'timeline', label: 'Timeline' },
   ];
 
@@ -288,41 +271,6 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
                 </div>
               </div>
             </>
-          )}
-
-          {activeTab === 'atribuicao' && (
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-1">
-                  <Users size={12} /> Atribuir a
-                </label>
-                <select
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-bold outline-none focus:bg-background focus:border-blue-500 appearance-none text-foreground"
-                  value={assignedToId}
-                  onChange={e => setAssignedToId(e.target.value)}
-                >
-                  <option value="">— Sem responsável —</option>
-                  {teamMembers.map(m => (
-                    <option key={m.id} value={m.id}>{m.email} ({m.role})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-1">
-                  <Calendar size={12} /> Prazo
-                </label>
-                <div className="relative">
-                  <Clock size={14} className="absolute left-3 top-3 text-muted-foreground" />
-                  <input
-                    type="date"
-                    className="w-full pl-9 pr-4 py-2.5 bg-muted border border-border rounded-xl text-sm font-bold outline-none focus:bg-background focus:border-blue-500 text-foreground"
-                    value={dueDate}
-                    onChange={e => setDueDate(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
           )}
 
           {activeTab === 'timeline' && (
