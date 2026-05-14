@@ -79,7 +79,11 @@ export default function FormularioPublico() {
   const [stats, setStats] = useState<Stats>({ nova: 0, em_andamento: 0, concluida: 0 });
   const [selected, setSelected] = useState<PublicDemanda | null>(null);
   const [editStatus, setEditStatus] = useState('');
-  const [savingStatus, setSavingStatus] = useState(false);
+  const [editCategoria, setEditCategoria] = useState('');
+  const [editDescricao, setEditDescricao] = useState('');
+  const [editNome, setEditNome] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchDemandas = useCallback((isBackground = false) => {
@@ -126,25 +130,66 @@ export default function FormularioPublico() {
   const openModal = (d: PublicDemanda) => {
     setSelected(d);
     setEditStatus(d.demandas.status);
+    setEditCategoria(d.demandas.categoria);
+    setEditDescricao(d.demandas.descricao);
+    setEditNome(d.municipes.name);
+    setEditPhone(d.municipes.phone);
   };
 
-  const closeModal = () => { setSelected(null); setEditStatus(''); };
+  const closeModal = () => {
+    setSelected(null);
+    setEditStatus('');
+    setEditCategoria('');
+    setEditDescricao('');
+    setEditNome('');
+    setEditPhone('');
+  };
 
-  const handleSaveStatus = async () => {
-    if (!selected || !editStatus || editStatus === selected.demandas.status) return;
-    setSavingStatus(true);
+  const handleSave = async () => {
+    if (!selected) return;
+    setSaving(true);
     try {
-      await api.patch(`/demands/${selected.demandas.id}/status`, { status: editStatus });
-      toast.success('Status atualizado');
+      const demandChanged =
+        editStatus !== selected.demandas.status ||
+        editCategoria !== selected.demandas.categoria ||
+        editDescricao !== selected.demandas.descricao;
+      const municipeChanged =
+        editNome !== selected.municipes.name ||
+        editPhone !== selected.municipes.phone;
+
+      const promises: Promise<any>[] = [];
+      if (demandChanged) {
+        promises.push(api.patch(`/demands/${selected.demandas.id}/status`, {
+          status: editStatus,
+          categoria: editCategoria,
+          resumoIa: editDescricao,
+        }));
+      }
+      if (municipeChanged) {
+        promises.push(api.patch(`/demands/municipes/${selected.municipes.id}`, {
+          name: editNome,
+          phone: editPhone,
+        }));
+      }
+      await Promise.all(promises);
+      toast.success('Demanda atualizada');
       closeModal();
       fetchDemandas(true);
       fetchStats();
     } catch {
-      toast.error('Erro ao atualizar status');
+      toast.error('Erro ao salvar alterações');
     } finally {
-      setSavingStatus(false);
+      setSaving(false);
     }
   };
+
+  const hasChanges = selected && (
+    editStatus !== selected.demandas.status ||
+    editCategoria !== selected.demandas.categoria ||
+    editDescricao !== selected.demandas.descricao ||
+    editNome !== selected.municipes.name ||
+    editPhone !== selected.municipes.phone
+  );
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -402,14 +447,45 @@ export default function FormularioPublico() {
 
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-muted rounded-lg p-3">
-                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Categoria</div>
-                  <div className="text-sm font-semibold text-foreground">{selected.demandas.categoria}</div>
+                <div>
+                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Nome</div>
+                  <input
+                    className="w-full text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
+                    value={editNome}
+                    onChange={e => setEditNome(e.target.value)}
+                  />
                 </div>
-                <div className="bg-muted rounded-lg p-3">
+                <div>
+                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Telefone</div>
+                  <input
+                    className="w-full text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
+                    value={editPhone}
+                    onChange={e => setEditPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Categoria</div>
+                  <select
+                    className="w-full text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
+                    value={editCategoria}
+                    onChange={e => setEditCategoria(e.target.value)}
+                  >
+                    {[...categories].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                    {!categories.find(c => c.name === editCategoria) && (
+                      <option value={editCategoria}>{editCategoria}</option>
+                    )}
+                  </select>
+                </div>
+                <div>
                   <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Status</div>
                   <select
-                    className="w-full text-sm bg-background border border-border rounded px-2 py-1 outline-none focus:ring-2 focus:ring-primary/30"
+                    className="w-full text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
                     value={editStatus}
                     onChange={e => setEditStatus(e.target.value)}
                   >
@@ -423,9 +499,12 @@ export default function FormularioPublico() {
 
               <div>
                 <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Descrição</div>
-                <div className="text-sm bg-muted rounded-lg p-3 leading-relaxed text-foreground">
-                  {selected.demandas.descricao}
-                </div>
+                <textarea
+                  className="w-full text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground leading-relaxed resize-none"
+                  rows={4}
+                  value={editDescricao}
+                  onChange={e => setEditDescricao(e.target.value)}
+                />
               </div>
 
               {selected.demandas.localizacao && (
@@ -437,24 +516,16 @@ export default function FormularioPublico() {
                   </div>
                 </div>
               )}
-
-              <div>
-                <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Telefone</div>
-                <div className="text-sm bg-muted rounded-lg p-3 flex items-center gap-2 text-foreground">
-                  <Phone size={14} className="text-muted-foreground flex-shrink-0" />
-                  {formatPhone(selected.municipes.phone)}
-                </div>
-              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-border">
               <Button
                 className="w-full"
-                disabled={savingStatus || editStatus === selected.demandas.status}
-                onClick={handleSaveStatus}
+                disabled={saving || !hasChanges}
+                onClick={handleSave}
               >
-                {savingStatus && <Loader2 size={16} className="animate-spin mr-2" />}
-                Salvar status
+                {saving && <Loader2 size={16} className="animate-spin mr-2" />}
+                Salvar alterações
               </Button>
             </div>
           </div>
