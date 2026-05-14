@@ -18,6 +18,18 @@ const ICON_MAP: Record<string, FC<LucideProps>> = {
   Lightbulb, Stethoscope, GraduationCap, Bike, Bus, Dog, Fish,
 };
 
+function normalizeStr(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+const VIRTUAL_CATEGORIES = [
+  { displayName: 'Buraco / Rua',        dbName: 'zeladoria publica', icon: 'Hammer'      },
+  { displayName: 'Mato Alto / Limpeza', dbName: 'zeladoria publica', icon: 'Scissors'    },
+  { displayName: 'Iluminação Pública',  dbName: 'zeladoria publica', icon: 'Lightbulb'   },
+  { displayName: 'Saúde / UBS',         dbName: 'saude',             icon: 'Stethoscope' },
+  { displayName: 'Segurança Pública',   dbName: 'seguranca publica', icon: 'Shield'      },
+];
+
 interface Category {
   id: string;
   name: string;
@@ -47,6 +59,7 @@ export default function PublicDemandPage() {
   const [notFound, setNotFound] = useState(false);
 
   const [categoriaId, setCategoriaId] = useState('');
+  const [categoriaDisplay, setCategoriaDisplay] = useState('');
   const [localizacao, setLocalizacao] = useState('');
   const [gpsLoading, setGpsLoading] = useState(false);
   const [descricao, setDescricao] = useState('');
@@ -118,6 +131,7 @@ export default function PublicDemandPage() {
     setSubmitting(true);
     const form = new FormData();
     form.append('categoriaId', categoriaId);
+    if (categoriaDisplay) form.append('categoriaDisplay', categoriaDisplay);
     form.append('descricao', descricao);
     form.append('nome', nome);
     form.append('telefone', telefone.replace(/\D/g, ''));
@@ -198,26 +212,40 @@ export default function PublicDemandPage() {
         <div>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Tipo de demanda *</p>
           <div className="grid grid-cols-3 gap-2">
-            {tenant.categories.map(cat => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setCategoriaId(cat.id)}
-                className={`rounded-xl p-2 text-center border-2 transition-all ${
-                  categoriaId === cat.id
-                    ? 'border-purple-600 bg-purple-50 text-purple-700'
-                    : 'border-slate-200 bg-white text-slate-700'
-                }`}
-              >
-                {(() => {
-                  const IconComp = cat.icon ? ICON_MAP[cat.icon] : null;
-                  return IconComp
-                    ? <IconComp size={22} className="mx-auto mb-1" />
-                    : <span className="block text-xl mb-1">📌</span>;
-                })()}
-                <span className="text-[10px] font-semibold leading-tight block">{cat.name}</span>
-              </button>
-            ))}
+            {(() => {
+              const displayCategories = VIRTUAL_CATEGORIES
+                .map(v => {
+                  const match = tenant.categories.find(c => normalizeStr(c.name) === v.dbName);
+                  return match ? { id: match.id, displayName: v.displayName, icon: v.icon } : null;
+                })
+                .filter((c): c is { id: string; displayName: string; icon: string } => c !== null);
+
+              const list = displayCategories.length > 0 ? displayCategories : tenant.categories.map(c => ({
+                id: c.id, displayName: c.name, icon: c.icon ?? 'Tag',
+              }));
+
+              return list.map(cat => {
+                const isSelected = categoriaId === cat.id && categoriaDisplay === cat.displayName;
+                const IconComp = ICON_MAP[cat.icon];
+                return (
+                  <button
+                    key={cat.displayName}
+                    type="button"
+                    onClick={() => { setCategoriaId(cat.id); setCategoriaDisplay(cat.displayName); }}
+                    className={`rounded-xl p-2 text-center border-2 transition-all ${
+                      isSelected
+                        ? 'border-purple-600 bg-purple-50 text-purple-700'
+                        : 'border-slate-200 bg-white text-slate-700'
+                    }`}
+                  >
+                    {IconComp
+                      ? <IconComp size={22} className="mx-auto mb-1" />
+                      : <span className="block text-xl mb-1">📌</span>}
+                    <span className="text-[10px] font-semibold leading-tight block">{cat.displayName}</span>
+                  </button>
+                );
+              });
+            })()}
           </div>
         </div>
 

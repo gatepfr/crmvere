@@ -64,7 +64,7 @@ export const getTenantPublicInfo = async (req: Request, res: Response) => {
 // POST /api/public/demanda/:slug
 export const submitPublicDemand = async (req: Request, res: Response) => {
   const slug = req.params.slug as string;
-  const { categoriaId, descricao, localizacao, nome, telefone } = req.body;
+  const { categoriaId, descricao, localizacao, nome, telefone, categoriaDisplay } = req.body;
   const fotoFile = req.file as Express.Multer.File | undefined;
 
   if (!categoriaId || !descricao || !nome || !telefone) {
@@ -106,6 +106,9 @@ export const submitPublicDemand = async (req: Request, res: Response) => {
         .from(globalCategories)
         .where(eq(globalCategories.id, categoriaId));
       if (globalCat) categoriaNome = globalCat.name;
+    }
+    if (categoriaDisplay && typeof categoriaDisplay === 'string' && categoriaDisplay.trim()) {
+      categoriaNome = categoriaDisplay.trim();
     }
 
     // Normalize phone
