@@ -111,9 +111,9 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
       existingAtendimento = newA;
     }
 
-    // 4. Standby Humano (30 min)
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-    const isHumanActive = existingAtendimento?.lastHumanInteractionAt && new Date(existingAtendimento.lastHumanInteractionAt) > thirtyMinutesAgo;
+    // 4. Standby Humano (120 min)
+    const humanCooldownMs = 120 * 60 * 1000;
+    const isHumanActive = existingAtendimento?.lastHumanInteractionAt && new Date(existingAtendimento.lastHumanInteractionAt) > new Date(Date.now() - humanCooldownMs);
     if (isHumanActive) return { status: 'waiting_human' };
 
     // 5. Verificação de Quota antes de chamar a IA
@@ -180,7 +180,7 @@ export async function orchestrateWebhook(payload: any, tenantId: string) {
         : rawPhone.length === 10
         ? `(${rawPhone.slice(0,2)}) ${rawPhone.slice(2,6)}-${rawPhone.slice(6)}`
         : municipe.phone;
-      const teamMessage = `🚨 *ATENÇÃO NECESSÁRIA*\n\n👤 *${municipe.name}*\n📱 ${maskedPhone}\n\n📋 *Resumo:* ${aiRes.resumo_ia || 'Nova demanda identificada'}\n\n💬 *Última mensagem:*\n"${normalized.text}"\n\n🏷️ ${(aiRes.categoria || 'OUTRO').toUpperCase()} · Prioridade ${(aiRes.prioridade || 'MEDIA').toUpperCase()}\n\n⏳ _A IA está pausada por 30 min. Responda pelo WhatsApp ou pelo painel._`;
+      const teamMessage = `🚨 *ATENÇÃO NECESSÁRIA*\n\n👤 *${municipe.name}*\n📱 ${maskedPhone}\n\n📋 *Resumo:* ${aiRes.resumo_ia || 'Nova demanda identificada'}\n\n💬 *Última mensagem:*\n"${normalized.text}"\n\n🏷️ ${(aiRes.categoria || 'OUTRO').toUpperCase()} · Prioridade ${(aiRes.prioridade || 'MEDIA').toUpperCase()}\n\n⏳ _A IA está pausada por 120 min. Responda pelo WhatsApp ou pelo painel._`;
       
       await evolution.sendMessage(tenant.whatsappInstanceId, teamJid, teamMessage)
         .catch(err => console.error('[NOTIFICATION ERROR]', err.message));
