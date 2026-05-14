@@ -31,6 +31,7 @@ import StrategicIntelligence from './pages/Intelligence/StrategicDashboard';
 import Billing from './pages/Billing';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import PublicDemandPage from './pages/Public/PublicDemandPage';
 import Sidebar from './components/Sidebar';
 import WhatsAppSupport from './components/WhatsAppSupport';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from './components/ui/sidebar';
@@ -81,6 +82,7 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/p/:slug" element={<PublicDemandPage />} />
           <Route
             path="/superadmin"
             element={
