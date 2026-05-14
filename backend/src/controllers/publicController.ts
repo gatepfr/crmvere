@@ -4,7 +4,7 @@ import { db } from '../db';
 import {
   tenants, municipes, demandas, demandCategories, globalCategories
 } from '../db/schema';
-import { eq, and, count, sql, asc } from 'drizzle-orm';
+import { eq, and, sql, asc } from 'drizzle-orm';
 import { normalizePhone } from '../utils/phoneUtils';
 import { EvolutionService } from '../services/evolutionService';
 import fs from 'fs';
@@ -73,9 +73,21 @@ export const submitPublicDemand = async (req: Request, res: Response) => {
   if (descricao.length < 10) {
     return res.status(400).json({ error: 'Descrição deve ter ao menos 10 caracteres' });
   }
+  if (descricao.length > 10000) {
+    return res.status(400).json({ error: 'Descrição muito longa (máximo 10000 caracteres).' });
+  }
 
   try {
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug));
+    const [tenant] = await db.select({
+      id: tenants.id,
+      name: tenants.name,
+      active: tenants.active,
+      blocked: tenants.blocked,
+      whatsappInstanceId: tenants.whatsappInstanceId,
+      evolutionApiUrl: tenants.evolutionApiUrl,
+      evolutionGlobalToken: tenants.evolutionGlobalToken,
+      whatsappNotificationNumber: tenants.whatsappNotificationNumber,
+    }).from(tenants).where(eq(tenants.slug, slug));
     if (!tenant || !tenant.active || tenant.blocked) {
       return res.status(404).json({ error: 'Gabinete não encontrado' });
     }
@@ -119,9 +131,10 @@ export const submitPublicDemand = async (req: Request, res: Response) => {
     // Handle photo upload
     let fotoUrl: string | null = null;
     if (fotoFile) {
-      const ext = (fotoFile.originalname.split('.').pop() || 'jpg').toLowerCase();
+      const mimeToExt: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+      const ext = mimeToExt[fotoFile.mimetype] ?? 'jpg';
       const fileName = `demanda-${Date.now()}.${ext}`;
-      const destDir = path.join('uploads', 'demandas');
+      const destDir = path.join(__dirname, '../../uploads', 'demandas');
       fs.mkdirSync(destDir, { recursive: true });
       fs.renameSync(fotoFile.path, path.join(destDir, fileName));
       fotoUrl = `/uploads/demandas/${fileName}`;
@@ -129,14 +142,14 @@ export const submitPublicDemand = async (req: Request, res: Response) => {
 
     // Generate protocolo: YYYY-NNNN (sequential per tenant per year)
     const year = new Date().getFullYear();
-    const [{ total }] = await db
-      .select({ total: count() })
-      .from(demandas)
-      .where(and(
-        eq(demandas.tenantId, tenant.id),
-        sql`EXTRACT(YEAR FROM ${demandas.createdAt}) = ${year}`
-      ));
-    const protocolo = `${year}-${String(Number(total) + 1).padStart(4, '0')}`;
+    const protocolResult = await db.execute(
+      sql`SELECT COALESCE(MAX(CAST(SPLIT_PART(protocolo, '-', 2) AS INTEGER)), 0) + 1 AS nextval
+          FROM demandas
+          WHERE tenant_id = ${tenant.id}
+            AND protocolo LIKE ${year + '-%'}`
+    );
+    const nextval = (protocolResult.rows[0] as any)?.nextval ?? 1;
+    const protocolo = `${year}-${String(Number(nextval)).padStart(4, '0')}`;
 
     // Create demand
     await db.insert(demandas).values({
@@ -163,13 +176,17 @@ export const submitPublicDemand = async (req: Request, res: Response) => {
       if (tenant.whatsappNotificationNumber) {
         const preview = descricao.length > 100 ? descricao.slice(0, 100) + '...' : descricao;
         const teamMsg =
-          `🔔 *Nova demanda via formulário público!*\n\n👤 ${nome} — 📱 ${telefone}\n📌 ${categoriaNome}${localizacao ? ` — 📍 ${localizacao}` : ''}\n📝 ${preview}\n\nAcesse o CRM para visualizar e atribuir.`;
+          `🔔 *Nova demanda via formulário público!*\n\n👤 ${nome} — 📱 ${phoneNormalized}\n📌 ${categoriaNome}${localizacao ? ` — 📍 ${localizacao}` : ''}\n📝 ${preview}\n\nAcesse o CRM para visualizar e atribuir.`;
         evo.sendMessage(tenant.whatsappInstanceId, tenant.whatsappNotificationNumber, teamMsg).catch(() => {});
       }
     }
 
     return res.status(201).json({ protocolo, message: 'Demanda recebida com sucesso!' });
   } catch (err) {
+    // cleanup orphaned temp file
+    if (fotoFile?.path) {
+      try { fs.unlinkSync(fotoFile.path); } catch {}
+    }
     console.error('[PUBLIC] submitPublicDemand error', err);
     return res.status(500).json({ error: 'Erro interno' });
   }
