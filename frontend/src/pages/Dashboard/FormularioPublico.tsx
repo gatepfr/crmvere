@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import api from '../../api/client';
 import { formatPhone } from '../../utils/formatPhone';
 import {
-  Search, Loader2, X, MapPin, MessageCircle, Globe, ChevronLeft, ChevronRight,
+  Search, Loader2, X, MapPin, Phone, MessageCircle, Globe, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -279,7 +279,7 @@ export default function FormularioPublico() {
                     )}
                     <div className="flex items-center gap-2 flex-wrap mt-2">
                       {d.demandas.protocolo && (
-                        <span className="text-xs font-bold text-primary">#{d.demandas.protocolo}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">#{d.demandas.protocolo}</span>
                       )}
                       <Badge
                         variant="outline"
@@ -305,7 +305,7 @@ export default function FormularioPublico() {
                       )}
                       <span>{timeAgo(d.demandas.createdAt)}</span>
                       {d.demandas.numeroIndicacao && (
-                        <span className="text-muted-foreground/60">Ind. nº {d.demandas.numeroIndicacao}</span>
+                        <span className="text-green-600 font-semibold">Ind. nº {d.demandas.numeroIndicacao}</span>
                       )}
                     </div>
                   </div>
