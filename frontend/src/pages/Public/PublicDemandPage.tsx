@@ -52,6 +52,10 @@ export default function PublicDemandPage() {
       .catch(() => setNotFound(true));
   }, [slug]);
 
+  useEffect(() => {
+    return () => { if (fotoPreview) URL.revokeObjectURL(fotoPreview); };
+  }, [fotoPreview]);
+
   const handleGps = () => {
     if (!navigator.geolocation) return;
     setGpsLoading(true);
@@ -72,13 +76,14 @@ export default function PublicDemandPage() {
           setGpsLoading(false);
         }
       },
-      () => setGpsLoading(false)
+      () => { setGpsLoading(false); setError('Não foi possível obter sua localização.'); }
     );
   };
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     setFoto(file);
     setFotoPreview(URL.createObjectURL(file));
   };
@@ -92,6 +97,8 @@ export default function PublicDemandPage() {
     setError(null);
     if (!categoriaId) { setError('Selecione o tipo de demanda.'); return; }
     if (descricao.length < 10) { setError('Descreva o problema com ao menos 10 caracteres.'); return; }
+    if (!nome.trim()) { setError('Informe seu nome.'); return; }
+    if (telefone.replace(/\D/g, '').length < 10) { setError('Informe um telefone válido com DDD.'); return; }
 
     setSubmitting(true);
     const form = new FormData();
@@ -238,7 +245,7 @@ export default function PublicDemandPage() {
             ? (
               <div className="relative">
                 <img src={fotoPreview} alt="preview" className="w-full h-32 object-cover rounded-xl" />
-                <button type="button" onClick={() => { setFoto(null); setFotoPreview(null); }}
+                <button type="button" onClick={() => { if (fotoPreview) URL.revokeObjectURL(fotoPreview); setFoto(null); setFotoPreview(null); }}
                   className="absolute top-2 right-2 bg-white rounded-full w-6 h-6 text-xs shadow flex items-center justify-center">✕</button>
               </div>
             )
