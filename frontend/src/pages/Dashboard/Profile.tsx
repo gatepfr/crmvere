@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { 
-  User, 
-  Lock, 
-  Mail, 
-  Shield, 
-  Loader2, 
-  CheckCircle2, 
-  Trash2, 
+import {
+  User,
+  Lock,
+  Mail,
+  Shield,
+  Loader2,
+  CheckCircle2,
+  Trash2,
   Users,
   UserPlus,
   Calendar,
   Settings as SettingsIcon,
-  Plus
+  Plus,
+  Link2,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +32,21 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Slug público
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get('/config/me').then(res => setTenantSlug(res.data.slug)).catch(() => {});
+  }, []);
+
+  const publicUrl = tenantSlug ? `${window.location.origin}/p/${tenantSlug}` : '';
+
+  const handleCopyLink = () => {
+    if (!publicUrl) return;
+    navigator.clipboard.writeText(publicUrl);
+    toast.success('Link copiado!');
+  };
 
   // Equipe
   const [members, setMembers] = useState<Member[]>([]);
@@ -119,6 +137,41 @@ export default function Profile() {
                 <span className="text-sm font-bold truncate">{user?.email}</span>
               </div>
             </div>
+          </section>
+
+          <section className="bg-card rounded-[2.5rem] p-8 shadow-sm border border-border">
+            <h3 className="text-lg font-black text-foreground uppercase tracking-tight flex items-center gap-2 mb-4">
+              <Link2 size={20} className="text-blue-600" />
+              Página Pública
+            </h3>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">
+              Compartilhe com os munícipes
+            </p>
+            {!tenantSlug ? (
+              <div className="flex justify-center py-4"><Loader2 className="animate-spin text-blue-600" size={20} /></div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 bg-muted rounded-2xl px-4 py-3 border border-border">
+                  <span className="flex-1 text-xs font-mono text-foreground truncate">{publicUrl}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                  >
+                    <Copy size={14} /> Copiar Link
+                  </button>
+                  <a
+                    href={publicUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all"
+                  >
+                    <ExternalLink size={14} /> Abrir
+                  </a>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="bg-card rounded-[2.5rem] p-8 shadow-sm border border-border">
