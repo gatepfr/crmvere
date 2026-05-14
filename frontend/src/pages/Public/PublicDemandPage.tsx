@@ -222,9 +222,9 @@ export default function PublicDemandPage() {
                 })
                 .filter((c): c is { id: string; displayName: string; icon: string } => c !== null);
 
-              const list = displayCategories.length > 0 ? displayCategories : tenant.categories.map(c => ({
+              const list = (displayCategories.length > 0 ? displayCategories : tenant.categories.map(c => ({
                 id: c.id, displayName: c.name, icon: c.icon ?? 'Tag',
-              }));
+              }))).sort((a, b) => a.displayName.localeCompare(b.displayName, 'pt-BR'));
 
               return list.map(cat => {
                 const isSelected = categoriaId === cat.id && categoriaDisplay === cat.displayName;
