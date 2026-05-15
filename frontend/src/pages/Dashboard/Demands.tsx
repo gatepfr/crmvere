@@ -162,7 +162,7 @@ export default function Demands() {
               className={cn(
                 'px-5 py-2.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all border flex items-center gap-1.5',
                 filterByAttention
-                  ? 'bg-destructive border-destructive/80 text-black shadow-sm'
+                  ? 'bg-destructive border-destructive/80 text-white shadow-sm'
                   : 'bg-muted border-transparent text-muted-foreground hover:bg-muted/80'
               )}
             >
