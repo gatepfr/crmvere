@@ -114,7 +114,8 @@ export default function LegislativoEditModal({ demand, onClose, onUpdate }: Legi
     const raw = value.replace(/\D/g, '').slice(0, 11);
     let masked = raw;
     if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
-    if (raw.length > 7) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
+    if (raw.length === 10) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+    if (raw.length === 11) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
     setDisplayPhone(masked);
     const dbNumber = raw.startsWith('55') ? raw : `55${raw}`;
     setMunicipe(prev => ({ ...prev, phone: dbNumber }));

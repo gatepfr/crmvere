@@ -1,266 +1,213 @@
 ---
 phase: code-review
-reviewed: 2026-04-24T00:00:00Z
+reviewed: 2026-05-15T00:00:00Z
 depth: standard
-files_reviewed: 5
+files_reviewed: 3
 files_reviewed_list:
-  - backend/src/routes/demandRoutes.ts
-  - backend/src/services/reportService.ts
-  - frontend/src/components/DemandModal.tsx
+  - backend/src/controllers/demandController.ts
   - frontend/src/components/LegislativoEditModal.tsx
-  - frontend/src/pages/Dashboard/Municipes.tsx
+  - frontend/src/pages/Dashboard/FormularioPublico.tsx
 findings:
   critical: 1
-  warning: 6
-  info: 4
-  total: 11
+  warning: 5
+  info: 3
+  total: 9
 status: issues_found
 ---
 
 # Code Review Report
 
-**Reviewed:** 2026-04-24
+**Reviewed:** 2026-05-15
 **Depth:** standard
-**Files Reviewed:** 5
+**Files Reviewed:** 3
 **Status:** issues_found
 
 ## Summary
 
-Five files were reviewed covering the recent Express route ordering fix, PDF report service redesign, category name normalisation in both modals, and Bairro column alignment in the Municipes table.
+Three files were reviewed covering backend demand management (demandController.ts), the legislativo edit modal (LegislativoEditModal.tsx), and the public form page (FormularioPublico.tsx). The code is generally well-structured and the recent features are functional.
 
-The route ordering fix (`demandRoutes.ts`) is correct and well-commented. The PDF redesign (`reportService.ts`) is clean and functional. The category normalisation logic in both modals is correct.
-
-The main concerns are: one critical security issue (unvalidated URL injected directly into an HTML `src` attribute), several missing-error-handling and state-consistency bugs in the frontend, and a route naming inconsistency that can cause 404s at runtime.
+The most significant finding is a phone number data integrity bug in FormularioPublico: the formatted display value is sent to the backend instead of the raw normalized number, which can corrupt stored phone data when a user edits the phone field. Several missing tenant-authorization checks in the backend are also flagged as they allow cross-tenant data access by any authenticated user.
 
 ---
 
 ## Critical Issues
 
-### CR-01: Unsanitised photo URL injected into HTML `src` — potential data-exfiltration / SSRF
+### CR-01: Phone sent as formatted display string, not normalized number
 
-**File:** `backend/src/services/reportService.ts:202-203`
+**File:** `frontend/src/pages/Dashboard/FormularioPublico.tsx:137,174-178`
 
-**Issue:** `tenant.fotoUrl` is accepted from the database and dropped directly into the Puppeteer HTML template as an `<img src="...">` attribute. The only guard is a prefix check (`isSafeUrl`), which only verifies `http://` or `https://`. This check is performed client-side *in the rendering context of Puppeteer (Chromium)*. A compromised or manipulated tenant record could supply a URL that:
+**Issue:** `editPhone` is initialized with `formatPhone(d.municipes.phone)` (produces `"(11) 99999-8888"`) and is edited directly by the user as a formatted string. In `handleSave`, this formatted display value is sent unchanged to `PATCH /demands/municipes/:id` as the `phone` field. The backend `normalizePhone` will strip non-digits and may add `55` again — but if the user typed a new number in display format (e.g., `(11) 98765-4321`), `normalizePhone` strips it to `11987654321` (11 digits) and correctly prefixes to `5511987654321`. However, the `hasChanges` comparison on line 197 compares `editPhone` (display-formatted) against `formatPhone(selected.municipes.phone)` (also display-formatted), meaning a user who edits the phone will trigger a save but the raw number passed is never validated client-side. More critically, unlike `LegislativoEditModal` which correctly separates `displayPhone` (UI state) from `municipe.phone` (DB state), `FormularioPublico` has only one phone state variable serving both purposes. If the user clears and re-types a number, there is no mask applied (`applyPhoneMask` is missing), so raw partial input such as `"(11) 9"` will be sent to the backend.
 
-1. Leaks the internal network topology (Chromium will follow the URL at render time — SSRF).
-2. Contains a `javascript:` URL if the prefix check is somehow bypassed (e.g., `  javascript:...` with leading whitespace — the current `startsWith` check does not trim).
-3. Triggers a DNS rebinding attack against internal services reachable from the Docker container running Chromium.
+**Fix:** Introduce a separate raw phone state and a mask handler, mirroring the pattern already used in `LegislativoEditModal`:
 
-```typescript
-// Current (vulnerable)
-const isSafeUrl = (url: string) => url.startsWith('http://') || url.startsWith('https://');
-const fotoHtml = tenant.fotoUrl && isSafeUrl(tenant.fotoUrl)
-  ? `<img src="${tenant.fotoUrl}" ...`
-```
+```tsx
+// State
+const [editPhoneDisplay, setEditPhoneDisplay] = useState('');
+const [editPhoneRaw, setEditPhoneRaw] = useState('');
 
-**Fix:** Trim the URL before checking, and pass Puppeteer's `--disable-web-security` only if absolutely needed. More importantly, block private-network ranges by validating the hostname, or disable remote image loading entirely and serve the photo through a safe proxy:
+// In openModal:
+setEditPhoneDisplay(formatPhone(d.municipes.phone));
+setEditPhoneRaw(d.municipes.phone); // store the raw normalized number
 
-```typescript
-const isSafeUrl = (url: string) => {
-  const trimmed = url.trim();
-  return (trimmed.startsWith('https://') || trimmed.startsWith('http://'))
-    && !/localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\./i.test(trimmed);
+// Add mask handler:
+const applyPhoneMask = (value: string) => {
+  const raw = value.replace(/\D/g, '').slice(0, 11);
+  let masked = raw;
+  if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+  if (raw.length === 10) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+  if (raw.length === 11) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+  setEditPhoneDisplay(masked);
+  setEditPhoneRaw(raw.startsWith('55') ? raw : `55${raw}`);
 };
 
-// Also use the trimmed value in the attribute:
-const fotoHtml = tenant.fotoUrl && isSafeUrl(tenant.fotoUrl)
-  ? `<img src="${tenant.fotoUrl.trim()}" ...`
-  : fallbackDiv;
-```
+// In the phone <input>:
+value={editPhoneDisplay}
+onChange={e => applyPhoneMask(e.target.value)}
 
-For a more robust fix, resolve the image server-side (fetch → base64) before passing it to the template, so Puppeteer never makes outbound requests.
+// In handleSave — send the raw number:
+promises.push(api.patch(`/demands/municipes/${selected.municipes.id}`, {
+  name: editNome,
+  phone: editPhoneRaw,  // raw normalized digits, not display string
+}));
+
+// In hasChanges — compare raw values:
+editPhoneRaw !== selected.municipes.phone
+```
 
 ---
 
 ## Warnings
 
-### WR-01: Route prefix inconsistency — `municipe` vs `municipes` causes runtime 404s
+### WR-01: updateMunicipe and deleteMunicipe have no tenant authorization check
 
-**File:** `backend/src/routes/demandRoutes.ts:50-51`
+**File:** `backend/src/controllers/demandController.ts:98-121`
 
-**Issue:** Individual municipe PATCH/DELETE routes use the singular prefix `/municipe/:id`, while the list/create/import routes use the plural `/municipes`. The frontend calls `/demands/municipe/:id` (singular), which is consistent with the backend — but the asymmetry is fragile and already diverges from the bulk route at line 47 (`/municipes/list`). Any future developer adding a new route for a single municipe is likely to choose the wrong prefix.
-
-```
-router.get('/municipes/list', listMunicipes);     // plural
-router.post('/municipes', createMunicipe);         // plural
-router.patch('/municipe/:id', updateMunicipe);     // singular ← inconsistency
-router.delete('/municipe/:id', deleteMunicipe);    // singular ← inconsistency
-```
-
-**Fix:** Standardise on the plural prefix throughout:
-
-```typescript
-router.patch('/municipes/:id', updateMunicipe);
-router.delete('/municipes/:id', deleteMunicipe);
-```
-
-And update every frontend call from `/demands/municipe/${id}` to `/demands/municipes/${id}` (affects `DemandModal.tsx`, `LegislativoEditModal.tsx`, and `Municipes.tsx`).
-
----
-
-### WR-02: `isLegislativo`, `numeroIndicacao`, `documentUrl` are `const` — `handleUpdateLegislativo` always saves stale initial values
-
-**File:** `frontend/src/components/DemandModal.tsx:65-67, 178-189`
-
-**Issue:** The three legislative fields are declared with `const [isLegislativo] = useState(...)` — the setter is deliberately discarded. `handleUpdateLegislativo` (line 181) then PATCH-es these frozen values back to the server. The user has no way to edit them via this modal, yet the save button still exists. The result is that pressing "Salvar" on the legislative section re-writes the same original data (a no-op at best; silently discards any edit the user might expect to make at worst). The button exists and the handler fires, leading to confusing UX.
-
-**Fix:** Either expose the setters so the fields are editable, or remove `handleUpdateLegislativo` and its button from the modal since this modal is not the editing surface for legislative fields (that role belongs to `LegislativoEditModal`).
-
-```typescript
-// If the section is display-only, remove the save call:
-// const handleUpdateLegislativo = ... // delete entirely
-// And remove the associated button from JSX
-```
-
----
-
-### WR-03: Empty `catch` block silently swallows timeline load errors
-
-**File:** `frontend/src/components/LegislativoEditModal.tsx:115`
-
-**Issue:** The `loadTimeline` function has a bare empty `catch {}` that discards any network or server error. If the timeline fails to load, the user sees an empty list with no indication of failure, and the developer has no log to diagnose the issue.
-
-```typescript
-// Current
-try {
-  const res = await api.get(`/demands/${demand.demandas.id}/timeline`);
-  setTimeline(res.data);
-} catch {}           // ← silent failure
-finally { setTimelineLoading(false); }
-```
+**Issue:** Both `updateMunicipe` (line 98) and `deleteMunicipe` (line 115) perform their database operations using only the `id` URL parameter with no `tenantId` filter. Any authenticated user from a different tenant can modify or delete any municipe by guessing or discovering a UUID, bypassing tenant isolation entirely.
 
 **Fix:**
-
 ```typescript
-} catch (err) {
-  console.error('Erro ao carregar timeline:', err);
-  // Optionally: setTimeline([]); and show an error message to the user
-}
+export const updateMunicipe = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  // ... build updateData ...
+  const [u] = await db.update(municipes).set(updateData)
+    .where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId)))
+    .returning();
+  if (!u) return res.status(404).json({ error: 'Not found' });
+  res.json(u);
+};
+
+export const deleteMunicipe = async (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
+  await db.delete(municipes)
+    .where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId)));
+  res.json({ success: true });
+};
 ```
 
----
+### WR-02: updateDemand does not return 404 when the demand is not found
 
-### WR-04: `loadMunicipes` captures stale `cabinetConfig` in its dependency array, causing an infinite render loop risk
+**File:** `backend/src/controllers/demandController.ts:354-373`
 
-**File:** `frontend/src/pages/Dashboard/Municipes.tsx:118-144`
+**Issue:** `updateDemand` selects `existing` to record the old status for the activity log (line 354), but never checks whether the record was found. If `id` does not exist for the tenant, `existing` is `undefined`, the `db.update` silently affects zero rows, and the response still returns `{ success: true }`. The optional-chaining on `existing?.status` at line 370 masks this logic error.
 
-**Issue:** `cabinetConfig` is included in the `useCallback` dependency array at line 144. Inside `loadMunicipes`, when `cabinetConfig` is `null`, the function fetches config and calls `setCabinetConfig(configRes.data)`. This state update changes `cabinetConfig`, which invalidates the `useCallback` memoisation, which triggers the `useEffect` on line 146 again. In practice this loop terminates because after the first fetch `cabinetConfig` is non-null and the fetch is skipped, but the double-render on mount is unnecessary and the pattern is fragile — any change to `loadMunicipes` risks reintroducing an infinite loop.
-
-**Fix:** Fetch the cabinet config in a separate `useEffect` with an empty dependency array, and keep `cabinetConfig` out of `loadMunicipes`'s dependencies:
-
+**Fix:**
 ```typescript
-useEffect(() => {
-  api.get('/config/me').then(res => setCabinetConfig(res.data)).catch(() => {});
-}, []);
-
-const loadMunicipes = useCallback(async () => {
-  setLoading(true);
-  try {
-    // cabinetConfig no longer fetched here
-    const params = new URLSearchParams({ ... });
-    ...
-  }
-}, [pagination.page, pagination.limit, searchTerm, selectedBairro, onlyLideranca, onlyBirthdays, sortConfig]);
-// cabinetConfig removed from deps
+const [existing] = await db.select({ status: demandas.status })
+  .from(demandas)
+  .where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
+if (!existing) return res.status(404).json({ error: 'Demand not found' });
+// rest of update logic unchanged
 ```
 
----
+### WR-03: getDemandTimeline has no tenant scope check on the demand
 
-### WR-05: `handleSendBroadcast` continues sending after individual failure instead of surfacing per-recipient errors
+**File:** `backend/src/controllers/demandController.ts:300-319`
 
-**File:** `frontend/src/pages/Dashboard/Municipes.tsx:262-282`
+**Issue:** `getDemandTimeline` fetches comments and activity entries for a demand by `id` alone (lines 309, 315) without verifying the demand belongs to the requesting user's tenant. Any authenticated user can read another tenant's full demand timeline by providing a known demand UUID.
 
-**Issue:** The broadcast loop catches errors per-recipient but only logs them to the console (line 272). The user sees "Mensagens enviadas com sucesso!" at the end regardless of how many deliveries failed. In a multi-tenant CRM context where reliability matters, silent partial failure is a significant UX bug.
-
+**Fix:**
 ```typescript
-} catch (err) { console.error(`Erro ao enviar para ${municipe.name}:`, err); }
-// ... loop continues; final alert says success unconditionally
+// Verify ownership before fetching timeline:
+const [demand] = await db.select({ id: demandas.id })
+  .from(demandas)
+  .where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId)));
+if (!demand) return res.status(404).json({ error: 'Demand not found' });
+// then fetch comments and activities as before
 ```
 
-**Fix:** Accumulate failures and report them:
+### WR-04: addDemandComment has no tenant scope check on the demand
 
+**File:** `backend/src/controllers/demandController.ts:287-298`
+
+**Issue:** `addDemandComment` validates that the calling user has a `tenantId` and `userId`, but does not verify the target demand (identified by the `id` URL parameter) belongs to the user's tenant before inserting the comment (line 295). A user from Tenant A can post comments on Tenant B's demands.
+
+**Fix:**
 ```typescript
-const failures: string[] = [];
-// inside catch:
-failures.push(municipe.name);
-// after loop:
-if (failures.length > 0) {
-  alert(`Envio concluído. Falhas: ${failures.join(', ')}`);
-} else {
-  alert('Mensagens enviadas com sucesso!');
-}
+// Before inserting, verify demand ownership:
+const [demand] = await db.select({ id: demandas.id })
+  .from(demandas)
+  .where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId)));
+if (!demand) return res.status(404).json({ error: 'Demand not found' });
 ```
 
----
+### WR-05: LegislativoEditModal phone mask does not handle 10-digit numbers correctly
 
-### WR-06: `loadAllBairros` fetches up to 1000 records just to extract unique bairro values — server-side filtering missing
+**File:** `frontend/src/components/LegislativoEditModal.tsx:113-121`
 
-**File:** `frontend/src/pages/Dashboard/Municipes.tsx:108-116`
+**Issue:** `applyPhoneMask` handles only 11-digit mobile numbers. The condition `raw.length > 7` is triggered for both 10-digit and 11-digit inputs, always applying the mobile mask `(xx) xxxxx-xxxx`. A 10-digit landline input produces `(xx) xxxxx-xxx` (only 9 digits visible after the DDD) instead of the correct `(xx) xxxx-xxxx`. Combined with `formatPhone.ts` adding a `9` to 10-digit numbers (line 5 of formatPhone.ts), a landline stored as 10 digits gets promoted to a mobile number on the first save.
 
-**Issue:** `loadAllBairros` calls `/demands/municipes/list?limit=1000`, downloads up to 1000 full municipe records, and then extracts unique bairros client-side. This is wasteful over a slow connection and will silently miss bairros beyond the 1000-record cutoff. More importantly, the backend already has the data to return a distinct bairro list cheaply.
-
-**Fix:** Add a dedicated `/demands/municipes/bairros` backend endpoint returning `string[]`, then replace `loadAllBairros` with a single lightweight call. As a short-term fix with no backend change, increase the limit to `all` or handle the pagination of the bairro list.
+**Fix:**
+```typescript
+const applyPhoneMask = (value: string) => {
+  const raw = value.replace(/\D/g, '').slice(0, 11);
+  let masked = raw;
+  if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+  if (raw.length === 10) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+  if (raw.length === 11) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+  setDisplayPhone(masked);
+  const dbNumber = raw.startsWith('55') ? raw : `55${raw}`;
+  setMunicipe(prev => ({ ...prev, phone: dbNumber }));
+};
+```
 
 ---
 
 ## Info
 
-### IN-01: Doubled variable name `setSelectedSelectedMunicipes` is a naming error
+### IN-01: limit=all hardcoded cap of 10000 may silently truncate data
 
-**File:** `frontend/src/pages/Dashboard/Municipes.tsx:78`
+**File:** `backend/src/controllers/demandController.ts:47`
 
-**Issue:** The state setter is named `setSelectedSelectedMunicipes` (double "Selected"), used consistently throughout the file but clearly a typo from the original `useState` destructure. It does not cause a runtime bug but reduces readability.
+**Issue:** `listMunicipes` accepts `?limit=all` and converts it to `10000`. If a tenant has more than 10,000 municipes, callers requesting all records receive a truncated result with no indication that pagination was applied. The `totalPages` calculation at line 94 divides by `1` when limit is 10000, making the pagination object appear to indicate a single page of complete results.
 
+**Fix:** Either document the 10,000 cap explicitly in an API response header (`X-Truncated: true`) or replace the `all` shorthand with standard pagination so callers are forced to handle multiple pages.
+
+### IN-02: window.confirm() used for destructive action confirmation
+
+**File:** `frontend/src/pages/Dashboard/FormularioPublico.tsx:202`
+
+**Issue:** `window.confirm()` is used to confirm demand deletion. This is a browser-native blocking dialog that cannot be styled to match the application design, is blocked in some iframe and embedded contexts, and is inconsistent with the rest of the UI which uses toasts and modal dialogs.
+
+**Fix:** Replace with an `AlertDialog` from the existing shadcn/ui component library, which is already used elsewhere in the project and provides a consistent, styleable confirmation flow.
+
+### IN-03: BACKEND_URL derivation is fragile
+
+**File:** `frontend/src/pages/Dashboard/FormularioPublico.tsx:53`
+
+**Issue:** `BACKEND_URL` is derived by calling `.replace('/api', '')` on `VITE_API_URL`. This will silently strip the first occurrence of the substring `/api` wherever it appears in the URL — for example, a URL such as `https://api.example.com/api` would become `https://.example.com/api`, and `https://myapp.com/api/v2` would become `https://myapp.com/v2`. The assumption that `VITE_API_URL` always ends with `/api` is not enforced anywhere.
+
+**Fix:**
 ```typescript
-// Line 78
-const [selectedMunicipes, setSelectedSelectedMunicipes] = useState<string[]>([]);
-```
-
-**Fix:** Rename to `setSelectedMunicipes`.
-
----
-
-### IN-02: `demand` prop typed as `any` in both modals
-
-**File:** `frontend/src/components/DemandModal.tsx:22`, `frontend/src/components/LegislativoEditModal.tsx:22`
-
-**Issue:** Both modal components accept `demand: any`. This suppresses all TypeScript safety on the most important data object in the component. Any typo accessing `demand.demandas.somField` becomes a silent runtime `undefined`.
-
-**Fix:** Define a shared `DemandRow` interface (or import from a shared types file) with the shape `{ demandas: {...}, municipes: {...}, atendimentoId?: string }` and use it on both props.
-
----
-
-### IN-03: `console.error` left in production code across multiple files
-
-**Files:**
-- `frontend/src/pages/Dashboard/Municipes.tsx:113, 139, 272, 335`
-- `frontend/src/components/DemandModal.tsx:119`
-
-**Issue:** Several `console.error` calls are appropriate for development but should be gated or replaced with a logging service in production to avoid leaking internal error details and request structure to browser dev tools.
-
-**Fix:** Replace with a project-wide logger utility or wrap in `if (process.env.NODE_ENV !== 'production')` guards where the output is only diagnostic. Error details shown to the user (via `alert`) are already sanitised, so this is a dev-tool exposure issue only.
-
----
-
-### IN-04: `formatPeriod` uses `T12:00:00` noon-fix — fragile for non-UTC timezones
-
-**File:** `backend/src/services/reportService.ts:192`
-
-**Issue:** `formatPeriod` appends `T12:00:00` to force noon so that `toLocaleDateString` does not roll back to the previous day due to UTC-offset. This works for Brazil (UTC-3) but would silently misdisplay in UTC+13 or UTC+14. The pattern is a common workaround but is not documented and will be confusing to maintainers.
-
-```typescript
-new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR', ...)
-```
-
-**Fix:** Use `Intl.DateTimeFormat` with `timeZone: 'America/Sao_Paulo'` explicitly, or parse the date string directly with `{ timeZone: 'UTC' }` to avoid the ambiguity:
-
-```typescript
-const fmtDate = (iso: string) =>
-  new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));
+// Use a dedicated env var instead of deriving:
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 ```
 
 ---
 
-_Reviewed: 2026-04-24_
+_Reviewed: 2026-05-15_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

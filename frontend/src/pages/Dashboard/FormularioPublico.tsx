@@ -50,7 +50,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelada: 'bg-slate-50 text-slate-500 border-slate-100',
 };
 
-const BACKEND_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace('/api', '');
+const BACKEND_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -82,10 +82,12 @@ export default function FormularioPublico() {
   const [editCategoria, setEditCategoria] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
   const [editNome, setEditNome] = useState('');
-  const [editPhone, setEditPhone] = useState('');
+  const [editPhoneDisplay, setEditPhoneDisplay] = useState('');
+  const [editPhoneRaw, setEditPhoneRaw] = useState('');
   const [editLocalizacao, setEditLocalizacao] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchDemandas = useCallback((isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -134,7 +136,8 @@ export default function FormularioPublico() {
     setEditCategoria(d.demandas.categoria);
     setEditDescricao(d.demandas.descricao);
     setEditNome(d.municipes.name);
-    setEditPhone(formatPhone(d.municipes.phone));
+    setEditPhoneDisplay(formatPhone(d.municipes.phone));
+    setEditPhoneRaw(d.municipes.phone);
     setEditLocalizacao(d.demandas.localizacao ?? '');
   };
 
@@ -144,8 +147,19 @@ export default function FormularioPublico() {
     setEditCategoria('');
     setEditDescricao('');
     setEditNome('');
-    setEditPhone('');
+    setEditPhoneDisplay('');
+    setEditPhoneRaw('');
     setEditLocalizacao('');
+  };
+
+  const applyPhoneMask = (value: string) => {
+    const raw = value.replace(/\D/g, '').slice(0, 11);
+    let masked = raw;
+    if (raw.length > 2) masked = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+    if (raw.length === 10) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+    if (raw.length === 11) masked = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7)}`;
+    setEditPhoneDisplay(masked);
+    setEditPhoneRaw(raw.startsWith('55') ? raw : `55${raw}`);
   };
 
   const handleSave = async () => {
@@ -159,7 +173,7 @@ export default function FormularioPublico() {
         editLocalizacao !== (selected.demandas.localizacao ?? '');
       const municipeChanged =
         editNome !== selected.municipes.name ||
-        editPhone !== formatPhone(selected.municipes.phone);
+        editPhoneRaw !== selected.municipes.phone;
 
       const promises: Promise<any>[] = [];
       if (demandChanged) {
@@ -173,7 +187,7 @@ export default function FormularioPublico() {
       if (municipeChanged) {
         promises.push(api.patch(`/demands/municipes/${selected.municipes.id}`, {
           name: editNome,
-          phone: editPhone,
+          phone: editPhoneRaw,
         }));
       }
       await Promise.all(promises);
@@ -194,12 +208,18 @@ export default function FormularioPublico() {
     editDescricao !== selected.demandas.descricao ||
     editLocalizacao !== (selected.demandas.localizacao ?? '') ||
     editNome !== selected.municipes.name ||
-    editPhone !== formatPhone(selected.municipes.phone)
+    editPhoneRaw !== selected.municipes.phone
   );
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Apagar esta demanda? Esta ação não pode ser desfeita.')) return;
+    setDeleteConfirmId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
+    const id = deleteConfirmId;
+    setDeleteConfirmId(null);
     setDeletingId(id);
     try {
       await api.delete(`/demands/${id}`);
@@ -371,7 +391,7 @@ export default function FormularioPublico() {
                       <Edit2 size={15} />
                     </button>
                     <button
-                      onClick={e => handleDelete(d.demandas.id, e)}
+                      onClick={e => handleDeleteClick(d.demandas.id, e)}
                       disabled={deletingId === d.demandas.id}
                       className="p-2 text-muted-foreground hover:text-destructive rounded-lg transition-colors disabled:opacity-50"
                       title="Apagar"
@@ -416,6 +436,23 @@ export default function FormularioPublico() {
           </div>
         </CardContent>
       </Card>
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <p className="text-sm font-semibold text-foreground">Apagar esta demanda?</p>
+            <p className="text-xs text-muted-foreground">Esta ação não pode ser desfeita.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmId(null)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" className="flex-1" onClick={handleDeleteConfirm}>
+                Apagar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
@@ -465,8 +502,8 @@ export default function FormularioPublico() {
                   <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Telefone</div>
                   <input
                     className="w-full text-sm bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
-                    value={editPhone}
-                    onChange={e => setEditPhone(e.target.value)}
+                    value={editPhoneDisplay}
+                    onChange={e => applyPhoneMask(e.target.value)}
                     placeholder="(11) 99999-9999"
                   />
                 </div>

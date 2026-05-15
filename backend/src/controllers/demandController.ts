@@ -97,7 +97,9 @@ export const listMunicipes = async (req: Request, res: Response) => {
 
 export const updateMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
   const { name, phone, cep, bairro, birthDate, isLideranca, instagramHandle } = req.body;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   try {
     const updateData: Record<string, any> = {};
     if (name !== undefined) updateData.name = name;
@@ -107,15 +109,18 @@ export const updateMunicipe = async (req: Request, res: Response) => {
     if (birthDate !== undefined) updateData.birthDate = birthDate ? new Date(birthDate) : null;
     if (isLideranca !== undefined) updateData.isLideranca = isLideranca;
     if (instagramHandle !== undefined) updateData.instagramHandle = instagramHandle || null;
-    const [u] = await db.update(municipes).set(updateData).where(eq(municipes.id, id)).returning();
+    const [u] = await db.update(municipes).set(updateData).where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId))).returning();
+    if (!u) return res.status(404).json({ error: 'Not found' });
     res.json(u);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
 
 export const deleteMunicipe = async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   try {
-    await db.delete(municipes).where(eq(municipes.id, id));
+    await db.delete(municipes).where(and(eq(municipes.id, id), eq(municipes.tenantId, tenantId)));
     res.json({ success: true });
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
 };
@@ -292,6 +297,8 @@ export const addDemandComment = async (req: Request, res: Response) => {
   if (!tenantId || !userId) return res.status(403).json({ error: 'No tenant context' });
   if (!comment?.trim()) return res.status(400).json({ error: 'Comment required' });
   try {
+    const [demand] = await db.select({ id: demandas.id }).from(demandas).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId)));
+    if (!demand) return res.status(404).json({ error: 'Demand not found' });
     const [newComment] = await db.insert(demandComments).values({ demandId: id, userId, comment: comment.trim() }).returning();
     res.status(201).json(newComment);
   } catch (error) { res.status(500).json({ error: 'Failed' }); }
@@ -302,6 +309,8 @@ export const getDemandTimeline = async (req: Request, res: Response) => {
   const tenantId = req.user?.tenantId;
   if (!tenantId) return res.status(403).json({ error: 'No tenant context' });
   try {
+    const [demand] = await db.select({ id: demandas.id }).from(demandas).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId)));
+    if (!demand) return res.status(404).json({ error: 'Demand not found' });
     const comments = await db
       .select({ id: demandComments.id, type: sql<string>`'comment'`, content: demandComments.comment, userId: demandComments.userId, userEmail: users.email, createdAt: demandComments.createdAt })
       .from(demandComments)
@@ -352,6 +361,7 @@ export const updateDemand = async (req: Request, res: Response) => {
   const actorId = req.user?.id;
   try {
     const [existing] = await db.select({ status: demandas.status }).from(demandas).where(and(eq(demandas.id, id), eq(demandas.tenantId, tenantId!)));
+    if (!existing) return res.status(404).json({ error: 'Demand not found' });
     const updateData: any = { updatedAt: new Date() };
     if (status) {
       updateData.status = status;
